@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -22,8 +22,40 @@ export default function CreateEventPage() {
     const [wineType, setWineType] = useState('');
     const [location, setLocation] = useState('');
     const navigate = useNavigate();
+    const isInitialized = useRef(false);
+
+    // Load saved form data from localStorage on component mount
+    useEffect(() => {
+        const savedData = localStorage.getItem('wineEventFormData');
+        if (savedData) {
+            const formData = JSON.parse(savedData);
+            setEventName(formData.eventName || '');
+            setEventDate(formData.eventDate || '');
+            setMaxParticipants(formData.maxParticipants || '');
+            setWineType(formData.wineType || '');
+            setLocation(formData.location || '');
+        }
+        isInitialized.current = true;
+    }, []);
+
+    // Save form data to localStorage whenever any field changes (but not on initial load)
+    useEffect(() => {
+        if (isInitialized.current) {
+            const formData = {
+                eventName,
+                eventDate,
+                maxParticipants,
+                wineType,
+                location
+            };
+            localStorage.setItem('wineEventFormData', JSON.stringify(formData));
+        }
+    }, [eventName, eventDate, maxParticipants, wineType, location]);
 
     const handleBack = () => {
+        // Clear localStorage when going back to home
+        localStorage.removeItem('wineEventFormData');
+        localStorage.removeItem('wineEventDetailsData');
         navigate('/');
     };
 
@@ -83,7 +115,7 @@ export default function CreateEventPage() {
                     onClick={handleBack}
                     startIcon={<ArrowBack />}
                     sx={{
-                        color: 'black',
+                        color: 'white',
                         scale: 1.5,
                         '&:hover': {
                             scale: 1.7,
@@ -121,7 +153,7 @@ export default function CreateEventPage() {
                     }}
                 >
                     <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <WineBar sx={{ fontSize: 80, mb: 2, opacity: 0.9 }} />
+                        <WineBar sx={{ fontSize: 80, mb: 2, opacity: 0.9, color: 'white' }} />
                         <Typography sx={{ color: 'white' }} variant="h4" component="h2" gutterBottom fontWeight="bold">
                             Plan Your Wine Event
                         </Typography>

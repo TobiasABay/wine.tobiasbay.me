@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -21,6 +21,33 @@ export default function EventDetailsPage() {
     const [duration, setDuration] = useState('');
     const [wineNotes, setWineNotes] = useState('');
     const navigate = useNavigate();
+    const isInitialized = useRef(false);
+
+    // Load saved form data from localStorage on component mount
+    useEffect(() => {
+        const savedData = localStorage.getItem('wineEventDetailsData');
+        if (savedData) {
+            const formData = JSON.parse(savedData);
+            setDescription(formData.description || '');
+            setBudget(formData.budget || '');
+            setDuration(formData.duration || '');
+            setWineNotes(formData.wineNotes || '');
+        }
+        isInitialized.current = true;
+    }, []);
+
+    // Save form data to localStorage whenever any field changes (but not on initial load)
+    useEffect(() => {
+        if (isInitialized.current) {
+            const formData = {
+                description,
+                budget,
+                duration,
+                wineNotes
+            };
+            localStorage.setItem('wineEventDetailsData', JSON.stringify(formData));
+        }
+    }, [description, budget, duration, wineNotes]);
 
     const handleBack = () => {
         navigate('/create-event');
@@ -36,8 +63,22 @@ export default function EventDetailsPage() {
                 createdAt: new Date().toISOString()
             };
             console.log('Event details:', eventDetails);
+
+            // Get the basic event data from localStorage
+            const basicEventData = localStorage.getItem('wineEventFormData');
+            const completeEventData = {
+                ...(basicEventData ? JSON.parse(basicEventData) : {}),
+                ...eventDetails
+            };
+
+            console.log('Complete event data:', completeEventData);
+
+            // Clear localStorage data after successful creation
+            localStorage.removeItem('wineEventFormData');
+            localStorage.removeItem('wineEventDetailsData');
+
             // TODO: Implement actual event creation logic with API
-            alert(`Event details saved successfully! 🍷`);
+            alert(`Wine event "${completeEventData.eventName || 'Untitled'}" created successfully! 🍷`);
             navigate('/');
         } else {
             alert('Please fill in all required fields');
@@ -82,14 +123,12 @@ export default function EventDetailsPage() {
                     startIcon={<ArrowBack />}
                     sx={{
                         color: 'white',
-                        border: '1px solid rgba(255,255,255,0.3)',
+                        scale: 1.5,
                         '&:hover': {
-                            backgroundColor: 'rgba(255,255,255,0.1)',
-                            border: '1px solid rgba(255,255,255,0.5)'
+                            scale: 1.7,
                         }
                     }}
                 >
-                    Back
                 </Button>
                 <Typography variant="h4" component="h1" sx={{ ml: 3, fontWeight: 'bold', color: 'white' }}>
                     Event Details
@@ -121,8 +160,8 @@ export default function EventDetailsPage() {
                     }}
                 >
                     <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <Description sx={{ fontSize: 80, mb: 2, opacity: 0.9 }} />
-                        <Typography variant="h4" component="h2" gutterBottom fontWeight="bold">
+                        <Description sx={{ fontSize: 80, mb: 2, opacity: 0.9, color: 'white' }} />
+                        <Typography variant="h4" component="h2" gutterBottom fontWeight="bold" sx={{ opacity: 0.9, color: 'white' }}>
                             Tell Us More
                         </Typography>
                         <Typography variant="body1" sx={{ opacity: 0.9, color: 'white' }}>
