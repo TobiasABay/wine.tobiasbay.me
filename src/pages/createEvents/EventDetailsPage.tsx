@@ -12,6 +12,7 @@ import {
     MenuItem,
 } from '@mui/material';
 import { ArrowBack, Description, Delete } from '@mui/icons-material';
+import FullscreenButton from '../../components/FullscreenButton';
 
 export default function EventDetailsPage() {
     const [description, setDescription] = useState('');
@@ -160,25 +161,30 @@ export default function EventDetailsPage() {
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
                     padding: 3,
                     borderBottom: '1px solid rgba(255,255,255,0.1)'
                 }}
             >
-                <Button
-                    onClick={handleBack}
-                    startIcon={<ArrowBack />}
-                    sx={{
-                        color: 'white',
-                        scale: 1.5,
-                        '&:hover': {
-                            scale: 1.7,
-                        }
-                    }}
-                >
-                </Button>
-                <Typography variant="h4" component="h1" sx={{ ml: 3, fontWeight: 'bold', color: 'white' }}>
-                    Event Details
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Button
+                        onClick={handleBack}
+                        startIcon={<ArrowBack />}
+                        sx={{
+                            color: 'white',
+                            scale: 1.5,
+                            '&:hover': {
+                                scale: 1.7,
+                            }
+                        }}
+                    >
+                    </Button>
+                    <Typography variant="h4" component="h1" sx={{ ml: 3, fontWeight: 'bold', color: 'white' }}>
+                        Event Details
+                    </Typography>
+                </Box>
+
+                <FullscreenButton />
             </Box>
 
             {/* Main Content */}

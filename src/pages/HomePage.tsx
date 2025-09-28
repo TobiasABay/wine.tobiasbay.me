@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Paper } from "@mui/material";
 import { Add, GroupAdd } from "@mui/icons-material";
+import FullscreenButton from '../components/FullscreenButton';
 
 export default function HomePage() {
     const navigate = useNavigate();
@@ -23,9 +24,21 @@ export default function HomePage() {
                 margin: 0,
                 minHeight: '100vh',
                 border: 'none',
-                outline: 'none'
+                outline: 'none',
+                position: 'relative'
             }}
         >
+            {/* Fullscreen Button */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    top: 20,
+                    right: 20,
+                    zIndex: 1000
+                }}
+            >
+                <FullscreenButton />
+            </Box>
             {/* Create Event Section */}
             <Box
                 sx={{
