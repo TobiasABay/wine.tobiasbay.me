@@ -7,17 +7,21 @@ import {
     Paper,
     Container,
     Grid,
-    IconButton,
-    Chip
+    Chip,
+    List,
+    ListItem,
+    ListItemText,
+    Avatar,
+    Divider
 } from '@mui/material';
-import { ArrowBack, ContentCopy, Share, QrCode } from '@mui/icons-material';
+import { ArrowBack, Person } from '@mui/icons-material';
 import QRCode from 'qrcode';
 
 export default function EventCreatedPage() {
-    const [eventData, setEventData] = useState<any>(null);
     const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
     const [joinCode, setJoinCode] = useState<string>('');
     const [eventId, setEventId] = useState<string>('');
+    const [players, setPlayers] = useState<Array<{ id: string, name: string, joinedAt: string }>>([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -52,35 +56,6 @@ export default function EventCreatedPage() {
 
     const handleBack = () => {
         navigate('/');
-    };
-
-    const handleCopyJoinCode = async () => {
-        try {
-            await navigator.clipboard.writeText(joinCode);
-            alert('Join code copied to clipboard!');
-        } catch (error) {
-            console.error('Failed to copy join code:', error);
-        }
-    };
-
-    const handleShare = async () => {
-        const shareData = {
-            title: 'Join my Wine Tasting Event',
-            text: `Join my wine tasting event! Use code: ${joinCode}`,
-            url: `https://wine.tobiasbay.me/join/${joinCode}`
-        };
-
-        try {
-            if (navigator.share) {
-                await navigator.share(shareData);
-            } else {
-                // Fallback: copy to clipboard
-                await navigator.clipboard.writeText(`Join my wine tasting event! Use code: ${joinCode} or visit: https://wine.tobiasbay.me/join/${joinCode}`);
-                alert('Share link copied to clipboard!');
-            }
-        } catch (error) {
-            console.error('Error sharing:', error);
-        }
     };
 
     return (
@@ -130,7 +105,7 @@ export default function EventCreatedPage() {
                     display: 'flex',
                     alignItems: 'flex-start',
                     justifyContent: 'center',
-                    padding: 4,
+                    padding: { xs: 2, sm: 4 },
                     minHeight: 'calc(100vh - 120px)'
                 }}
             >
@@ -139,8 +114,8 @@ export default function EventCreatedPage() {
                     sx={{
                         background: 'rgba(255,255,255,0.1)',
                         backdropFilter: 'blur(10px)',
-                        borderRadius: 4,
-                        padding: 6,
+                        borderRadius: { xs: 2, sm: 4 },
+                        padding: { xs: 3, sm: 6 },
                         border: '1px solid rgba(255,255,255,0.2)',
                         maxWidth: 600,
                         width: '100%',
@@ -148,126 +123,156 @@ export default function EventCreatedPage() {
                     }}
                 >
 
-                    <Grid container spacing={4}>
-                        {/* Event Title */}
-                        <Grid size={12}>
-                            <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                <Typography variant="h5" sx={{ color: 'white', fontWeight: 'bold', mb: 1 }}>
-                                    Event Title
-                                </Typography>
-                                <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
-                                    Wine Tasting Event
-                                </Typography>
-                            </Box>
-                        </Grid>
+                    <Grid container spacing={{ xs: 1, sm: 2 }}>
 
                         {/* Join Code */}
                         <Grid size={12}>
-                            <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                            <Box sx={{ textAlign: 'center', mb: { xs: 1, sm: 2 } }}>
+                                <Typography variant="h6" sx={{ color: 'white', mb: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                                     Join Code
                                 </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: { xs: 1, sm: 2 },
+                                    flexDirection: { xs: 'column', sm: 'row' }
+                                }}>
                                     <Chip
                                         label={joinCode}
                                         sx={{
-                                            fontSize: '2rem',
+                                            fontSize: { xs: '1.5rem', sm: '2rem' },
                                             fontWeight: 'bold',
-                                            height: 60,
+                                            height: { xs: 50, sm: 60 },
                                             backgroundColor: 'rgba(255,255,255,0.2)',
                                             color: 'white',
-                                            border: '2px solid white'
+                                            border: '2px solid white',
+                                            minWidth: { xs: 120, sm: 150 }
                                         }}
                                     />
-                                    <IconButton
-                                        onClick={handleCopyJoinCode}
-                                        sx={{
-                                            backgroundColor: 'rgba(255,255,255,0.2)',
-                                            color: 'white',
-                                            '&:hover': {
-                                                backgroundColor: 'rgba(255,255,255,0.3)'
-                                            }
-                                        }}
-                                    >
-                                        <ContentCopy />
-                                    </IconButton>
+
                                 </Box>
                             </Box>
                         </Grid>
 
                         {/* QR Code */}
                         <Grid size={12}>
-                            <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-                                    QR Code
-                                </Typography>
+                            <Box sx={{ textAlign: 'center', mb: { xs: 1, sm: 2 } }}>
                                 {qrCodeUrl && (
                                     <Box sx={{
                                         display: 'inline-block',
-                                        p: 2,
+                                        p: { xs: 1, sm: 2 },
                                         backgroundColor: 'white',
                                         borderRadius: 2,
                                         mb: 2
                                     }}>
-                                        <img src={qrCodeUrl} alt="QR Code" style={{ display: 'block' }} />
+                                        <img
+                                            src={qrCodeUrl}
+                                            alt="QR Code"
+                                            style={{
+                                                display: 'block',
+                                                width: '100%',
+                                                maxWidth: '200px',
+                                                height: 'auto'
+                                            }}
+                                        />
                                     </Box>
                                 )}
-                                <Typography variant="body2" sx={{ color: 'white', opacity: 0.8 }}>
-                                    Guests can scan this QR code to join
-                                </Typography>
                             </Box>
                         </Grid>
 
-                        {/* Event ID */}
+                        {/* Players List */}
                         <Grid size={12}>
-                            <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
-                                    Event ID
+                            <Box sx={{ mb: { xs: 1, sm: 2 } }}>
+                                <Typography variant="h6" sx={{ color: 'white', mb: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                                    Players ({players.length})
                                 </Typography>
-                                <Typography variant="body1" sx={{ color: 'white', opacity: 0.8, fontFamily: 'monospace' }}>
-                                    {eventId}
-                                </Typography>
+                                {players.length === 0 ? (
+                                    <Box sx={{
+                                        textAlign: 'center',
+                                        py: 4,
+                                        backgroundColor: 'rgba(255,255,255,0.05)',
+                                        borderRadius: 2,
+                                        border: '1px dashed rgba(255,255,255,0.2)'
+                                    }}>
+                                        <Person sx={{ fontSize: 48, color: 'rgba(255,255,255,0.5)', mb: 1 }} />
+                                        <Typography variant="body2" sx={{ color: 'white', opacity: 0.6 }}>
+                                            No players joined yet. Share the join code or QR code to invite guests!
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <Paper sx={{
+                                        backgroundColor: 'rgba(255,255,255,0.05)',
+                                        borderRadius: 2,
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        maxHeight: 200,
+                                        overflow: 'auto'
+                                    }}>
+                                        <List>
+                                            {players.map((player, index) => (
+                                                <Box key={player.id}>
+                                                    <ListItem sx={{ py: 1.5 }}>
+                                                        <Avatar sx={{
+                                                            backgroundColor: 'rgba(255,255,255,0.2)',
+                                                            color: 'white',
+                                                            mr: 2,
+                                                            width: 32,
+                                                            height: 32
+                                                        }}>
+                                                            <Person sx={{ fontSize: 20 }} />
+                                                        </Avatar>
+                                                        <ListItemText
+                                                            primary={
+                                                                <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium' }}>
+                                                                    {player.name}
+                                                                </Typography>
+                                                            }
+                                                            secondary={
+                                                                <Typography variant="body2" sx={{ color: 'white', opacity: 0.7 }}>
+                                                                    Joined {new Date(player.joinedAt).toLocaleString()}
+                                                                </Typography>
+                                                            }
+                                                        />
+                                                    </ListItem>
+                                                    {index < players.length - 1 && <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />}
+                                                </Box>
+                                            ))}
+                                        </List>
+                                    </Paper>
+                                )}
                             </Box>
                         </Grid>
 
                         {/* Action Buttons */}
                         <Grid size={12}>
-                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-                                <Button
-                                    variant="outlined"
-                                    startIcon={<Share />}
-                                    onClick={handleShare}
-                                    sx={{
-                                        color: 'white',
-                                        borderColor: 'rgba(255,255,255,0.3)',
-                                        px: 4,
-                                        py: 1.5,
-                                        '&:hover': {
-                                            backgroundColor: 'rgba(255,255,255,0.1)',
-                                            borderColor: 'rgba(255,255,255,0.5)'
-                                        }
-                                    }}
-                                >
-                                    Share Event
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    onClick={handleBack}
-                                    sx={{
-                                        backgroundColor: 'rgba(255,255,255,0.2)',
-                                        color: 'white',
-                                        border: '2px solid white',
-                                        px: 4,
-                                        py: 1.5,
-                                        '&:hover': {
-                                            backgroundColor: 'white',
-                                            color: '#667eea',
-                                            transform: 'translateY(-2px)'
-                                        }
-                                    }}
-                                >
-                                    Back to Home
-                                </Button>
+                            <Box sx={{
+                                display: 'flex',
+                                gap: { xs: 1, sm: 2 },
+                                justifyContent: 'center',
+                                flexDirection: { xs: 'column', sm: 'row' }
+                            }}>
+                            </Box>
+                        </Grid>
+
+                        {/* Event ID - Bottom */}
+                        <Grid size={12}>
+                            <Box sx={{ textAlign: 'center', mt: 2 }}>
+                                <Typography variant="body2" sx={{ color: 'white', opacity: 0.6, mb: 1 }}>
+                                    Event ID
+                                </Typography>
+                                <Typography variant="body2" sx={{
+                                    color: 'white',
+                                    opacity: 0.8,
+                                    fontFamily: 'monospace',
+                                    fontSize: { xs: '0.7rem', sm: '0.8rem' },
+                                    wordBreak: 'break-all',
+                                    px: 1,
+                                    backgroundColor: 'rgba(255,255,255,0.05)',
+                                    borderRadius: 1,
+                                    py: 0.5
+                                }}>
+                                    {eventId}
+                                </Typography>
                             </Box>
                         </Grid>
                     </Grid>
