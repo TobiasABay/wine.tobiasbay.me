@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Typography,
-    TextField,
     Button,
     Paper,
     Container,
@@ -11,7 +10,7 @@ import {
     FormControl,
     InputLabel,
     Select,
-    MenuItem,
+    MenuItem
 } from '@mui/material';
 import { ArrowBack, Description } from '@mui/icons-material';
 
@@ -20,6 +19,15 @@ export default function EventDetailsPage() {
     const [budget, setBudget] = useState('');
     const [duration, setDuration] = useState('');
     const [wineNotes, setWineNotes] = useState('');
+    const [wineCategories, setWineCategories] = useState<Array<{
+        id: string;
+        guessingElement: string;
+        difficultyFactor: string;
+    }>>([{
+        id: '1',
+        guessingElement: '',
+        difficultyFactor: ''
+    }]);
     const navigate = useNavigate();
     const isInitialized = useRef(false);
 
@@ -32,6 +40,11 @@ export default function EventDetailsPage() {
             setBudget(formData.budget || '');
             setDuration(formData.duration || '');
             setWineNotes(formData.wineNotes || '');
+            setWineCategories(formData.wineCategories || [{
+                id: '1',
+                guessingElement: '',
+                difficultyFactor: ''
+            }]);
         }
         isInitialized.current = true;
     }, []);
@@ -43,23 +56,46 @@ export default function EventDetailsPage() {
                 description,
                 budget,
                 duration,
-                wineNotes
+                wineNotes,
+                wineCategories
             };
             localStorage.setItem('wineEventDetailsData', JSON.stringify(formData));
         }
-    }, [description, budget, duration, wineNotes]);
+    }, [description, budget, duration, wineNotes, wineCategories]);
 
     const handleBack = () => {
         navigate('/create-event');
     };
 
+    const addNewCategory = () => {
+        const newCategory = {
+            id: Date.now().toString(),
+            guessingElement: '',
+            difficultyFactor: ''
+        };
+        setWineCategories(prev => [...prev, newCategory]);
+    };
+
+    const removeCategory = (categoryId: string) => {
+        if (wineCategories.length > 1) {
+            setWineCategories(prev => prev.filter(category => category.id !== categoryId));
+        }
+    };
+
+    const updateCategory = (categoryId: string, field: 'guessingElement' | 'difficultyFactor', value: string) => {
+        setWineCategories(prev => prev.map(category =>
+            category.id === categoryId ? { ...category, [field]: value } : category
+        ));
+    };
+
     const handleNext = () => {
-        if (description.trim() && budget && duration) {
+        if (description.trim() && budget && duration && allCategoriesValid) {
             const eventDetails = {
                 description,
                 budget: parseFloat(budget),
                 duration,
                 wineNotes,
+                wineCategories,
                 createdAt: new Date().toISOString()
             };
             console.log('Event details:', eventDetails);
@@ -81,19 +117,29 @@ export default function EventDetailsPage() {
             alert(`Wine event "${completeEventData.eventName || 'Untitled'}" created successfully! 🍷`);
             navigate('/');
         } else {
-            alert('Please fill in all required fields');
+            alert('Please fill in all required fields and select at least one guessing element');
         }
     };
 
-    const durationOptions = [
-        '1 hour',
-        '1.5 hours',
-        '2 hours',
-        '2.5 hours',
-        '3 hours',
-        '3.5 hours',
-        '4 hours'
+
+    const predefinedGuessingOptions = [
+        'Region',
+        'Country',
+        'Age/Vintage',
+        'Grape Variety',
+        'Price Range',
+        'Producer/Winery',
+        'Wine Style',
+        'Alcohol Content',
+        'Tannin Level',
+        'Acidity Level',
+        'Body Type',
+        'Finish Length'
     ];
+
+    const allCategoriesValid = wineCategories.every(category =>
+        category.guessingElement && category.difficultyFactor
+    );
 
     return (
         <Container
@@ -164,157 +210,127 @@ export default function EventDetailsPage() {
                         <Typography variant="h4" component="h2" gutterBottom fontWeight="bold" sx={{ opacity: 0.9, color: 'white' }}>
                             Tell Us More
                         </Typography>
-                        <Typography variant="body1" sx={{ opacity: 0.9, color: 'white' }}>
-                            Add details to make your wine event special
-                        </Typography>
                     </Box>
 
                     <Grid container spacing={3}>
-                        {/* Description */}
+                        {/* Wine Guessing Categories Section */}
                         <Grid size={12}>
-                            <TextField
-                                fullWidth
-                                multiline
-                                rows={4}
-                                label="Event Description"
-                                placeholder="Describe your wine event, what makes it special, what guests can expect..."
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        backgroundColor: 'rgba(0,0,0,0.3)',
-                                        borderRadius: '12px',
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255,255,255,0.3)',
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(255,255,255,0.5)',
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: 'white',
-                                        },
-                                    },
-                                    '& .MuiInputBase-input': {
-                                        color: 'white',
-                                        fontSize: '1rem'
-                                    },
-                                    '& .MuiInputLabel-root': {
-                                        color: 'white',
-                                        '&.Mui-focused': {
-                                            color: 'white'
-                                        }
-                                    }
-                                }}
-                            />
+                            <Typography variant="h5" component="h3" gutterBottom sx={{ color: 'white', fontWeight: 'bold', mb: 3 }}>
+                                Wine Guessing Categories
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'white', opacity: 0.8, mb: 3 }}>
+                                Create different categories of things your guests should try to guess about each wine
+                            </Typography>
                         </Grid>
 
-                        {/* Budget and Duration */}
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                            <TextField
-                                fullWidth
-                                type="number"
-                                label="Budget per Person"
-                                placeholder="e.g., 25"
-                                value={budget}
-                                onChange={(e) => setBudget(e.target.value)}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        backgroundColor: 'rgba(0,0,0,0.3)',
-                                        borderRadius: '12px',
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255,255,255,0.3)',
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(255,255,255,0.5)',
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: 'white',
-                                        },
-                                    },
-                                    '& .MuiInputBase-input': {
-                                        color: 'white'
-                                    },
-                                    '& .MuiInputLabel-root': {
-                                        color: 'white',
-                                        '&.Mui-focused': {
-                                            color: 'white'
-                                        }
-                                    }
-                                }}
-                            />
-                        </Grid>
+                        {/* Wine Guessing Categories */}
+                        {wineCategories.map((category, index) => (
+                            <Grid key={category.id} size={12}>
+                                <Box sx={{
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    borderRadius: 2,
+                                    p: 3,
+                                    mb: 2,
+                                    backgroundColor: 'rgba(255,255,255,0.05)'
+                                }}>
 
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                            <FormControl fullWidth>
-                                <InputLabel sx={{ color: 'white', '&.Mui-focused': { color: 'white' } }}>
-                                    Duration
-                                </InputLabel>
-                                <Select
-                                    value={duration}
-                                    onChange={(e) => setDuration(e.target.value)}
+                                    <Grid container spacing={2}>
+                                        <Grid size={{ xs: 12, sm: 8 }}>
+                                            <FormControl fullWidth>
+                                                <Select
+                                                    value={category.guessingElement}
+                                                    onChange={(e) => updateCategory(category.id, 'guessingElement', e.target.value)}
+                                                    displayEmpty
+                                                    sx={{
+                                                        backgroundColor: 'rgba(0,0,0,0.3)',
+                                                        borderRadius: '12px',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(255,255,255,0.3)',
+                                                        },
+                                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(255,255,255,0.5)',
+                                                        },
+                                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'white',
+                                                        },
+                                                        '& .MuiSelect-select': {
+                                                            color: 'white'
+                                                        }
+                                                    }}
+                                                >
+                                                    <MenuItem value="" disabled>
+                                                        <em>Choose a guessing element</em>
+                                                    </MenuItem>
+                                                    {predefinedGuessingOptions.map((option) => (
+                                                        <MenuItem key={option} value={option}>
+                                                            {option}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+
+                                        <Grid size={{ xs: 12, sm: 4 }}>
+                                            <FormControl fullWidth>
+                                                <Select
+                                                    value={category.difficultyFactor}
+                                                    onChange={(e) => updateCategory(category.id, 'difficultyFactor', e.target.value)}
+                                                    displayEmpty
+                                                    sx={{
+                                                        backgroundColor: 'rgba(0,0,0,0.3)',
+                                                        borderRadius: '12px',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(255,255,255,0.3)',
+                                                        },
+                                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(255,255,255,0.5)',
+                                                        },
+                                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'white',
+                                                        },
+                                                        '& .MuiSelect-select': {
+                                                            color: 'white'
+                                                        }
+                                                    }}
+                                                >
+                                                    <MenuItem value="" disabled>
+                                                        <em>Factor (1-5)</em>
+                                                    </MenuItem>
+                                                    <MenuItem value="1">1 - Very Easy (Beginner)</MenuItem>
+                                                    <MenuItem value="2">2 - Easy</MenuItem>
+                                                    <MenuItem value="3">3 - Medium</MenuItem>
+                                                    <MenuItem value="4">4 - Hard</MenuItem>
+                                                    <MenuItem value="5">5 - Expert Level</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                    </Grid>
+                                </Box>
+                            </Grid>
+                        ))}
+
+                        {/* Add New Category Button */}
+                        <Grid size={12}>
+                            <Box sx={{ textAlign: 'center', mb: 2 }}>
+                                <Button
+                                    variant="outlined"
+                                    onClick={addNewCategory}
                                     sx={{
-                                        backgroundColor: 'rgba(0,0,0,0.3)',
-                                        borderRadius: '12px',
-                                        '& .MuiOutlinedInput-notchedOutline': {
-                                            borderColor: 'rgba(255,255,255,0.3)',
-                                        },
-                                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                                            borderColor: 'rgba(255,255,255,0.5)',
-                                        },
-                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                            borderColor: 'white',
-                                        },
-                                        '& .MuiSelect-select': {
-                                            color: 'white'
+                                        color: 'white',
+                                        borderColor: 'rgba(255,255,255,0.3)',
+                                        px: 4,
+                                        py: 1.5,
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(255,255,255,0.1)',
+                                            borderColor: 'rgba(255,255,255,0.5)'
                                         }
                                     }}
                                 >
-                                    {durationOptions.map((option) => (
-                                        <MenuItem key={option} value={option}>
-                                            {option}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                                    + Add Another Category
+                                </Button>
+                            </Box>
                         </Grid>
 
-                        {/* Wine Notes */}
-                        <Grid size={12}>
-                            <TextField
-                                fullWidth
-                                multiline
-                                rows={3}
-                                label="Wine Notes (Optional)"
-                                placeholder="Any specific wine preferences, themes, or special requests..."
-                                value={wineNotes}
-                                onChange={(e) => setWineNotes(e.target.value)}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        backgroundColor: 'rgba(0,0,0,0.3)',
-                                        borderRadius: '12px',
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255,255,255,0.3)',
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(255,255,255,0.5)',
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: 'white',
-                                        },
-                                    },
-                                    '& .MuiInputBase-input': {
-                                        color: 'white',
-                                        fontSize: '1rem'
-                                    },
-                                    '& .MuiInputLabel-root': {
-                                        color: 'white',
-                                        '&.Mui-focused': {
-                                            color: 'white'
-                                        }
-                                    }
-                                }}
-                            />
-                        </Grid>
 
                         {/* Create Button */}
                         <Grid size={12}>
@@ -323,7 +339,7 @@ export default function EventDetailsPage() {
                                     variant="contained"
                                     size="large"
                                     onClick={handleNext}
-                                    disabled={!description.trim() || !budget || !duration}
+                                    disabled={!description.trim() || !budget || !duration || !allCategoriesValid}
                                     sx={{
                                         backgroundColor: 'rgba(255,255,255,0.2)',
                                         color: 'white',
