@@ -110,9 +110,12 @@ export default function EventDetailsPage() {
             localStorage.removeItem('wineEventDetailsData');
 
             // TODO: Implement actual event creation logic with API
+            // Generate event ID in UUID format like Kahoot
+            const eventId = crypto.randomUUID();
+
             // Store event data for the created page
             localStorage.setItem('createdEventData', JSON.stringify(completeEventData));
-            navigate('/event-created');
+            navigate(`/event-created/${eventId}`);
         } else {
             alert('Please select at least one guessing element');
         }

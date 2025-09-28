@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -23,20 +23,27 @@ export default function EventCreatedPage() {
     const [eventId, setEventId] = useState<string>('');
     const [players, setPlayers] = useState<Array<{ id: string, name: string, joinedAt: string }>>([]);
     const navigate = useNavigate();
+    const { eventId: urlEventId } = useParams();
 
     useEffect(() => {
-        // Generate a unique event ID
-        const newEventId = `EVT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        setEventId(newEventId);
+        // Use event ID from URL if available, otherwise generate a new one in UUID format like Kahoot
+        const finalEventId = urlEventId || crypto.randomUUID();
+        setEventId(finalEventId);
 
         // Generate a join code (6-digit number)
         const newJoinCode = Math.floor(100000 + Math.random() * 900000).toString();
         setJoinCode(newJoinCode);
 
+        // Update the URL to include the event ID if not already there
+        if (!urlEventId) {
+            const newUrl = `/event-created/${finalEventId}`;
+            window.history.replaceState({}, '', newUrl);
+        }
+
         // Generate QR code
         const generateQRCode = async () => {
             try {
-                const qrData = `https://wine.tobiasbay.me/join/${newJoinCode}`;
+                const qrData = `https://wine.tobiasbay.me/join/${finalEventId}`;
                 const qrCodeDataURL = await QRCode.toDataURL(qrData, {
                     width: 200,
                     margin: 2,
@@ -52,7 +59,7 @@ export default function EventCreatedPage() {
         };
 
         generateQRCode();
-    }, []);
+    }, [urlEventId]);
 
     const handleBack = () => {
         navigate('/');
@@ -251,28 +258,6 @@ export default function EventCreatedPage() {
                                 justifyContent: 'center',
                                 flexDirection: { xs: 'column', sm: 'row' }
                             }}>
-                            </Box>
-                        </Grid>
-
-                        {/* Event ID - Bottom */}
-                        <Grid size={12}>
-                            <Box sx={{ textAlign: 'center', mt: 2 }}>
-                                <Typography variant="body2" sx={{ color: 'white', opacity: 0.6, mb: 1 }}>
-                                    Event ID
-                                </Typography>
-                                <Typography variant="body2" sx={{
-                                    color: 'white',
-                                    opacity: 0.8,
-                                    fontFamily: 'monospace',
-                                    fontSize: { xs: '0.7rem', sm: '0.8rem' },
-                                    wordBreak: 'break-all',
-                                    px: 1,
-                                    backgroundColor: 'rgba(255,255,255,0.05)',
-                                    borderRadius: 1,
-                                    py: 0.5
-                                }}>
-                                    {eventId}
-                                </Typography>
                             </Box>
                         </Grid>
                     </Grid>

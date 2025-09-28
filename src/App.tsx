@@ -13,6 +13,7 @@ function App() {
         <Route path="/create-event" element={<CreateEventPage />} />
         <Route path="/event-details" element={<EventDetailsPage />} />
         <Route path="/event-created" element={<EventCreatedPage />} />
+        <Route path="/event-created/:eventId" element={<EventCreatedPage />} />
       </Routes>
     </Router>
   )
