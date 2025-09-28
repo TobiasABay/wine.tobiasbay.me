@@ -12,9 +12,11 @@ import {
     ListItem,
     ListItemText,
     Avatar,
-    Divider
+    Divider,
+    FormControlLabel,
+    Switch
 } from '@mui/material';
-import { ArrowBack, Person, Fullscreen, FullscreenExit } from '@mui/icons-material';
+import { ArrowBack, Person, Fullscreen, FullscreenExit, Shuffle, PlayArrow } from '@mui/icons-material';
 import QRCode from 'qrcode';
 
 export default function EventCreatedPage() {
@@ -22,6 +24,8 @@ export default function EventCreatedPage() {
     const [joinCode, setJoinCode] = useState<string>('');
     const [players] = useState<Array<{ id: string, name: string, joinedAt: string }>>([]);
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+    const [autoShuffle, setAutoShuffle] = useState<boolean>(false);
+    const [presentationOrder, setPresentationOrder] = useState<Array<{ id: string, name: string, joinedAt: string }>>([]);
     const navigate = useNavigate();
     const { eventId: urlEventId } = useParams();
 
@@ -86,8 +90,26 @@ export default function EventCreatedPage() {
         };
     }, []);
 
+    // Handle auto shuffle logic
+    useEffect(() => {
+        if (autoShuffle && players.length > 0) {
+            // Create a shuffled copy of the players array
+            const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+            setPresentationOrder(shuffledPlayers);
+        } else {
+            // Use original order when auto shuffle is off
+            setPresentationOrder([...players]);
+        }
+    }, [players, autoShuffle]);
+
     const handleBack = () => {
         navigate('/');
+    };
+
+    const handleStart = () => {
+        // Navigate to the event details page to start the wine tasting
+        const finalEventId = urlEventId || crypto.randomUUID();
+        navigate(`/event/${finalEventId}`);
     };
 
     const toggleFullscreen = async () => {
@@ -290,9 +312,9 @@ export default function EventCreatedPage() {
                         <Grid size={12}>
                             <Box sx={{ mb: { xs: 1, sm: 2 } }}>
                                 <Typography variant="h6" sx={{ color: 'white', mb: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-                                    Players ({players.length})
+                                    Presentation Order ({presentationOrder.length})
                                 </Typography>
-                                {players.length === 0 ? (
+                                {presentationOrder.length === 0 ? (
                                     <Box sx={{
                                         textAlign: 'center',
                                         py: 4,
@@ -314,7 +336,7 @@ export default function EventCreatedPage() {
                                         overflow: 'auto'
                                     }}>
                                         <List>
-                                            {players.map((player, index) => (
+                                            {presentationOrder.map((player, index) => (
                                                 <Box key={player.id}>
                                                     <ListItem sx={{ py: 1.5 }}>
                                                         <Avatar sx={{
@@ -322,9 +344,11 @@ export default function EventCreatedPage() {
                                                             color: 'white',
                                                             mr: 2,
                                                             width: 32,
-                                                            height: 32
+                                                            height: 32,
+                                                            fontSize: '0.875rem',
+                                                            fontWeight: 'bold'
                                                         }}>
-                                                            <Person sx={{ fontSize: 20 }} />
+                                                            {index + 1}
                                                         </Avatar>
                                                         <ListItemText
                                                             primary={
@@ -334,12 +358,12 @@ export default function EventCreatedPage() {
                                                             }
                                                             secondary={
                                                                 <Typography variant="body2" sx={{ color: 'white', opacity: 0.7 }}>
-                                                                    Joined {new Date(player.joinedAt).toLocaleString()}
+                                                                    Wine #{index + 1}
                                                                 </Typography>
                                                             }
                                                         />
                                                     </ListItem>
-                                                    {index < players.length - 1 && <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />}
+                                                    {index < presentationOrder.length - 1 && <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />}
                                                 </Box>
                                             ))}
                                         </List>
@@ -348,14 +372,94 @@ export default function EventCreatedPage() {
                             </Box>
                         </Grid>
 
-                        {/* Action Buttons */}
+                        {/* Bottom Controls */}
                         <Grid size={12}>
                             <Box sx={{
                                 display: 'flex',
-                                gap: { xs: 1, sm: 2 },
-                                justifyContent: 'center',
-                                flexDirection: { xs: 'column', sm: 'row' }
+                                flexDirection: 'column',
+                                gap: 3,
+                                pt: 2,
+                                borderTop: '1px solid rgba(255,255,255,0.1)'
                             }}>
+                                {/* Auto Shuffle Toggle */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center'
+                                }}>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={autoShuffle}
+                                                onChange={(e) => setAutoShuffle(e.target.checked)}
+                                                sx={{
+                                                    '& .MuiSwitch-switchBase.Mui-checked': {
+                                                        color: 'white',
+                                                        '& + .MuiSwitch-track': {
+                                                            backgroundColor: 'rgba(255,255,255,0.5)',
+                                                        },
+                                                    },
+                                                    '& .MuiSwitch-switchBase': {
+                                                        color: 'rgba(255,255,255,0.5)',
+                                                    },
+                                                    '& .MuiSwitch-track': {
+                                                        backgroundColor: 'rgba(255,255,255,0.2)',
+                                                    },
+                                                }}
+                                            />
+                                        }
+                                        label={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, order: -1 }}>
+                                                <Shuffle sx={{ color: 'white', fontSize: '1.2rem' }} />
+                                                <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium' }}>
+                                                    Auto Shuffle
+                                                </Typography>
+                                            </Box>
+                                        }
+                                        labelPlacement="start"
+                                        sx={{
+                                            '& .MuiFormControlLabel-label': {
+                                                color: 'white',
+                                            }
+                                        }}
+                                    />
+                                </Box>
+
+                                {/* Start Button */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center'
+                                }}>
+                                    <Button
+                                        onClick={handleStart}
+                                        variant="contained"
+                                        startIcon={<PlayArrow />}
+                                        sx={{
+                                            backgroundColor: 'rgba(255,255,255,0.2)',
+                                            color: 'white',
+                                            border: '2px solid white',
+                                            borderRadius: 3,
+                                            px: 4,
+                                            py: 1.5,
+                                            fontSize: '1.1rem',
+                                            fontWeight: 'bold',
+                                            textTransform: 'none',
+                                            minWidth: 200,
+                                            '&:hover': {
+                                                backgroundColor: 'rgba(255,255,255,0.3)',
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                                            },
+                                            '&:active': {
+                                                transform: 'translateY(0px)',
+                                            },
+                                            transition: 'all 0.2s ease-in-out'
+                                        }}
+                                    >
+                                        Start
+                                    </Button>
+                                </Box>
                             </Box>
                         </Grid>
                     </Grid>
