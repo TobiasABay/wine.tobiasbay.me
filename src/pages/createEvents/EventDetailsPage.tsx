@@ -8,11 +8,10 @@ import {
     Container,
     Grid,
     FormControl,
-    InputLabel,
     Select,
     MenuItem
 } from '@mui/material';
-import { ArrowBack, Description } from '@mui/icons-material';
+import { ArrowBack, Description, Delete } from '@mui/icons-material';
 
 export default function EventDetailsPage() {
     const [description, setDescription] = useState('');
@@ -223,91 +222,113 @@ export default function EventDetailsPage() {
                             </Typography>
                         </Grid>
 
-                        {/* Wine Guessing Categories */}
-                        {wineCategories.map((category, index) => (
-                            <Grid key={category.id} size={12}>
-                                <Box sx={{
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    borderRadius: 2,
-                                    p: 3,
-                                    mb: 2,
-                                    backgroundColor: 'rgba(255,255,255,0.05)'
-                                }}>
-
-                                    <Grid container spacing={2}>
-                                        <Grid size={{ xs: 12, sm: 8 }}>
-                                            <FormControl fullWidth>
-                                                <Select
-                                                    value={category.guessingElement}
-                                                    onChange={(e) => updateCategory(category.id, 'guessingElement', e.target.value)}
-                                                    displayEmpty
-                                                    sx={{
-                                                        backgroundColor: 'rgba(0,0,0,0.3)',
-                                                        borderRadius: '12px',
-                                                        '& .MuiOutlinedInput-notchedOutline': {
-                                                            borderColor: 'rgba(255,255,255,0.3)',
-                                                        },
-                                                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                            borderColor: 'rgba(255,255,255,0.5)',
-                                                        },
-                                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                            borderColor: 'white',
-                                                        },
-                                                        '& .MuiSelect-select': {
-                                                            color: 'white'
-                                                        }
-                                                    }}
-                                                >
-                                                    <MenuItem value="" disabled>
-                                                        <em>Choose a guessing element</em>
-                                                    </MenuItem>
-                                                    {predefinedGuessingOptions.map((option) => (
-                                                        <MenuItem key={option} value={option}>
-                                                            {option}
+                        {/* Wine Guessing Categories Container */}
+                        <Grid size={12}>
+                            <Box sx={{
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: 2,
+                                p: 3,
+                                mb: 2,
+                                backgroundColor: 'rgba(255,255,255,0.05)'
+                            }}>
+                                {wineCategories.map((category, index) => (
+                                    <Box key={category.id} sx={{ mb: index < wineCategories.length - 1 ? 2 : 0 }}>
+                                        <Grid container spacing={2}>
+                                            <Grid size={{ xs: 12, sm: 8 }}>
+                                                <FormControl fullWidth>
+                                                    <Select
+                                                        value={category.guessingElement}
+                                                        onChange={(e) => updateCategory(category.id, 'guessingElement', e.target.value)}
+                                                        displayEmpty
+                                                        sx={{
+                                                            backgroundColor: 'rgba(0,0,0,0.3)',
+                                                            borderRadius: '12px',
+                                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                                borderColor: 'rgba(255,255,255,0.3)',
+                                                            },
+                                                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                                borderColor: 'rgba(255,255,255,0.5)',
+                                                            },
+                                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                                borderColor: 'white',
+                                                            },
+                                                            '& .MuiSelect-select': {
+                                                                color: 'white'
+                                                            }
+                                                        }}
+                                                    >
+                                                        <MenuItem value="" disabled>
+                                                            <em>Choose a guessing element</em>
                                                         </MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </FormControl>
-                                        </Grid>
+                                                        {predefinedGuessingOptions.map((option) => (
+                                                            <MenuItem key={option} value={option}>
+                                                                {option}
+                                                            </MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
 
-                                        <Grid size={{ xs: 12, sm: 4 }}>
-                                            <FormControl fullWidth>
-                                                <Select
-                                                    value={category.difficultyFactor}
-                                                    onChange={(e) => updateCategory(category.id, 'difficultyFactor', e.target.value)}
-                                                    displayEmpty
-                                                    sx={{
-                                                        backgroundColor: 'rgba(0,0,0,0.3)',
-                                                        borderRadius: '12px',
-                                                        '& .MuiOutlinedInput-notchedOutline': {
-                                                            borderColor: 'rgba(255,255,255,0.3)',
-                                                        },
-                                                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                            borderColor: 'rgba(255,255,255,0.5)',
-                                                        },
-                                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                            borderColor: 'white',
-                                                        },
-                                                        '& .MuiSelect-select': {
-                                                            color: 'white'
-                                                        }
-                                                    }}
-                                                >
-                                                    <MenuItem value="" disabled>
-                                                        <em>Factor (1-5)</em>
-                                                    </MenuItem>
-                                                    <MenuItem value="1">1 - Very Easy (Beginner)</MenuItem>
-                                                    <MenuItem value="2">2 - Easy</MenuItem>
-                                                    <MenuItem value="3">3 - Medium</MenuItem>
-                                                    <MenuItem value="4">4 - Hard</MenuItem>
-                                                    <MenuItem value="5">5 - Expert Level</MenuItem>
-                                                </Select>
-                                            </FormControl>
+                                            <Grid size={{ xs: 12, sm: 4 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <FormControl fullWidth>
+                                                        <Select
+                                                            value={category.difficultyFactor}
+                                                            onChange={(e) => updateCategory(category.id, 'difficultyFactor', e.target.value)}
+                                                            displayEmpty
+                                                            sx={{
+                                                                backgroundColor: 'rgba(0,0,0,0.3)',
+                                                                borderRadius: '12px',
+                                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: 'rgba(255,255,255,0.3)',
+                                                                },
+                                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: 'rgba(255,255,255,0.5)',
+                                                                },
+                                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: 'white',
+                                                                },
+                                                                '& .MuiSelect-select': {
+                                                                    color: 'white'
+                                                                }
+                                                            }}
+                                                        >
+                                                            <MenuItem value="" disabled>
+                                                                <em>Factor (1-5)</em>
+                                                            </MenuItem>
+                                                            <MenuItem value="1">1</MenuItem>
+                                                            <MenuItem value="2">2</MenuItem>
+                                                            <MenuItem value="3">3</MenuItem>
+                                                            <MenuItem value="4">4</MenuItem>
+                                                            <MenuItem value="5">5</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+                                                    {wineCategories.length > 1 && (
+                                                        <Button
+                                                            onClick={() => removeCategory(category.id)}
+                                                            sx={{
+                                                                minWidth: 'auto',
+                                                                width: 32,
+                                                                height: 32,
+                                                                borderRadius: '50%',
+                                                                backgroundColor: 'rgba(255,0,0,0.2)',
+                                                                color: 'white',
+                                                                '&:hover': {
+                                                                    backgroundColor: 'rgba(255,0,0,0.4)',
+                                                                    transform: 'scale(1.1)'
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Delete sx={{ fontSize: 18 }} />
+                                                        </Button>
+                                                    )}
+                                                </Box>
+                                            </Grid>
                                         </Grid>
-                                    </Grid>
-                                </Box>
-                            </Grid>
-                        ))}
+                                    </Box>
+                                ))}
+                            </Box>
+                        </Grid>
 
                         {/* Add New Category Button */}
                         <Grid size={12}>
