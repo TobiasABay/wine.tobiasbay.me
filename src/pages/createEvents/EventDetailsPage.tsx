@@ -10,7 +10,6 @@ import {
     FormControl,
     Select,
     MenuItem,
-    TextField
 } from '@mui/material';
 import { ArrowBack, Description, Delete } from '@mui/icons-material';
 
@@ -111,8 +110,9 @@ export default function EventDetailsPage() {
             localStorage.removeItem('wineEventDetailsData');
 
             // TODO: Implement actual event creation logic with API
-            alert(`Wine event "${completeEventData.eventName || 'Untitled'}" created successfully! 🍷`);
-            navigate('/');
+            // Store event data for the created page
+            localStorage.setItem('createdEventData', JSON.stringify(completeEventData));
+            navigate('/event-created');
         } else {
             alert('Please select at least one guessing element');
         }
