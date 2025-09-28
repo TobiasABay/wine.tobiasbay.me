@@ -14,13 +14,14 @@ import {
     Avatar,
     Divider
 } from '@mui/material';
-import { ArrowBack, Person } from '@mui/icons-material';
+import { ArrowBack, Person, Fullscreen, FullscreenExit } from '@mui/icons-material';
 import QRCode from 'qrcode';
 
 export default function EventCreatedPage() {
     const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
     const [joinCode, setJoinCode] = useState<string>('');
     const [players] = useState<Array<{ id: string, name: string, joinedAt: string }>>([]);
+    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const navigate = useNavigate();
     const { eventId: urlEventId } = useParams();
 
@@ -63,6 +64,20 @@ export default function EventCreatedPage() {
         navigate('/');
     };
 
+    const toggleFullscreen = async () => {
+        try {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen();
+                setIsFullscreen(true);
+            } else {
+                await document.exitFullscreen();
+                setIsFullscreen(false);
+            }
+        } catch (error) {
+            console.error('Error toggling fullscreen:', error);
+        }
+    };
+
     return (
         <Container
             maxWidth={false}
@@ -82,25 +97,42 @@ export default function EventCreatedPage() {
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
                     padding: 3,
                     borderBottom: '1px solid rgba(255,255,255,0.1)'
                 }}
             >
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Button
+                        onClick={handleBack}
+                        startIcon={<ArrowBack />}
+                        sx={{
+                            color: 'white',
+                            scale: 1.5,
+                            '&:hover': {
+                                scale: 1.7,
+                            }
+                        }}
+                    >
+                    </Button>
+                    <Typography variant="h4" component="h1" sx={{ ml: 3, fontWeight: 'bold', color: 'white' }}>
+                        Event Created!
+                    </Typography>
+                </Box>
+
                 <Button
-                    onClick={handleBack}
-                    startIcon={<ArrowBack />}
+                    onClick={toggleFullscreen}
                     sx={{
                         color: 'white',
-                        scale: 1.5,
+                        scale: 1.2,
                         '&:hover': {
-                            scale: 1.7,
+                            scale: 1.4,
+                            backgroundColor: 'rgba(255,255,255,0.1)'
                         }
                     }}
                 >
+                    {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
                 </Button>
-                <Typography variant="h4" component="h1" sx={{ ml: 3, fontWeight: 'bold', color: 'white' }}>
-                    Event Created!
-                </Typography>
             </Box>
 
             {/* Main Content */}
