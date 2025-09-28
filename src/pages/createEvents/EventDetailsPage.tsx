@@ -9,7 +9,8 @@ import {
     Grid,
     FormControl,
     Select,
-    MenuItem
+    MenuItem,
+    TextField
 } from '@mui/material';
 import { ArrowBack, Description, Delete } from '@mui/icons-material';
 
@@ -88,11 +89,8 @@ export default function EventDetailsPage() {
     };
 
     const handleNext = () => {
-        if (description.trim() && budget && duration && allCategoriesValid) {
+        if (allCategoriesValid) {
             const eventDetails = {
-                description,
-                budget: parseFloat(budget),
-                duration,
                 wineNotes,
                 wineCategories,
                 createdAt: new Date().toISOString()
@@ -116,7 +114,7 @@ export default function EventDetailsPage() {
             alert(`Wine event "${completeEventData.eventName || 'Untitled'}" created successfully! 🍷`);
             navigate('/');
         } else {
-            alert('Please fill in all required fields and select at least one guessing element');
+            alert('Please select at least one guessing element');
         }
     };
 
@@ -360,7 +358,7 @@ export default function EventDetailsPage() {
                                     variant="contained"
                                     size="large"
                                     onClick={handleNext}
-                                    disabled={!description.trim() || !budget || !duration || !allCategoriesValid}
+                                    disabled={!allCategoriesValid}
                                     sx={{
                                         backgroundColor: 'rgba(255,255,255,0.2)',
                                         color: 'white',
