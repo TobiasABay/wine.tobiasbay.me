@@ -1,0 +1,180 @@
+import { Box, Typography, Button, Paper } from "@mui/material";
+import { Add, GroupAdd } from "@mui/icons-material";
+
+export default function HomePage() {
+    const handleCreateEvent = () => {
+        console.log('Create event clicked');
+        // TODO: Implement create event functionality
+    };
+
+    const handleJoinEvent = () => {
+        console.log('Join event clicked');
+        // TODO: Implement join event functionality
+    };
+
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                height: '100vh',
+                padding: 0,
+                margin: 0,
+                minHeight: '100vh',
+                border: 'none',
+                outline: 'none'
+            }}
+        >
+            {/* Create Event Section */}
+            <Box
+                sx={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                        transform: 'scale(1.02)',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                    }
+                }}
+                onClick={handleCreateEvent}
+            >
+                <Paper
+                    elevation={0}
+                    sx={{
+                        background: 'rgba(255,255,255,0.1)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: 3,
+                        padding: 4,
+                        textAlign: 'center',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                            background: 'rgba(255,255,255,0.2)',
+                            transform: 'translateY(-5px)'
+                        }
+                    }}
+                >
+                    <Add sx={{ fontSize: 60, mb: 2 }} />
+                    <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
+                        Create Event
+                    </Typography>
+                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
+                        Start a new wine tasting event
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        size="large"
+                        sx={{
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            color: 'white',
+                            border: '2px solid white',
+                            px: 4,
+                            py: 1.5,
+                            fontSize: '1.1rem',
+                            fontWeight: 'bold',
+                            '&:hover': {
+                                backgroundColor: 'white',
+                                color: '#667eea',
+                                transform: 'translateY(-2px)'
+                            }
+                        }}
+                    >
+                        Get Started
+                    </Button>
+                </Paper>
+            </Box>
+
+            {/* Divider */}
+            <Box
+                sx={{
+                    width: '2px',
+                    background: 'linear-gradient(to bottom, transparent, #ccc, transparent)',
+                    position: 'relative',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '20px',
+                        height: '20px',
+                        background: '#ccc',
+                        borderRadius: '50%'
+                    }
+                }}
+            />
+
+            {/* Join Event Section */}
+            <Box
+                sx={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    color: 'white',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                        transform: 'scale(1.02)',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                    }
+                }}
+                onClick={handleJoinEvent}
+            >
+                <Paper
+                    elevation={0}
+                    sx={{
+                        background: 'rgba(255,255,255,0.1)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: 3,
+                        padding: 4,
+                        textAlign: 'center',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                            background: 'rgba(255,255,255,0.2)',
+                            transform: 'translateY(-5px)'
+                        }
+                    }}
+                >
+                    <GroupAdd sx={{ fontSize: 60, mb: 2 }} />
+                    <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
+                        Join Event
+                    </Typography>
+                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
+                        Enter an event code to join
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        size="large"
+                        sx={{
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            color: 'white',
+                            border: '2px solid white',
+                            px: 4,
+                            py: 1.5,
+                            fontSize: '1.1rem',
+                            fontWeight: 'bold',
+                            '&:hover': {
+                                backgroundColor: 'white',
+                                color: '#f5576c',
+                                transform: 'translateY(-2px)'
+                            }
+                        }}
+                    >
+                        Enter Code
+                    </Button>
+                </Paper>
+            </Box>
+        </Box>
+    )
+}
