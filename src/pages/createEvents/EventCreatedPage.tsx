@@ -20,15 +20,13 @@ import QRCode from 'qrcode';
 export default function EventCreatedPage() {
     const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
     const [joinCode, setJoinCode] = useState<string>('');
-    const [eventId, setEventId] = useState<string>('');
-    const [players, setPlayers] = useState<Array<{ id: string, name: string, joinedAt: string }>>([]);
+    const [players] = useState<Array<{ id: string, name: string, joinedAt: string }>>([]);
     const navigate = useNavigate();
     const { eventId: urlEventId } = useParams();
 
     useEffect(() => {
         // Use event ID from URL if available, otherwise generate a new one in UUID format like Kahoot
         const finalEventId = urlEventId || crypto.randomUUID();
-        setEventId(finalEventId);
 
         // Generate a join code (6-digit number)
         const newJoinCode = Math.floor(100000 + Math.random() * 900000).toString();
