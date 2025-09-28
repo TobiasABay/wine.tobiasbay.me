@@ -1,10 +1,12 @@
+import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Paper } from "@mui/material";
 import { Add, GroupAdd } from "@mui/icons-material";
 
 export default function HomePage() {
+    const navigate = useNavigate();
+
     const handleCreateEvent = () => {
-        console.log('Create event clicked');
-        // TODO: Implement create event functionality
+        navigate('/create-event');
     };
 
     const handleJoinEvent = () => {
@@ -65,7 +67,7 @@ export default function HomePage() {
                         Create Event
                     </Typography>
                     <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
-                        Start a new wine tasting event
+                        Host your own wine tasting experience
                     </Typography>
                     <Button
                         variant="contained"
@@ -78,6 +80,7 @@ export default function HomePage() {
                             py: 1.5,
                             fontSize: '1.1rem',
                             fontWeight: 'bold',
+                            borderRadius: '2rem',
                             '&:hover': {
                                 backgroundColor: 'white',
                                 color: '#667eea',
@@ -89,26 +92,6 @@ export default function HomePage() {
                     </Button>
                 </Paper>
             </Box>
-
-            {/* Divider */}
-            <Box
-                sx={{
-                    width: '2px',
-                    background: 'linear-gradient(to bottom, transparent, #ccc, transparent)',
-                    position: 'relative',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: '20px',
-                        height: '20px',
-                        background: '#ccc',
-                        borderRadius: '50%'
-                    }
-                }}
-            />
 
             {/* Join Event Section */}
             <Box
@@ -151,7 +134,7 @@ export default function HomePage() {
                         Join Event
                     </Typography>
                     <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
-                        Enter an event code to join
+                        Join an existing wine tasting event
                     </Typography>
                     <Button
                         variant="contained"
@@ -164,6 +147,8 @@ export default function HomePage() {
                             py: 1.5,
                             fontSize: '1.1rem',
                             fontWeight: 'bold',
+                            borderRadius: '2rem',
+
                             '&:hover': {
                                 backgroundColor: 'white',
                                 color: '#f5576c',
