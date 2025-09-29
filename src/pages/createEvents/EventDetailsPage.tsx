@@ -124,6 +124,9 @@ export default function EventDetailsPage() {
             const result = await apiService.createEvent(completeEventData);
             console.log('Event created successfully:', result);
 
+            // Set the event creator flag so drag and drop is enabled
+            localStorage.setItem(`event-creator-${result.eventId}`, 'true');
+
             // Clear localStorage data after successful creation
             localStorage.removeItem('wineEventFormData');
             localStorage.removeItem('wineEventDetailsData');
