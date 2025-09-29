@@ -220,7 +220,6 @@ export default function EventCreatedPage() {
                 setQrCodeUrl(qrCodeDataURL);
 
                 // Connect to WebSocket and join event room
-                const socket = webSocketService.connect();
 
                 // Set up real-time event listeners
                 webSocketService.onPlayerJoined((data) => {
