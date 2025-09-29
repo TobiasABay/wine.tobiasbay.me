@@ -39,7 +39,6 @@ import { CSS } from '@dnd-kit/utilities';
 import FullscreenButton from '../../components/FullscreenButton';
 import QRCode from 'qrcode';
 import { apiService, type Event, type Player } from '../../services/api';
-import { webSocketService } from '../../services/websocket';
 
 // Sortable Player Item Component
 function SortablePlayerItem({ player, index, canDrag }: { player: Player; index: number; canDrag: boolean }) {
@@ -127,6 +126,7 @@ export default function EventCreatedPage() {
     const [eventData, setEventData] = useState<Event | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [isEventCreator, setIsEventCreator] = useState<boolean>(false);
+    const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
     const navigate = useNavigate();
     const { eventId: urlEventId } = useParams();
 
@@ -219,33 +219,28 @@ export default function EventCreatedPage() {
                 });
                 setQrCodeUrl(qrCodeDataURL);
 
-                // Connect to WebSocket and join event room
-                webSocketService.connect();
+                // Set up polling for real-time updates (since WebSockets aren't available in Cloudflare Workers)
+                console.log('🔄 Setting up polling for real-time updates...');
 
-                // Set up real-time event listeners
-                webSocketService.onPlayerJoined((data) => {
-                    console.log('Received player-joined event:', data);
-                    setPlayers(data.allPlayers);
-                });
+                // Poll for player updates every 2 seconds
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const event = await apiService.getEvent(urlEventId);
+                        const newPlayers = event.players || [];
 
-                webSocketService.onPlayerLeft((data) => {
-                    console.log('Received player-left event:', data);
-                    setPlayers(data.allPlayers);
-                });
+                        // Only update if players have actually changed
+                        const playersChanged = JSON.stringify(players) !== JSON.stringify(newPlayers);
+                        if (playersChanged) {
+                            console.log('📊 Players updated via polling:', newPlayers);
+                            setPlayers(newPlayers);
+                        }
+                    } catch (error) {
+                        console.error('Error polling for updates:', error);
+                    }
+                }, 2000);
 
-                webSocketService.onPlayersShuffled((shuffledPlayers) => {
-                    console.log('Received players-shuffled event:', shuffledPlayers);
-                    setPlayers(shuffledPlayers);
-                });
-
-                webSocketService.onPlayersReordered((reorderedPlayers) => {
-                    console.log('Received players-reordered event:', reorderedPlayers);
-                    setPlayers(reorderedPlayers);
-                });
-
-                // Join event room after listeners are set up
-                webSocketService.joinEvent(urlEventId);
-                console.log('WebSocket connected and joined event room:', urlEventId);
+                // Store interval ID for cleanup
+                setPollingInterval(pollInterval);
 
             } catch (error) {
                 console.error('Error loading event:', error);
@@ -257,18 +252,14 @@ export default function EventCreatedPage() {
 
         loadEventData();
 
-        // Cleanup WebSocket connection on unmount
+        // Cleanup polling interval on unmount
         return () => {
-            if (urlEventId) {
-                webSocketService.leaveEvent(urlEventId);
-                // Remove specific event listeners
-                webSocketService.offPlayerJoined();
-                webSocketService.offPlayerLeft();
-                webSocketService.offPlayersShuffled();
-                webSocketService.offPlayersReordered();
+            if (pollingInterval) {
+                console.log('🧹 Clearing polling interval');
+                clearInterval(pollingInterval);
             }
         };
-    }, [urlEventId]);
+    }, [urlEventId, pollingInterval]);
 
 
     const handleAutoShuffleToggle = async (checked: boolean) => {
