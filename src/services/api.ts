@@ -74,7 +74,9 @@ class ApiService {
     }
 
     // Event API methods
-    async createEvent(eventData: EventData): Promise<{ eventId: string; joinCode: string }> {
+    async createEvent(eventData: EventData): Promise<{
+        eventId: string; joinCode: string
+    }> {
         return this.request<{ eventId: string; joinCode: string }>('/api/events', {
             method: 'POST',
             body: JSON.stringify(eventData),

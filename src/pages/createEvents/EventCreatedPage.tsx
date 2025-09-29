@@ -42,7 +42,7 @@ import { apiService, type Event, type Player } from '../../services/api';
 import { webSocketService } from '../../services/websocket';
 
 // Sortable Player Item Component
-function SortablePlayerItem({ player, index }: { player: Player; index: number }) {
+function SortablePlayerItem({ player, index, canDrag }: { player: Player; index: number; canDrag: boolean }) {
     const {
         attributes,
         listeners,
@@ -88,22 +88,24 @@ function SortablePlayerItem({ player, index }: { player: Player; index: number }
                     }
                 />
 
-                {/* Drag Handle */}
-                <Box
-                    {...attributes}
-                    {...listeners}
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        cursor: 'grab',
-                        ml: 2,
-                        '&:active': {
-                            cursor: 'grabbing',
-                        },
-                    }}
-                >
-                    <DragIndicator sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem' }} />
-                </Box>
+                {/* Drag Handle - Only show for event creator */}
+                {canDrag && (
+                    <Box
+                        {...attributes}
+                        {...listeners}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            cursor: 'grab',
+                            ml: 2,
+                            '&:active': {
+                                cursor: 'grabbing',
+                            },
+                        }}
+                    >
+                        <DragIndicator sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem' }} />
+                    </Box>
+                )}
 
             </ListItem>
             <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />
@@ -118,6 +120,7 @@ export default function EventCreatedPage() {
     const [autoShuffle, setAutoShuffle] = useState<boolean>(false);
     const [eventData, setEventData] = useState<Event | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [isEventCreator, setIsEventCreator] = useState<boolean>(false);
     const navigate = useNavigate();
     const { eventId: urlEventId } = useParams();
 
@@ -158,6 +161,11 @@ export default function EventCreatedPage() {
                 setLoading(false);
                 return;
             }
+
+            // Check if user is the event creator by looking at localStorage
+            // This is a simple approach - in a real app you'd have proper authentication
+            const isCreator = localStorage.getItem(`event-creator-${urlEventId}`) === 'true';
+            setIsEventCreator(isCreator);
 
             try {
                 const event = await apiService.getEvent(urlEventId);
@@ -439,26 +447,40 @@ export default function EventCreatedPage() {
                                         maxHeight: 300,
                                         overflow: 'auto'
                                     }}>
-                                        <DndContext
-                                            sensors={sensors}
-                                            collisionDetection={closestCenter}
-                                            onDragEnd={handleDragEnd}
-                                        >
-                                            <SortableContext
-                                                items={players.map(player => player.id)}
-                                                strategy={verticalListSortingStrategy}
+                                        {isEventCreator ? (
+                                            <DndContext
+                                                sensors={sensors}
+                                                collisionDetection={closestCenter}
+                                                onDragEnd={handleDragEnd}
                                             >
-                                                <List>
-                                                    {players.map((player, index) => (
-                                                        <SortablePlayerItem
-                                                            key={player.id}
-                                                            player={player}
-                                                            index={index}
-                                                        />
-                                                    ))}
-                                                </List>
-                                            </SortableContext>
-                                        </DndContext>
+                                                <SortableContext
+                                                    items={players.map(player => player.id)}
+                                                    strategy={verticalListSortingStrategy}
+                                                >
+                                                    <List>
+                                                        {players.map((player, index) => (
+                                                            <SortablePlayerItem
+                                                                key={player.id}
+                                                                player={player}
+                                                                index={index}
+                                                                canDrag={true}
+                                                            />
+                                                        ))}
+                                                    </List>
+                                                </SortableContext>
+                                            </DndContext>
+                                        ) : (
+                                            <List>
+                                                {players.map((player, index) => (
+                                                    <SortablePlayerItem
+                                                        key={player.id}
+                                                        player={player}
+                                                        index={index}
+                                                        canDrag={false}
+                                                    />
+                                                ))}
+                                            </List>
+                                        )}
                                     </Paper>
                                 )}
                             </Box>
@@ -473,49 +495,51 @@ export default function EventCreatedPage() {
                                 pt: 2,
                                 borderTop: '1px solid rgba(255,255,255,0.1)'
                             }}>
-                                {/* Auto Shuffle Toggle */}
-                                <Box sx={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center'
-                                }}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={autoShuffle}
-                                                onChange={(e) => handleAutoShuffleToggle(e.target.checked)}
-                                                sx={{
-                                                    '& .MuiSwitch-switchBase.Mui-checked': {
-                                                        color: 'white',
-                                                        '& + .MuiSwitch-track': {
-                                                            backgroundColor: 'rgba(255,255,255,0.5)',
+                                {/* Auto Shuffle Toggle - Only show for event creator */}
+                                {isEventCreator && (
+                                    <Box sx={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center'
+                                    }}>
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    checked={autoShuffle}
+                                                    onChange={(e) => handleAutoShuffleToggle(e.target.checked)}
+                                                    sx={{
+                                                        '& .MuiSwitch-switchBase.Mui-checked': {
+                                                            color: 'white',
+                                                            '& + .MuiSwitch-track': {
+                                                                backgroundColor: 'rgba(255,255,255,0.5)',
+                                                            },
                                                         },
-                                                    },
-                                                    '& .MuiSwitch-switchBase': {
-                                                        color: 'rgba(255,255,255,0.5)',
-                                                    },
-                                                    '& .MuiSwitch-track': {
-                                                        backgroundColor: 'rgba(255,255,255,0.2)',
-                                                    },
-                                                }}
-                                            />
-                                        }
-                                        label={
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, order: -1 }}>
-                                                <Shuffle sx={{ color: 'white', fontSize: '1.2rem' }} />
-                                                <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium' }}>
-                                                    Auto Shuffle
-                                                </Typography>
-                                            </Box>
-                                        }
-                                        labelPlacement="start"
-                                        sx={{
-                                            '& .MuiFormControlLabel-label': {
-                                                color: 'white',
+                                                        '& .MuiSwitch-switchBase': {
+                                                            color: 'rgba(255,255,255,0.5)',
+                                                        },
+                                                        '& .MuiSwitch-track': {
+                                                            backgroundColor: 'rgba(255,255,255,0.2)',
+                                                        },
+                                                    }}
+                                                />
                                             }
-                                        }}
-                                    />
-                                </Box>
+                                            label={
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, order: -1 }}>
+                                                    <Shuffle sx={{ color: 'white', fontSize: '1.2rem' }} />
+                                                    <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium' }}>
+                                                        Auto Shuffle
+                                                    </Typography>
+                                                </Box>
+                                            }
+                                            labelPlacement="start"
+                                            sx={{
+                                                '& .MuiFormControlLabel-label': {
+                                                    color: 'white',
+                                                }
+                                            }}
+                                        />
+                                    </Box>
+                                )}
 
                                 {/* Start Button */}
                                 <Box sx={{
