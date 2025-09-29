@@ -11,8 +11,7 @@ export default function HomePage() {
     };
 
     const handleJoinEvent = () => {
-        console.log('Join event clicked');
-        // TODO: Implement join event functionality
+        navigate('/join-event');
     };
 
     return (
@@ -169,7 +168,7 @@ export default function HomePage() {
                             }
                         }}
                     >
-                        Enter Code
+                        Join Event
                     </Button>
                 </Paper>
             </Box>

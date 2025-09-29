@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage'
 import CreateEventPage from './pages/createEvents/CreateEventPage'
 import EventDetailsPage from './pages/createEvents/EventDetailsPage'
 import EventCreatedPage from './pages/createEvents/EventCreatedPage'
+import JoinEventPage from './pages/joinEvents/JoinEventPage'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/event-details" element={<EventDetailsPage />} />
         <Route path="/event-created" element={<EventCreatedPage />} />
         <Route path="/event-created/:eventId" element={<EventCreatedPage />} />
+        <Route path="/join-event" element={<JoinEventPage />} />
       </Routes>
     </Router>
   )
