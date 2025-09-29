@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -17,6 +17,15 @@ export default function JoinEventPage() {
     const [playerName, setPlayerName] = useState('');
     const [joinCode, setJoinCode] = useState('');
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    // Auto-fill join code from URL parameter
+    useEffect(() => {
+        const codeFromUrl = searchParams.get('code');
+        if (codeFromUrl) {
+            setJoinCode(codeFromUrl);
+        }
+    }, [searchParams]);
 
     const handleBack = () => {
         navigate('/');
@@ -126,7 +135,10 @@ export default function JoinEventPage() {
                                     Join Wine Tasting Event
                                 </Typography>
                                 <Typography variant="body1" sx={{ color: 'white', opacity: 0.8 }}>
-                                    Enter your details to join the event
+                                    {searchParams.get('code')
+                                        ? 'Join code detected! Just enter your name to join.'
+                                        : 'Enter your details to join the event'
+                                    }
                                 </Typography>
                             </Box>
                         </Grid>
@@ -173,6 +185,7 @@ export default function JoinEventPage() {
                                 onChange={(e) => setJoinCode(e.target.value)}
                                 onKeyPress={handleEnterKey}
                                 placeholder="Enter 6-digit code"
+                                disabled={!!searchParams.get('code')}
                                 inputProps={{
                                     maxLength: 6,
                                     style: {
@@ -193,11 +206,21 @@ export default function JoinEventPage() {
                                         '&.Mui-focused fieldset': {
                                             borderColor: 'white',
                                         },
+                                        '&.Mui-disabled': {
+                                            color: 'rgba(255,255,255,0.8)',
+                                            '& fieldset': {
+                                                borderColor: 'rgba(255,255,255,0.5)',
+                                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                            },
+                                        },
                                     },
                                     '& .MuiInputLabel-root': {
                                         color: 'rgba(255,255,255,0.7)',
                                         '&.Mui-focused': {
                                             color: 'white',
+                                        },
+                                        '&.Mui-disabled': {
+                                            color: 'rgba(255,255,255,0.9)',
                                         },
                                     },
                                 }}

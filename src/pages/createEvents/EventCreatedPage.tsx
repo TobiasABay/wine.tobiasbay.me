@@ -46,8 +46,8 @@ export default function EventCreatedPage() {
                 setPlayers(event.players || []);
                 setAutoShuffle(event.auto_shuffle);
 
-                // Generate QR code
-                const qrData = `${window.location.origin}/join/${urlEventId}`;
+                // Generate QR code with join code as parameter
+                const qrData = `${window.location.origin}/join-event?code=${event.join_code}`;
                 const qrCodeDataURL = await QRCode.toDataURL(qrData, {
                     width: 200,
                     margin: 2,
