@@ -129,11 +129,15 @@ export default function EventDetailsPage() {
             const creatorSessionId = `creator-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             localStorage.setItem(`event-creator-${result.eventId}`, creatorSessionId);
 
-            // Also store a session flag to track the current user's creator status
+            // Store a session flag to track the current user's creator status
+            // This is the primary method since sessionStorage is per-tab/user
             sessionStorage.setItem(`is-creator-${result.eventId}`, 'true');
 
             // Store a timestamp to ensure the creator session is recent
             localStorage.setItem(`creator-time-${result.eventId}`, Date.now().toString());
+
+            // Store the session ID in sessionStorage as well for additional security
+            sessionStorage.setItem(`creator-session-${result.eventId}`, creatorSessionId);
 
             // Clear localStorage data after successful creation
             localStorage.removeItem('wineEventFormData');
