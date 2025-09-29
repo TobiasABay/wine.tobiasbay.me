@@ -62,16 +62,7 @@ export default function CreateEventPage() {
 
     const handleCreateEvent = () => {
         if (eventName.trim() && eventDate && maxParticipants && wineType && location.trim()) {
-            const eventData = {
-                name: eventName,
-                date: eventDate,
-                maxParticipants: parseInt(maxParticipants),
-                wineType,
-                location,
-                createdAt: new Date().toISOString()
-            };
-            console.log('Creating wine event:', eventData);
-            // Navigate to the next step
+            // Navigate to event details page to complete the event creation
             navigate('/event-details');
         } else {
             alert('Please fill in all fields to continue');

@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, Description, Delete } from '@mui/icons-material';
 import FullscreenButton from '../../components/FullscreenButton';
+import { apiService } from '../../services/api';
 
 export default function EventDetailsPage() {
     const [description, setDescription] = useState('');
@@ -88,38 +89,54 @@ export default function EventDetailsPage() {
         ));
     };
 
-    const handleNext = () => {
-        if (allCategoriesValid) {
-            const eventDetails = {
-                wineNotes,
-                wineCategories,
-                createdAt: new Date().toISOString()
-            };
-            console.log('Event details:', eventDetails);
-
+    const handleNext = async () => {
+        console.log('handleNext called!');
+        // For now, allow creating events without wine categories
+        // if (allCategoriesValid) {
+        try {
             // Get the basic event data from localStorage
             const basicEventData = localStorage.getItem('wineEventFormData');
+            if (!basicEventData) {
+                alert('Event data not found. Please go back and create an event first.');
+                navigate('/create-event');
+                return;
+            }
+
+            const parsedBasicData = JSON.parse(basicEventData);
+
+            // Combine basic event data with additional details
             const completeEventData = {
-                ...(basicEventData ? JSON.parse(basicEventData) : {}),
-                ...eventDetails
+                name: parsedBasicData.eventName.trim(),
+                date: parsedBasicData.eventDate,
+                maxParticipants: parseInt(parsedBasicData.maxParticipants),
+                wineType: parsedBasicData.wineType,
+                location: parsedBasicData.location.trim(),
+                description: description.trim(),
+                budget: budget.trim(),
+                duration: duration.trim(),
+                wineNotes: wineNotes.trim()
             };
 
-            console.log('Complete event data:', completeEventData);
+            console.log('Creating event with data:', completeEventData);
+            console.log('About to call API...');
+
+            // Create the event in the database
+            const result = await apiService.createEvent(completeEventData);
+            console.log('Event created successfully:', result);
 
             // Clear localStorage data after successful creation
             localStorage.removeItem('wineEventFormData');
             localStorage.removeItem('wineEventDetailsData');
 
-            // TODO: Implement actual event creation logic with API
-            // Generate event ID in UUID format like Kahoot
-            const eventId = crypto.randomUUID();
-
-            // Store event data for the created page
-            localStorage.setItem('createdEventData', JSON.stringify(completeEventData));
-            navigate(`/event-created/${eventId}`);
-        } else {
-            alert('Please select at least one guessing element');
+            // Navigate to the event created page with the real event ID
+            navigate(`/event-created/${result.eventId}`);
+        } catch (error) {
+            console.error('Error creating event:', error);
+            alert('Failed to create event. Please try again.');
         }
+        // } else {
+        //     alert('Please select at least one guessing element');
+        // }
     };
 
 
@@ -138,9 +155,6 @@ export default function EventDetailsPage() {
         'Finish Length'
     ];
 
-    const allCategoriesValid = wineCategories.every(category =>
-        category.guessingElement && category.difficultyFactor
-    );
 
     return (
         <Container
@@ -367,7 +381,7 @@ export default function EventDetailsPage() {
                                     variant="contained"
                                     size="large"
                                     onClick={handleNext}
-                                    disabled={!allCategoriesValid}
+                                    disabled={false}
                                     sx={{
                                         backgroundColor: 'rgba(255,255,255,0.2)',
                                         color: 'white',

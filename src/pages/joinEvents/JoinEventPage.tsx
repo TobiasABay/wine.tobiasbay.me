@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, PersonAdd } from '@mui/icons-material';
 import FullscreenButton from '../../components/FullscreenButton';
+import { apiService } from '../../services/api';
 
 export default function JoinEventPage() {
     const [playerName, setPlayerName] = useState('');
@@ -21,15 +22,22 @@ export default function JoinEventPage() {
         navigate('/');
     };
 
-    const handleJoinEvent = () => {
+    const handleJoinEvent = async () => {
         if (playerName.trim() && joinCode.trim()) {
-            // TODO: Implement actual join logic with backend
-            console.log('Joining event:', { playerName: playerName.trim(), joinCode: joinCode.trim() });
+            try {
+                const result = await apiService.joinEvent({
+                    playerName: playerName.trim(),
+                    joinCode: joinCode.trim()
+                });
 
-            // For now, navigate to a placeholder page or back to home
-            // In the future, this should navigate to the event lobby or waiting room
-            alert(`Welcome ${playerName.trim()}! You've joined event ${joinCode.trim()}`);
-            navigate('/');
+                console.log('Joined event:', result);
+
+                // Navigate to the event created page to show the event details
+                navigate(`/event-created/${result.eventId}`);
+            } catch (error: any) {
+                console.error('Error joining event:', error);
+                alert(error.message || 'Failed to join event. Please check your join code and try again.');
+            }
         } else {
             alert('Please enter both your name and the join code');
         }

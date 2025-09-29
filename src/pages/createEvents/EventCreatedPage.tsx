@@ -19,34 +19,35 @@ import {
 import { ArrowBack, Person, Shuffle, PlayArrow } from '@mui/icons-material';
 import FullscreenButton from '../../components/FullscreenButton';
 import QRCode from 'qrcode';
+import { apiService, type Event, type Player } from '../../services/api';
+import { webSocketService } from '../../services/websocket';
 
 export default function EventCreatedPage() {
     const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
     const [joinCode, setJoinCode] = useState<string>('');
-    const [players] = useState<Array<{ id: string, name: string, joinedAt: string }>>([]);
+    const [players, setPlayers] = useState<Player[]>([]);
     const [autoShuffle, setAutoShuffle] = useState<boolean>(false);
-    const [presentationOrder, setPresentationOrder] = useState<Array<{ id: string, name: string, joinedAt: string }>>([]);
+    const [eventData, setEventData] = useState<Event | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
     const navigate = useNavigate();
     const { eventId: urlEventId } = useParams();
 
     useEffect(() => {
-        // Use event ID from URL if available, otherwise generate a new one in UUID format like Kahoot
-        const finalEventId = urlEventId || crypto.randomUUID();
+        const loadEventData = async () => {
+            if (!urlEventId) {
+                setLoading(false);
+                return;
+            }
 
-        // Generate a join code (6-digit number)
-        const newJoinCode = Math.floor(100000 + Math.random() * 900000).toString();
-        setJoinCode(newJoinCode);
-
-        // Update the URL to include the event ID if not already there
-        if (!urlEventId) {
-            const newUrl = `/event-created/${finalEventId}`;
-            window.history.replaceState({}, '', newUrl);
-        }
-
-        // Generate QR code
-        const generateQRCode = async () => {
             try {
-                const qrData = `https://wine.tobiasbay.me/join/${finalEventId}`;
+                const event = await apiService.getEvent(urlEventId);
+                setEventData(event);
+                setJoinCode(event.join_code);
+                setPlayers(event.players || []);
+                setAutoShuffle(event.auto_shuffle);
+
+                // Generate QR code
+                const qrData = `https://wine.tobiasbay.me/join/${urlEventId}`;
                 const qrCodeDataURL = await QRCode.toDataURL(qrData, {
                     width: 200,
                     margin: 2,
@@ -56,37 +57,112 @@ export default function EventCreatedPage() {
                     }
                 });
                 setQrCodeUrl(qrCodeDataURL);
+
+                // Connect to WebSocket and join event room
+                webSocketService.connect();
+                webSocketService.joinEvent(urlEventId);
+
+                // Set up real-time event listeners
+                webSocketService.onPlayerJoined((data) => {
+                    setPlayers(data.allPlayers);
+                });
+
+                webSocketService.onPlayerLeft((data) => {
+                    setPlayers(data.allPlayers);
+                });
+
+                webSocketService.onPlayersShuffled((shuffledPlayers) => {
+                    setPlayers(shuffledPlayers);
+                });
+
             } catch (error) {
-                console.error('Error generating QR code:', error);
+                console.error('Error loading event:', error);
+                alert('Failed to load event data');
+            } finally {
+                setLoading(false);
             }
         };
 
-        generateQRCode();
+        loadEventData();
+
+        // Cleanup WebSocket connection on unmount
+        return () => {
+            if (urlEventId) {
+                webSocketService.leaveEvent(urlEventId);
+            }
+        };
     }, [urlEventId]);
 
 
-    // Handle auto shuffle logic
-    useEffect(() => {
-        if (autoShuffle && players.length > 0) {
-            // Create a shuffled copy of the players array
-            const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
-            setPresentationOrder(shuffledPlayers);
-        } else {
-            // Use original order when auto shuffle is off
-            setPresentationOrder([...players]);
+    const handleAutoShuffleToggle = async (checked: boolean) => {
+        if (!urlEventId) return;
+
+        try {
+            setAutoShuffle(checked);
+            await apiService.updateEventAutoShuffle(urlEventId, checked);
+        } catch (error) {
+            console.error('Error updating auto shuffle:', error);
+            // Revert the toggle if the API call failed
+            setAutoShuffle(!checked);
+            alert('Failed to update shuffle setting');
         }
-    }, [players, autoShuffle]);
+    };
 
     const handleBack = () => {
         navigate('/');
     };
 
     const handleStart = () => {
-        // Navigate to the event details page to start the wine tasting
-        const finalEventId = urlEventId || crypto.randomUUID();
-        navigate(`/event/${finalEventId}`);
+        if (urlEventId) {
+            navigate(`/event/${urlEventId}`);
+        }
     };
 
+
+    if (loading) {
+        return (
+            <Container
+                maxWidth={false}
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '100vh',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white'
+                }}
+            >
+                <Typography variant="h4" sx={{ color: 'white' }}>
+                    Loading event...
+                </Typography>
+            </Container>
+        );
+    }
+
+    if (!eventData) {
+        return (
+            <Container
+                maxWidth={false}
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '100vh',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white'
+                }}
+            >
+                <Typography variant="h4" sx={{ color: 'white' }}>
+                    Event not found
+                </Typography>
+                <Button onClick={handleBack} sx={{ mt: 2, color: 'white' }}>
+                    Go Back
+                </Button>
+            </Container>
+        );
+    }
 
     return (
         <Container
@@ -220,9 +296,9 @@ export default function EventCreatedPage() {
                         <Grid size={12}>
                             <Box sx={{ mb: { xs: 1, sm: 2 } }}>
                                 <Typography variant="h6" sx={{ color: 'white', mb: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-                                    Presentation Order ({presentationOrder.length})
+                                    Presentation Order ({players.length})
                                 </Typography>
-                                {presentationOrder.length === 0 ? (
+                                {players.length === 0 ? (
                                     <Box sx={{
                                         textAlign: 'center',
                                         py: 4,
@@ -244,7 +320,7 @@ export default function EventCreatedPage() {
                                         overflow: 'auto'
                                     }}>
                                         <List>
-                                            {presentationOrder.map((player, index) => (
+                                            {players.map((player, index) => (
                                                 <Box key={player.id}>
                                                     <ListItem sx={{ py: 1.5 }}>
                                                         <Avatar sx={{
@@ -256,7 +332,7 @@ export default function EventCreatedPage() {
                                                             fontSize: '0.875rem',
                                                             fontWeight: 'bold'
                                                         }}>
-                                                            {index + 1}
+                                                            {player.presentation_order}
                                                         </Avatar>
                                                         <ListItemText
                                                             primary={
@@ -266,12 +342,12 @@ export default function EventCreatedPage() {
                                                             }
                                                             secondary={
                                                                 <Typography variant="body2" sx={{ color: 'white', opacity: 0.7 }}>
-                                                                    Wine #{index + 1}
+                                                                    Wine #{player.presentation_order} • Joined {new Date(player.joined_at).toLocaleString()}
                                                                 </Typography>
                                                             }
                                                         />
                                                     </ListItem>
-                                                    {index < presentationOrder.length - 1 && <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />}
+                                                    {index < players.length - 1 && <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />}
                                                 </Box>
                                             ))}
                                         </List>
@@ -299,7 +375,7 @@ export default function EventCreatedPage() {
                                         control={
                                             <Switch
                                                 checked={autoShuffle}
-                                                onChange={(e) => setAutoShuffle(e.target.checked)}
+                                                onChange={(e) => handleAutoShuffleToggle(e.target.checked)}
                                                 sx={{
                                                     '& .MuiSwitch-switchBase.Mui-checked': {
                                                         color: 'white',
