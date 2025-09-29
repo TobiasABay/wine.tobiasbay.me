@@ -16,11 +16,100 @@ import {
     FormControlLabel,
     Switch
 } from '@mui/material';
-import { ArrowBack, Person, Shuffle, PlayArrow } from '@mui/icons-material';
+import { ArrowBack, Person, Shuffle, PlayArrow, DragIndicator } from '@mui/icons-material';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import FullscreenButton from '../../components/FullscreenButton';
 import QRCode from 'qrcode';
 import { apiService, type Event, type Player } from '../../services/api';
 import { webSocketService } from '../../services/websocket';
+
+// Sortable Player Item Component
+function SortablePlayerItem({ player, index }: { player: Player; index: number }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: player.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <Box key={player.id} ref={setNodeRef} style={style}>
+            <ListItem sx={{ py: 1.5, pl: 1 }}>
+                {/* Player Avatar */}
+                <Avatar sx={{
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    mr: 2,
+                    width: 32,
+                    height: 32,
+                    fontSize: '0.875rem',
+                    fontWeight: 'bold'
+                }}>
+                    {index + 1}
+                </Avatar>
+
+                {/* Player Info */}
+                <ListItemText
+                    primary={
+                        <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium' }}>
+                            {player.name}
+                        </Typography>
+                    }
+                    secondary={
+                        <Typography variant="body2" sx={{ color: 'white', opacity: 0.7 }}>
+                            Wine #{index + 1} • Joined {new Date(player.joined_at).toLocaleString()}
+                        </Typography>
+                    }
+                />
+
+                {/* Drag Handle */}
+                <Box
+                    {...attributes}
+                    {...listeners}
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        cursor: 'grab',
+                        ml: 2,
+                        '&:active': {
+                            cursor: 'grabbing',
+                        },
+                    }}
+                >
+                    <DragIndicator sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem' }} />
+                </Box>
+
+            </ListItem>
+            <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />
+        </Box>
+    );
+}
 
 export default function EventCreatedPage() {
     const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
@@ -31,6 +120,37 @@ export default function EventCreatedPage() {
     const [loading, setLoading] = useState<boolean>(true);
     const navigate = useNavigate();
     const { eventId: urlEventId } = useParams();
+
+    // Drag and drop sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    // Handle drag end
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            const oldIndex = players.findIndex(player => player.id === active.id);
+            const newIndex = players.findIndex(player => player.id === over.id);
+
+            const newPlayers = arrayMove(players, oldIndex, newIndex);
+            setPlayers(newPlayers);
+
+            // Update presentation order in database
+            try {
+                await apiService.updatePlayerOrder(urlEventId!, newPlayers);
+            } catch (error) {
+                console.error('Error updating player order:', error);
+                // Revert the change if API call fails
+                setPlayers(players);
+                alert('Failed to update player order. Please try again.');
+            }
+        }
+    };
 
     useEffect(() => {
         const loadEventData = async () => {
@@ -316,41 +436,29 @@ export default function EventCreatedPage() {
                                         backgroundColor: 'rgba(255,255,255,0.05)',
                                         borderRadius: 2,
                                         border: '1px solid rgba(255,255,255,0.1)',
-                                        maxHeight: 200,
+                                        maxHeight: 300,
                                         overflow: 'auto'
                                     }}>
-                                        <List>
-                                            {players.map((player, index) => (
-                                                <Box key={player.id}>
-                                                    <ListItem sx={{ py: 1.5 }}>
-                                                        <Avatar sx={{
-                                                            backgroundColor: 'rgba(255,255,255,0.2)',
-                                                            color: 'white',
-                                                            mr: 2,
-                                                            width: 32,
-                                                            height: 32,
-                                                            fontSize: '0.875rem',
-                                                            fontWeight: 'bold'
-                                                        }}>
-                                                            {player.presentation_order}
-                                                        </Avatar>
-                                                        <ListItemText
-                                                            primary={
-                                                                <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium' }}>
-                                                                    {player.name}
-                                                                </Typography>
-                                                            }
-                                                            secondary={
-                                                                <Typography variant="body2" sx={{ color: 'white', opacity: 0.7 }}>
-                                                                    Wine #{player.presentation_order} • Joined {new Date(player.joined_at).toLocaleString()}
-                                                                </Typography>
-                                                            }
+                                        <DndContext
+                                            sensors={sensors}
+                                            collisionDetection={closestCenter}
+                                            onDragEnd={handleDragEnd}
+                                        >
+                                            <SortableContext
+                                                items={players.map(player => player.id)}
+                                                strategy={verticalListSortingStrategy}
+                                            >
+                                                <List>
+                                                    {players.map((player, index) => (
+                                                        <SortablePlayerItem
+                                                            key={player.id}
+                                                            player={player}
+                                                            index={index}
                                                         />
-                                                    </ListItem>
-                                                    {index < players.length - 1 && <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />}
-                                                </Box>
-                                            ))}
-                                        </List>
+                                                    ))}
+                                                </List>
+                                            </SortableContext>
+                                        </DndContext>
                                     </Paper>
                                 )}
                             </Box>

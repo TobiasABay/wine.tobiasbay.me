@@ -1,6 +1,6 @@
 const API_BASE_URL = process.env.NODE_ENV === 'production'
     ? 'https://wine.tobiasbay.me/backend'
-    : 'http://localhost:3001/api';
+    : 'http://localhost:3001';
 
 export interface EventData {
     name: string;
@@ -129,6 +129,13 @@ class ApiService {
     async removePlayer(playerId: string): Promise<void> {
         return this.request<void>(`/api/players/${playerId}`, {
             method: 'DELETE',
+        });
+    }
+
+    async updatePlayerOrder(eventId: string, players: Player[]): Promise<void> {
+        return this.request<void>(`/api/events/${eventId}/players/order`, {
+            method: 'PUT',
+            body: JSON.stringify({ players }),
         });
     }
 

@@ -165,6 +165,28 @@ class Database {
         });
     }
 
+    updatePlayerOrder(eventId, players) {
+        return new Promise((resolve, reject) => {
+            // Update each player's presentation order
+            const updatePromises = players.map((player, index) => {
+                return new Promise((updateResolve, updateReject) => {
+                    const sql = 'UPDATE players SET presentation_order = ? WHERE id = ? AND event_id = ?';
+                    this.db.run(sql, [index + 1, player.id, eventId], function (err) {
+                        if (err) {
+                            updateReject(err);
+                        } else {
+                            updateResolve();
+                        }
+                    });
+                });
+            });
+
+            Promise.all(updatePromises)
+                .then(() => resolve())
+                .catch(reject);
+        });
+    }
+
     removePlayer(playerId) {
         return new Promise((resolve, reject) => {
             const sql = 'UPDATE players SET is_active = 0 WHERE id = ?';

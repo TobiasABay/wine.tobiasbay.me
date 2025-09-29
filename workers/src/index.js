@@ -27,14 +27,14 @@ export default {
         }
 
         try {
-    // Remove /backend prefix if present
-    let apiPath = path;
-    if (path.startsWith('/backend')) {
-        apiPath = path.substring(8); // Remove '/backend' (8 characters)
-    }
+            // Remove /backend prefix if present
+            let apiPath = path;
+            if (path.startsWith('/backend')) {
+                apiPath = path.substring(8); // Remove '/backend' (8 characters)
+            }
 
-    // Route handling
-    if (apiPath === '/api/health') {
+            // Route handling
+            if (apiPath === '/api/health') {
                 return new Response(JSON.stringify({
                     status: 'OK',
                     timestamp: new Date().toISOString()
@@ -47,18 +47,18 @@ export default {
                 return await createEvent(request, env, corsHeaders);
             }
 
-    if (apiPath.startsWith('/api/events/') && method === 'GET') {
-        const eventId = apiPath.split('/')[3];
+            if (apiPath.startsWith('/api/events/') && method === 'GET') {
+                const eventId = apiPath.split('/')[3];
                 return await getEvent(eventId, env, corsHeaders);
             }
 
-    if (apiPath.startsWith('/api/events/join/') && method === 'GET') {
-        const joinCode = apiPath.split('/')[4];
+            if (apiPath.startsWith('/api/events/join/') && method === 'GET') {
+                const joinCode = apiPath.split('/')[4];
                 return await getEventByJoinCode(joinCode, env, corsHeaders);
             }
 
-    if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/shuffle') && method === 'PUT') {
-        const eventId = apiPath.split('/')[3];
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/shuffle') && method === 'PUT') {
+                const eventId = apiPath.split('/')[3];
                 return await updateAutoShuffle(eventId, request, env, corsHeaders);
             }
 
@@ -66,9 +66,14 @@ export default {
                 return await joinEvent(request, env, corsHeaders);
             }
 
-    if (apiPath.startsWith('/api/players/event/') && method === 'GET') {
-        const eventId = apiPath.split('/')[4];
+            if (apiPath.startsWith('/api/players/event/') && method === 'GET') {
+                const eventId = apiPath.split('/')[4];
                 return await getEventPlayers(eventId, env, corsHeaders);
+            }
+
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/players/order') && method === 'PUT') {
+                const eventId = apiPath.split('/')[3];
+                return await updatePlayerOrder(eventId, request, env, corsHeaders);
             }
 
             return new Response(JSON.stringify({ error: 'Route not found' }), {
@@ -277,6 +282,21 @@ async function getEventPlayers(eventId, env, corsHeaders) {
   `).bind(eventId).all();
 
     return new Response(JSON.stringify(players.results || []), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+}
+
+async function updatePlayerOrder(eventId, request, env, corsHeaders) {
+    const { players } = await request.json();
+
+    // Update each player's presentation order
+    for (let i = 0; i < players.length; i++) {
+        await env.wine_events.prepare(`
+      UPDATE players SET presentation_order = ? WHERE id = ? AND event_id = ?
+    `).bind(i + 1, players[i].id, eventId).run();
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 }

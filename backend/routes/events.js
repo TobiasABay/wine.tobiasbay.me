@@ -131,4 +131,23 @@ router.post('/:eventId/shuffle-players', async (req, res) => {
     }
 });
 
+// Update player order
+router.put('/:eventId/players/order', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const { players } = req.body;
+
+        await db.updatePlayerOrder(eventId, players);
+
+        // Emit real-time update
+        const io = req.app.get('io');
+        io.to(`event-${eventId}`).emit('players-reordered', players);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating player order:', error);
+        res.status(500).json({ error: 'Failed to update player order' });
+    }
+});
+
 module.exports = router;
