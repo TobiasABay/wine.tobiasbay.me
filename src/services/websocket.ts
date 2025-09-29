@@ -81,6 +81,12 @@ class WebSocketService {
         }
     }
 
+    onPlayersReordered(callback: (players: any[]) => void): void {
+        if (this.socket) {
+            this.socket.on('players-reordered', callback);
+        }
+    }
+
     onEventCreated(callback: (data: any) => void): void {
         if (this.socket) {
             this.socket.on('event-created', callback);
@@ -109,6 +115,12 @@ class WebSocketService {
     offPlayerOrderUpdated(callback?: (players: any[]) => void): void {
         if (this.socket) {
             this.socket.off('player-order-updated', callback);
+        }
+    }
+
+    offPlayersReordered(callback?: (players: any[]) => void): void {
+        if (this.socket) {
+            this.socket.off('players-reordered', callback);
         }
     }
 

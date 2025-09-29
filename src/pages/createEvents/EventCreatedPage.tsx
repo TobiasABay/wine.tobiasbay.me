@@ -234,6 +234,10 @@ export default function EventCreatedPage() {
                     setPlayers(shuffledPlayers);
                 });
 
+                webSocketService.onPlayersReordered((reorderedPlayers) => {
+                    setPlayers(reorderedPlayers);
+                });
+
             } catch (error) {
                 console.error('Error loading event:', error);
                 alert('Failed to load event data');
@@ -248,6 +252,11 @@ export default function EventCreatedPage() {
         return () => {
             if (urlEventId) {
                 webSocketService.leaveEvent(urlEventId);
+                // Remove specific event listeners
+                webSocketService.offPlayerJoined();
+                webSocketService.offPlayerLeft();
+                webSocketService.offPlayersShuffled();
+                webSocketService.offPlayersReordered();
             }
         };
     }, [urlEventId]);
