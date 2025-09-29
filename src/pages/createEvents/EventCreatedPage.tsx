@@ -220,17 +220,21 @@ export default function EventCreatedPage() {
                 setQrCodeUrl(qrCodeDataURL);
 
                 // Connect to WebSocket and join event room
+                webSocketService.connect();
 
                 // Set up real-time event listeners
                 webSocketService.onPlayerJoined((data) => {
+                    console.log('Received player-joined event:', data);
                     setPlayers(data.allPlayers);
                 });
 
                 webSocketService.onPlayerLeft((data) => {
+                    console.log('Received player-left event:', data);
                     setPlayers(data.allPlayers);
                 });
 
                 webSocketService.onPlayersShuffled((shuffledPlayers) => {
+                    console.log('Received players-shuffled event:', shuffledPlayers);
                     setPlayers(shuffledPlayers);
                 });
 
