@@ -1,5 +1,5 @@
 const API_BASE_URL = process.env.NODE_ENV === 'production'
-    ? 'https://wine-tasting-api.tobiasabay.workers.dev'
+    ? 'https://wine.tobiasbay.me/backend'
     : 'http://localhost:3001/api';
 
 export interface EventData {

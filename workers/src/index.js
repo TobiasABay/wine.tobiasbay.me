@@ -27,8 +27,14 @@ export default {
         }
 
         try {
-            // Route handling
-            if (path === '/api/health') {
+    // Remove /backend prefix if present
+    let apiPath = path;
+    if (path.startsWith('/backend')) {
+        apiPath = path.substring(8); // Remove '/backend' (8 characters)
+    }
+
+    // Route handling
+    if (apiPath === '/api/health') {
                 return new Response(JSON.stringify({
                     status: 'OK',
                     timestamp: new Date().toISOString()
@@ -37,31 +43,31 @@ export default {
                 });
             }
 
-            if (path === '/api/events' && method === 'POST') {
+            if (apiPath === '/api/events' && method === 'POST') {
                 return await createEvent(request, env, corsHeaders);
             }
 
-            if (path.startsWith('/api/events/') && method === 'GET') {
-                const eventId = path.split('/')[3];
+    if (apiPath.startsWith('/api/events/') && method === 'GET') {
+        const eventId = apiPath.split('/')[3];
                 return await getEvent(eventId, env, corsHeaders);
             }
 
-            if (path.startsWith('/api/events/join/') && method === 'GET') {
-                const joinCode = path.split('/')[4];
+    if (apiPath.startsWith('/api/events/join/') && method === 'GET') {
+        const joinCode = apiPath.split('/')[4];
                 return await getEventByJoinCode(joinCode, env, corsHeaders);
             }
 
-            if (path.startsWith('/api/events/') && path.endsWith('/shuffle') && method === 'PUT') {
-                const eventId = path.split('/')[3];
+    if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/shuffle') && method === 'PUT') {
+        const eventId = apiPath.split('/')[3];
                 return await updateAutoShuffle(eventId, request, env, corsHeaders);
             }
 
-            if (path === '/api/players/join' && method === 'POST') {
+            if (apiPath === '/api/players/join' && method === 'POST') {
                 return await joinEvent(request, env, corsHeaders);
             }
 
-            if (path.startsWith('/api/players/event/') && method === 'GET') {
-                const eventId = path.split('/')[4];
+    if (apiPath.startsWith('/api/players/event/') && method === 'GET') {
+        const eventId = apiPath.split('/')[4];
                 return await getEventPlayers(eventId, env, corsHeaders);
             }
 

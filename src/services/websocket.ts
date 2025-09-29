@@ -7,7 +7,7 @@ class WebSocketService {
     connect(): Socket {
         if (!this.socket) {
             const wsUrl = process.env.NODE_ENV === 'production'
-                ? 'https://wine-tasting-api.tobiasabay.workers.dev'
+                ? 'https://backend.wine.tobiasbay.me'
                 : 'http://localhost:3001';
             this.socket = io(wsUrl, {
                 transports: ['websocket', 'polling'],
