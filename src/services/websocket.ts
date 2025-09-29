@@ -14,7 +14,7 @@ class WebSocketService {
             });
 
             this.socket.on('connect', () => {
-                console.log('Connected to WebSocket server');
+                console.log('Connected to WebSocket server with ID:', this.socket?.id);
             });
 
             this.socket.on('disconnect', () => {
@@ -42,8 +42,11 @@ class WebSocketService {
 
     joinEvent(eventId: string): void {
         if (this.socket) {
+            console.log('Emitting join-event for:', eventId);
             this.socket.emit('join-event', eventId);
             this.eventId = eventId;
+        } else {
+            console.error('Cannot join event - socket not connected');
         }
     }
 
@@ -83,7 +86,10 @@ class WebSocketService {
 
     onPlayersReordered(callback: (players: any[]) => void): void {
         if (this.socket) {
+            console.log('Setting up players-reordered listener');
             this.socket.on('players-reordered', callback);
+        } else {
+            console.error('Socket not connected when setting up players-reordered listener');
         }
     }
 

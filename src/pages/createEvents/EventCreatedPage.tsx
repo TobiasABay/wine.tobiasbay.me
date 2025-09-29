@@ -155,7 +155,9 @@ export default function EventCreatedPage() {
 
             // Update presentation order in database
             try {
+                console.log('Calling API to update player order:', newPlayers);
                 await apiService.updatePlayerOrder(urlEventId!, newPlayers);
+                console.log('API call successful - WebSocket event should be emitted');
             } catch (error) {
                 console.error('Error updating player order:', error);
                 // Revert the change if API call fails
@@ -218,8 +220,7 @@ export default function EventCreatedPage() {
                 setQrCodeUrl(qrCodeDataURL);
 
                 // Connect to WebSocket and join event room
-                webSocketService.connect();
-                webSocketService.joinEvent(urlEventId);
+                const socket = webSocketService.connect();
 
                 // Set up real-time event listeners
                 webSocketService.onPlayerJoined((data) => {
@@ -235,8 +236,13 @@ export default function EventCreatedPage() {
                 });
 
                 webSocketService.onPlayersReordered((reorderedPlayers) => {
+                    console.log('Received players-reordered event:', reorderedPlayers);
                     setPlayers(reorderedPlayers);
                 });
+
+                // Join event room after listeners are set up
+                webSocketService.joinEvent(urlEventId);
+                console.log('WebSocket connected and joined event room:', urlEventId);
 
             } catch (error) {
                 console.error('Error loading event:', error);
