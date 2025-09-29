@@ -98,12 +98,18 @@ function SortablePlayerItem({ player, index, canDrag }: { player: Player; index:
                             alignItems: 'center',
                             cursor: 'grab',
                             ml: 2,
+                            padding: '8px',
+                            borderRadius: '4px',
+                            '&:hover': {
+                                backgroundColor: 'rgba(255,255,255,0.1)',
+                            },
                             '&:active': {
                                 cursor: 'grabbing',
+                                backgroundColor: 'rgba(255,255,255,0.2)',
                             },
                         }}
                     >
-                        <DragIndicator sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem' }} />
+                        <DragIndicator sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.2rem' }} />
                     </Box>
                 )}
 
@@ -126,7 +132,11 @@ export default function EventCreatedPage() {
 
     // Drag and drop sensors
     const sensors = useSensors(
-        useSensor(PointerSensor),
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
         })
@@ -162,9 +172,30 @@ export default function EventCreatedPage() {
                 return;
             }
 
-            // Check if user is the event creator by looking at localStorage
+            // Check if user is the event creator by looking at sessionStorage and localStorage
             // This is a simple approach - in a real app you'd have proper authentication
-            const isCreator = localStorage.getItem(`event-creator-${urlEventId}`) === 'true';
+            const hasCreatorSession = sessionStorage.getItem(`is-creator-${urlEventId}`) === 'true';
+            const hasCreatorLocalStorage = localStorage.getItem(`event-creator-${urlEventId}`) !== null;
+            const creatorTime = localStorage.getItem(`creator-time-${urlEventId}`);
+
+            // Check if the creator session is recent (within last 24 hours)
+            const isRecentCreator = creatorTime !== null && (Date.now() - parseInt(creatorTime)) < (24 * 60 * 60 * 1000);
+
+            // User is creator if they have sessionStorage OR if they have recent localStorage
+            // Fallback: if localStorage exists but no timestamp, assume they're the creator (for backward compatibility)
+            const isCreator = hasCreatorSession || (hasCreatorLocalStorage && isRecentCreator) || (hasCreatorLocalStorage && !creatorTime);
+
+            // Debug logging to troubleshoot the issue
+            console.log('Event creator check:', {
+                urlEventId,
+                hasCreatorSession,
+                hasCreatorLocalStorage,
+                isRecentCreator,
+                isCreator,
+                sessionStorageValue: sessionStorage.getItem(`is-creator-${urlEventId}`),
+                localStorageValue: localStorage.getItem(`event-creator-${urlEventId}`),
+                creatorTime: localStorage.getItem(`creator-time-${urlEventId}`)
+            });
             setIsEventCreator(isCreator);
 
             try {

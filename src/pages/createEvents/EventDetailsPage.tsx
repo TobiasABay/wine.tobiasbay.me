@@ -125,7 +125,15 @@ export default function EventDetailsPage() {
             console.log('Event created successfully:', result);
 
             // Set the event creator flag so drag and drop is enabled
-            localStorage.setItem(`event-creator-${result.eventId}`, 'true');
+            // Store the creator session with a unique identifier and timestamp
+            const creatorSessionId = `creator-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem(`event-creator-${result.eventId}`, creatorSessionId);
+
+            // Also store a session flag to track the current user's creator status
+            sessionStorage.setItem(`is-creator-${result.eventId}`, 'true');
+
+            // Store a timestamp to ensure the creator session is recent
+            localStorage.setItem(`creator-time-${result.eventId}`, Date.now().toString());
 
             // Clear localStorage data after successful creation
             localStorage.removeItem('wineEventFormData');
