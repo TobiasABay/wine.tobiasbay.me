@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NODE_ENV === 'production'
+    ? 'https://wine-tasting-api.tobiasabay.workers.dev'
+    : 'http://localhost:3001/api';
 
 export interface EventData {
     name: string;
@@ -73,29 +75,29 @@ class ApiService {
 
     // Event API methods
     async createEvent(eventData: EventData): Promise<{ eventId: string; joinCode: string }> {
-        return this.request<{ eventId: string; joinCode: string }>('/events', {
+        return this.request<{ eventId: string; joinCode: string }>('/api/events', {
             method: 'POST',
             body: JSON.stringify(eventData),
         });
     }
 
     async getEvent(eventId: string): Promise<Event> {
-        return this.request<Event>(`/events/${eventId}`);
+        return this.request<Event>(`/api/events/${eventId}`);
     }
 
     async getEventByJoinCode(joinCode: string): Promise<Event> {
-        return this.request<Event>(`/events/join/${joinCode}`);
+        return this.request<Event>(`/api/events/join/${joinCode}`);
     }
 
     async updateEventAutoShuffle(eventId: string, autoShuffle: boolean): Promise<void> {
-        return this.request<void>(`/events/${eventId}/shuffle`, {
+        return this.request<void>(`/api/events/${eventId}/shuffle`, {
             method: 'PUT',
             body: JSON.stringify({ autoShuffle }),
         });
     }
 
     async shufflePlayers(eventId: string): Promise<{ players: Player[] }> {
-        return this.request<{ players: Player[] }>(`/events/${eventId}/shuffle-players`, {
+        return this.request<{ players: Player[] }>(`/api/events/${eventId}/shuffle-players`, {
             method: 'POST',
         });
     }
@@ -114,25 +116,25 @@ class ApiService {
             playerId: string;
             presentationOrder: number;
             message: string;
-        }>('/players/join', {
+        }>('/api/players/join', {
             method: 'POST',
             body: JSON.stringify(joinData),
         });
     }
 
     async getEventPlayers(eventId: string): Promise<Player[]> {
-        return this.request<Player[]>(`/players/event/${eventId}`);
+        return this.request<Player[]>(`/api/players/event/${eventId}`);
     }
 
     async removePlayer(playerId: string): Promise<void> {
-        return this.request<void>(`/players/${playerId}`, {
+        return this.request<void>(`/api/players/${playerId}`, {
             method: 'DELETE',
         });
     }
 
     // Health check
     async healthCheck(): Promise<{ status: string; timestamp: string }> {
-        return this.request<{ status: string; timestamp: string }>('/health');
+        return this.request<{ status: string; timestamp: string }>('/api/health');
     }
 }
 

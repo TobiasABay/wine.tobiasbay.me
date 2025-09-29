@@ -1,0 +1,20 @@
+{
+    "name": "wine-tasting-workers",
+    "version": "1.0.0",
+    "description": "Cloudflare Workers backend for wine tasting app",
+    "main": "src/index.js",
+    "scripts": {
+        "dev": "wrangler dev",
+        "deploy": "wrangler deploy",
+        "db:create": "wrangler d1 create wine-events",
+        "db:migrate": "wrangler d1 migrations apply wine-events --local",
+        "db:migrate:prod": "wrangler d1 migrations apply wine-events"
+    },
+    "devDependencies": {
+        "@cloudflare/workers-types": "^4.20240925.0",
+        "wrangler": "^3.78.12"
+    },
+    "dependencies": {
+        "uuid": "^9.0.1"
+    }
+}

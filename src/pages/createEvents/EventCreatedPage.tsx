@@ -47,7 +47,7 @@ export default function EventCreatedPage() {
                 setAutoShuffle(event.auto_shuffle);
 
                 // Generate QR code
-                const qrData = `https://wine.tobiasbay.me/join/${urlEventId}`;
+                const qrData = `${window.location.origin}/join/${urlEventId}`;
                 const qrCodeDataURL = await QRCode.toDataURL(qrData, {
                     width: 200,
                     margin: 2,

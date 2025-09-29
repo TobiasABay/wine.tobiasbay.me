@@ -1,0 +1,45 @@
+-- Events table
+CREATE TABLE IF NOT EXISTS events (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    date TEXT NOT NULL,
+    max_participants INTEGER NOT NULL,
+    wine_type TEXT NOT NULL,
+    location TEXT NOT NULL,
+    description TEXT,
+    budget TEXT,
+    duration TEXT,
+    wine_notes TEXT,
+    join_code TEXT UNIQUE NOT NULL,
+    is_active BOOLEAN DEFAULT 1,
+    auto_shuffle BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Players table
+CREATE TABLE IF NOT EXISTS players (
+    id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    presentation_order INTEGER,
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT 1,
+    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
+);
+
+-- Wine categories table
+CREATE TABLE IF NOT EXISTS wine_categories (
+    id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL,
+    guessing_element TEXT NOT NULL,
+    difficulty_factor TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
+);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_events_join_code ON events(join_code);
+CREATE INDEX IF NOT EXISTS idx_players_event_id ON players(event_id);
+CREATE INDEX IF NOT EXISTS idx_wine_categories_event_id ON wine_categories(event_id);
+CREATE INDEX IF NOT EXISTS idx_players_presentation_order ON players(event_id, presentation_order);
