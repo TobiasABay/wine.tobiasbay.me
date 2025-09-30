@@ -13,59 +13,32 @@ interface WineCategoriesDisplayProps {
     eventId: string;
 }
 
-interface WineAnswer {
-    wine_answer: string;
-    player_name: string;
-    presentation_order: number;
-}
-
-interface WineCategoryWithAnswers {
+interface WineCategory {
     id: string;
     guessing_element: string;
     difficulty_factor: string;
-    answers: WineAnswer[];
 }
 
 export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplayProps) {
-    const [categories, setCategories] = useState<WineCategoryWithAnswers[]>([]);
+    const [categories, setCategories] = useState<WineCategory[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
 
     useEffect(() => {
-        const fetchWineAnswers = async () => {
+        const fetchWineCategories = async () => {
             try {
-                // First, get the wine categories
-                console.log('Testing wine categories endpoint...');
+                console.log('Fetching wine categories...');
                 const categoriesResponse = await apiService.getWineCategories(eventId);
                 console.log('Wine categories response:', categoriesResponse);
 
-                // Try to get wine answers, but fallback to categories only if it fails
-                let wineAnswersResponse = null;
-                try {
-                    wineAnswersResponse = await apiService.getEventWineAnswers(eventId);
-                    console.log('Wine answers response:', wineAnswersResponse);
-                } catch (answersError) {
-                    console.log('Wine answers API failed, using categories only:', answersError);
-                }
-
-                // Use wine answers if available, otherwise use categories with empty answers
-                if (wineAnswersResponse && wineAnswersResponse.categories && Array.isArray(wineAnswersResponse.categories)) {
-                    setCategories(wineAnswersResponse.categories);
-                } else if (categoriesResponse && Array.isArray(categoriesResponse)) {
-                    // Convert categories to the expected format with empty answers
-                    const categoriesWithEmptyAnswers = categoriesResponse.map(category => ({
-                        id: category.id,
-                        guessing_element: category.guessing_element,
-                        difficulty_factor: category.difficulty_factor,
-                        answers: []
-                    }));
-                    setCategories(categoriesWithEmptyAnswers);
+                if (categoriesResponse && Array.isArray(categoriesResponse)) {
+                    setCategories(categoriesResponse);
                 } else {
                     console.log('No valid categories found');
                     setCategories([]);
                 }
             } catch (error: any) {
-                console.error('Error fetching wine data:', error);
+                console.error('Error fetching wine categories:', error);
                 setError(error.message || 'Failed to load wine categories');
                 setCategories([]);
             } finally {
@@ -74,7 +47,7 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
         };
 
         if (eventId) {
-            fetchWineAnswers();
+            fetchWineCategories();
         } else {
             setLoading(false);
         }
@@ -151,9 +124,6 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                 {categories.map((category) => {
                     if (!category || !category.id) return null;
 
-                    const answers = category.answers || [];
-                    const answerCount = answers.length;
-
                     return (
                         <Paper
                             key={category.id}
@@ -208,105 +178,35 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                 )}
                             </Box>
 
-                            {/* Player Guesses */}
-                            <Box>
+                            {/* Placeholder for future guesses from rating page */}
+                            <Box
+                                sx={{
+                                    p: 3,
+                                    textAlign: 'center',
+                                    backgroundColor: 'rgba(0,0,0,0.05)',
+                                    borderRadius: 2,
+                                    border: '2px dashed rgba(0,0,0,0.1)'
+                                }}
+                            >
                                 <Typography
-                                    variant="h6"
+                                    variant="body1"
                                     sx={{
-                                        color: '#34495e',
-                                        fontWeight: 'medium',
-                                        mb: 2,
-                                        fontSize: '1rem'
+                                        color: '#7f8c8d',
+                                        fontStyle: 'italic',
+                                        fontWeight: 'medium'
                                     }}
                                 >
-                                    Player Guesses ({answerCount})
+                                    Player guesses will appear here
                                 </Typography>
-
-                                {answerCount === 0 ? (
-                                    <Box
-                                        sx={{
-                                            p: 3,
-                                            textAlign: 'center',
-                                            backgroundColor: 'rgba(0,0,0,0.05)',
-                                            borderRadius: 2,
-                                            border: '2px dashed rgba(0,0,0,0.1)'
-                                        }}
-                                    >
-                                        <Typography
-                                            variant="body1"
-                                            sx={{
-                                                color: '#7f8c8d',
-                                                fontStyle: 'italic',
-                                                fontWeight: 'medium'
-                                            }}
-                                        >
-                                            No guesses submitted yet
-                                        </Typography>
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                color: '#95a5a6',
-                                                mt: 1
-                                            }}
-                                        >
-                                            Players will appear here once they submit their guesses
-                                        </Typography>
-                                    </Box>
-                                ) : (
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                                        {answers.map((answer, index) => {
-                                            if (!answer) return null;
-                                            return (
-                                                <Paper
-                                                    key={index}
-                                                    sx={{
-                                                        p: 2,
-                                                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                                        border: '1px solid rgba(102, 126, 234, 0.2)',
-                                                        borderRadius: 2,
-                                                        minWidth: '200px',
-                                                        flex: '1 1 auto'
-                                                    }}
-                                                >
-                                                    <Typography
-                                                        variant="subtitle2"
-                                                        sx={{
-                                                            color: '#2c3e50',
-                                                            fontWeight: 'bold',
-                                                            mb: 1,
-                                                            fontSize: '0.9rem'
-                                                        }}
-                                                    >
-                                                        {answer.player_name || 'Unknown Player'}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="body1"
-                                                        sx={{
-                                                            color: '#34495e',
-                                                            fontWeight: 'medium',
-                                                            fontSize: '1rem'
-                                                        }}
-                                                    >
-                                                        {answer.wine_answer || 'No answer'}
-                                                    </Typography>
-                                                    {answer.presentation_order && (
-                                                        <Typography
-                                                            variant="caption"
-                                                            sx={{
-                                                                color: '#7f8c8d',
-                                                                fontSize: '0.75rem',
-                                                                display: 'block',
-                                                                mt: 0.5
-                                                            }}
-                                                        >
-                                                            Order: #{answer.presentation_order}
-                                                        </Typography>
-                                                    )}
-                                                </Paper>
-                                            );
-                                        })}
-                                    </Box>
-                                )}
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        color: '#95a5a6',
+                                        mt: 1
+                                    }}
+                                >
+                                    After players rate and guess the wines
+                                </Typography>
                             </Box>
                         </Paper>
                     );
