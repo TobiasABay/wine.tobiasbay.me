@@ -221,9 +221,18 @@ async function getEvent(eventId, env, corsHeaders) {
     ORDER BY presentation_order ASC
   `).bind(eventId).all();
 
+    // Convert SQLite boolean values (0/1) to actual booleans
+    const processedPlayers = (players.results || []).map(player => ({
+        ...player,
+        is_active: Boolean(player.is_active),
+        is_ready: Boolean(player.is_ready)
+    }));
+
     return new Response(JSON.stringify({
         ...event,
-        players: players.results || []
+        is_active: Boolean(event.is_active),
+        auto_shuffle: Boolean(event.auto_shuffle),
+        players: processedPlayers
     }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -247,9 +256,18 @@ async function getEventByJoinCode(joinCode, env, corsHeaders) {
     ORDER BY presentation_order ASC
   `).bind(event.id).all();
 
+    // Convert SQLite boolean values (0/1) to actual booleans
+    const processedPlayers = (players.results || []).map(player => ({
+        ...player,
+        is_active: Boolean(player.is_active),
+        is_ready: Boolean(player.is_ready)
+    }));
+
     return new Response(JSON.stringify({
         ...event,
-        players: players.results || []
+        is_active: Boolean(event.is_active),
+        auto_shuffle: Boolean(event.auto_shuffle),
+        players: processedPlayers
     }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
