@@ -37,6 +37,7 @@ export interface Player {
     presentation_order: number;
     joined_at: string;
     is_active: boolean;
+    is_ready: boolean;
     wine_details?: PlayerWineDetail[];
 }
 
@@ -183,6 +184,13 @@ class ApiService {
 
     async getPlayerWineDetails(playerId: string): Promise<PlayerWineDetail[]> {
         return this.request<PlayerWineDetail[]>(`/api/players/${playerId}/wine-details`);
+    }
+
+    async updatePlayerReadyStatus(playerId: string, isReady: boolean): Promise<{ success: boolean; message: string }> {
+        return this.request<{ success: boolean; message: string }>(`/api/players/${playerId}/ready`, {
+            method: 'PUT',
+            body: JSON.stringify({ isReady })
+        });
     }
 
     // Health check

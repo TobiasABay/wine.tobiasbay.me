@@ -283,6 +283,9 @@ export default function JoinEventPage() {
                 wineAnswers: wineAnswerData
             });
 
+            // Store player ID for ready status tracking
+            localStorage.setItem(`player-id-${result.eventId}`, result.playerId);
+
             // Successfully joined event
             navigate(`/event-created/${result.eventId}`);
         } catch (error: any) {

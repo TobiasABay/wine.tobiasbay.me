@@ -16,7 +16,7 @@ import {
     FormControlLabel,
     Switch
 } from '@mui/material';
-import { ArrowBack, Person, Shuffle, PlayArrow, DragIndicator } from '@mui/icons-material';
+import { ArrowBack, Person, Shuffle, PlayArrow, DragIndicator, CheckCircle } from '@mui/icons-material';
 import {
     DndContext,
     closestCenter,
@@ -76,9 +76,14 @@ function SortablePlayerItem({ player, index, canDrag }: { player: Player; index:
                 {/* Player Info */}
                 <ListItemText
                     primary={
-                        <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium' }}>
-                            {player.name}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium' }}>
+                                {player.name}
+                            </Typography>
+                            {player.is_ready && (
+                                <CheckCircle sx={{ color: '#4caf50', fontSize: '1.2rem' }} />
+                            )}
+                        </Box>
                     }
                     secondary={
                         <Box>
@@ -147,6 +152,8 @@ export default function EventCreatedPage() {
     const [loading, setLoading] = useState<boolean>(true);
     const [isEventCreator, setIsEventCreator] = useState<boolean>(false);
     const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+    const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
+    const [isReady, setIsReady] = useState<boolean>(false);
     const navigate = useNavigate();
     const { eventId: urlEventId } = useParams();
 
@@ -224,6 +231,17 @@ export default function EventCreatedPage() {
                 const event = await apiService.getEvent(urlEventId);
                 setEventData(event);
                 setJoinCode(event.join_code);
+
+                // If not the creator, find the current player
+                if (!isCreator) {
+                    const currentPlayer = event.players?.find(player =>
+                        localStorage.getItem(`player-id-${urlEventId}`) === player.id
+                    );
+                    if (currentPlayer) {
+                        setCurrentPlayerId(currentPlayer.id);
+                        setIsReady(currentPlayer.is_ready);
+                    }
+                }
 
                 // Load players with their wine details
                 const playersWithWineDetails = await Promise.all(
@@ -390,6 +408,19 @@ export default function EventCreatedPage() {
     const handleStart = () => {
         if (urlEventId) {
             navigate(`/event/${urlEventId}`);
+        }
+    };
+
+    const handleReadyToggle = async () => {
+        if (!currentPlayerId) return;
+
+        try {
+            const newReadyStatus = !isReady;
+            await apiService.updatePlayerReadyStatus(currentPlayerId, newReadyStatus);
+            setIsReady(newReadyStatus);
+        } catch (error) {
+            console.error('Error updating ready status:', error);
+            alert('Failed to update ready status. Please try again.');
         }
     };
 
@@ -688,40 +719,71 @@ export default function EventCreatedPage() {
                                     </Box>
                                 )}
 
-                                {/* Start Button */}
+                                {/* Action Button */}
                                 <Box sx={{
                                     display: 'flex',
                                     justifyContent: 'center',
                                     alignItems: 'center'
                                 }}>
-                                    <Button
-                                        onClick={handleStart}
-                                        variant="contained"
-                                        startIcon={<PlayArrow />}
-                                        sx={{
-                                            backgroundColor: 'rgba(255,255,255,0.2)',
-                                            color: 'white',
-                                            border: '2px solid white',
-                                            borderRadius: 3,
-                                            px: 4,
-                                            py: 1.5,
-                                            fontSize: '1.1rem',
-                                            fontWeight: 'bold',
-                                            textTransform: 'none',
-                                            minWidth: 200,
-                                            '&:hover': {
-                                                backgroundColor: 'rgba(255,255,255,0.3)',
-                                                transform: 'translateY(-2px)',
-                                                boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
-                                            },
-                                            '&:active': {
-                                                transform: 'translateY(0px)',
-                                            },
-                                            transition: 'all 0.2s ease-in-out'
-                                        }}
-                                    >
-                                        Start
-                                    </Button>
+                                    {isEventCreator ? (
+                                        <Button
+                                            onClick={handleStart}
+                                            variant="contained"
+                                            startIcon={<PlayArrow />}
+                                            sx={{
+                                                backgroundColor: 'rgba(255,255,255,0.2)',
+                                                color: 'white',
+                                                border: '2px solid white',
+                                                borderRadius: 3,
+                                                px: 4,
+                                                py: 1.5,
+                                                fontSize: '1.1rem',
+                                                fontWeight: 'bold',
+                                                textTransform: 'none',
+                                                minWidth: 200,
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(255,255,255,0.3)',
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                                                },
+                                                '&:active': {
+                                                    transform: 'translateY(0px)',
+                                                },
+                                                transition: 'all 0.2s ease-in-out'
+                                            }}
+                                        >
+                                            Start Event
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={handleReadyToggle}
+                                            variant="contained"
+                                            startIcon={isReady ? <CheckCircle /> : <Person />}
+                                            sx={{
+                                                backgroundColor: isReady ? 'rgba(76,175,80,0.8)' : 'rgba(255,255,255,0.2)',
+                                                color: 'white',
+                                                border: `2px solid ${isReady ? '#4caf50' : 'white'}`,
+                                                borderRadius: 3,
+                                                px: 4,
+                                                py: 1.5,
+                                                fontSize: '1.1rem',
+                                                fontWeight: 'bold',
+                                                textTransform: 'none',
+                                                minWidth: 200,
+                                                '&:hover': {
+                                                    backgroundColor: isReady ? 'rgba(76,175,80,0.9)' : 'rgba(255,255,255,0.3)',
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                                                },
+                                                '&:active': {
+                                                    transform: 'translateY(0px)',
+                                                },
+                                                transition: 'all 0.2s ease-in-out'
+                                            }}
+                                        >
+                                            {isReady ? 'Ready!' : 'Ready'}
+                                        </Button>
+                                    )}
                                 </Box>
                             </Box>
                         </Grid>

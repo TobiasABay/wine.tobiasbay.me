@@ -99,6 +99,11 @@ export default {
                 return await submitWineAnswers(request, env, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/players/') && apiPath.endsWith('/ready') && method === 'PUT') {
+                const playerId = apiPath.split('/')[3];
+                return await updatePlayerReadyStatus(request, env, playerId, corsHeaders);
+            }
+
             return new Response(JSON.stringify({
                 error: 'Route not found',
                 debug: {
@@ -548,6 +553,45 @@ async function testWineAnswers(env, corsHeaders) {
             error: 'Wine answers test failed',
             details: error.message,
             stack: error.stack
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function updatePlayerReadyStatus(request, env, playerId, corsHeaders) {
+    try {
+        const data = await request.json();
+        const { isReady } = data;
+
+        if (typeof isReady !== 'boolean') {
+            return new Response(JSON.stringify({
+                error: 'Invalid ready status'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Update player ready status
+        await env.wine_events.prepare(`
+            UPDATE players 
+            SET is_ready = ? 
+            WHERE id = ?
+        `).bind(isReady, playerId).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Player ready status updated'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error updating player ready status:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to update ready status',
+            details: error.message
         }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
