@@ -17,7 +17,6 @@ import {
     MenuItem
 } from '@mui/material';
 import { ArrowBack, PersonAdd, WineBar } from '@mui/icons-material';
-import FullscreenButton from '../../components/FullscreenButton';
 import { apiService, type Event, type WineCategory } from '../../services/api';
 
 // Predefined lists for wine regions and countries
@@ -348,7 +347,6 @@ export default function JoinEventPage() {
                 position: 'relative'
             }}
         >
-            <FullscreenButton />
             <Paper
                 elevation={24}
                 sx={{
