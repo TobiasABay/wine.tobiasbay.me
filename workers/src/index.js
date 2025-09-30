@@ -394,8 +394,10 @@ async function getWineCategories(eventId, env, corsHeaders) {
 async function submitWineAnswers(request, env, corsHeaders) {
     try {
         const { playerId, wineAnswers } = await request.json();
+        console.log('Submitting wine answers:', { playerId, wineAnswers });
 
         if (!playerId || !wineAnswers || !Array.isArray(wineAnswers)) {
+            console.log('Validation failed:', { playerId, wineAnswers, isArray: Array.isArray(wineAnswers) });
             return new Response(JSON.stringify({
                 error: 'Player ID and wine answers array are required'
             }), {
@@ -407,6 +409,7 @@ async function submitWineAnswers(request, env, corsHeaders) {
         // Validate wine answers
         for (const answer of wineAnswers) {
             if (!answer.categoryId || !answer.wineAnswer) {
+                console.log('Answer validation failed:', answer);
                 return new Response(JSON.stringify({
                     error: 'Each wine answer must have categoryId and wineAnswer'
                 }), {
@@ -416,27 +419,37 @@ async function submitWineAnswers(request, env, corsHeaders) {
             }
         }
 
+        console.log('About to delete existing answers...');
         // First, delete any existing answers for this player
         await env.wine_events.prepare(`
             DELETE FROM player_wine_details WHERE player_id = ?
         `).bind(playerId).run();
+        console.log('Existing answers deleted');
 
+        console.log('About to insert new answers...');
         // Insert new answers
         for (const answer of wineAnswers) {
             const answerId = generateUUID();
+            console.log('Inserting answer:', { answerId, playerId, categoryId: answer.categoryId, wineAnswer: answer.wineAnswer });
             await env.wine_events.prepare(`
                 INSERT INTO player_wine_details (
                     id, player_id, category_id, wine_answer
                 ) VALUES (?, ?, ?, ?)
             `).bind(answerId, playerId, answer.categoryId, answer.wineAnswer).run();
         }
+        console.log('All answers inserted successfully');
 
         return new Response(JSON.stringify({ success: true }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
     } catch (error) {
         console.error('Error submitting wine answers:', error);
-        return new Response(JSON.stringify({ error: 'Failed to save wine answers' }), {
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+        return new Response(JSON.stringify({
+            error: 'Failed to save wine answers',
+            details: error.message
+        }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
