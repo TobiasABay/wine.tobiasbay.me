@@ -37,23 +37,38 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
     useEffect(() => {
         const fetchWineAnswers = async () => {
             try {
-                // First, let's test the wine categories endpoint
+                // First, get the wine categories
                 console.log('Testing wine categories endpoint...');
                 const categoriesResponse = await apiService.getWineCategories(eventId);
                 console.log('Wine categories response:', categoriesResponse);
 
-                // Now try the wine answers endpoint
-                const response = await apiService.getEventWineAnswers(eventId);
-                console.log('Wine answers response:', response);
+                // Try to get wine answers, but fallback to categories only if it fails
+                let wineAnswersResponse = null;
+                try {
+                    wineAnswersResponse = await apiService.getEventWineAnswers(eventId);
+                    console.log('Wine answers response:', wineAnswersResponse);
+                } catch (answersError) {
+                    console.log('Wine answers API failed, using categories only:', answersError);
+                }
 
-                if (response && response.categories && Array.isArray(response.categories)) {
-                    setCategories(response.categories);
+                // Use wine answers if available, otherwise use categories with empty answers
+                if (wineAnswersResponse && wineAnswersResponse.categories && Array.isArray(wineAnswersResponse.categories)) {
+                    setCategories(wineAnswersResponse.categories);
+                } else if (categoriesResponse && Array.isArray(categoriesResponse)) {
+                    // Convert categories to the expected format with empty answers
+                    const categoriesWithEmptyAnswers = categoriesResponse.map(category => ({
+                        id: category.id,
+                        guessing_element: category.guessingElement,
+                        difficulty_factor: category.difficultyFactor,
+                        answers: []
+                    }));
+                    setCategories(categoriesWithEmptyAnswers);
                 } else {
-                    console.log('Invalid response structure:', response);
+                    console.log('No valid categories found');
                     setCategories([]);
                 }
             } catch (error: any) {
-                console.error('Error fetching wine answers:', error);
+                console.error('Error fetching wine data:', error);
                 setError(error.message || 'Failed to load wine categories');
                 setCategories([]);
             } finally {
