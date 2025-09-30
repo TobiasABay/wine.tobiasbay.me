@@ -257,40 +257,44 @@ export default function EventCreatedPage() {
                 setQrCodeUrl(qrCodeDataURL);
 
                 // Set up polling for real-time updates (since WebSockets aren't available in Cloudflare Workers)
-                console.log('🔄 Setting up polling for real-time updates...');
+                // Setting up polling for real-time updates
 
-                // Poll for player updates every 2 seconds
+                // Poll for player updates every 10 seconds (reduced frequency)
                 const pollInterval = setInterval(async () => {
                     try {
                         const event = await apiService.getEvent(urlEventId);
                         const newPlayers = event.players || [];
 
-                        // Load wine details for new players
-                        const playersWithWineDetails = await Promise.all(
-                            newPlayers.map(async (player) => {
-                                try {
-                                    const wineDetails = await apiService.getPlayerWineDetails(player.id);
-                                    return {
-                                        ...player,
-                                        wine_details: wineDetails
-                                    };
-                                } catch (error) {
-                                    console.error(`Error loading wine details for player ${player.id}:`, error);
-                                    return player;
-                                }
-                            })
-                        );
+                        // Only load wine details if we have new players or player count changed
+                        const currentPlayerIds = players.map(p => p.id).sort();
+                        const newPlayerIds = newPlayers.map(p => p.id).sort();
+                        const hasNewPlayers = JSON.stringify(currentPlayerIds) !== JSON.stringify(newPlayerIds);
 
-                        // Only update if players have actually changed
-                        const playersChanged = JSON.stringify(players) !== JSON.stringify(playersWithWineDetails);
-                        if (playersChanged) {
-                            console.log('📊 Players updated via polling:', playersWithWineDetails);
+                        if (hasNewPlayers) {
+                            // New players detected, loading wine details
+
+                            // Load wine details for new players only
+                            const playersWithWineDetails = await Promise.all(
+                                newPlayers.map(async (player) => {
+                                    try {
+                                        const wineDetails = await apiService.getPlayerWineDetails(player.id);
+                                        return {
+                                            ...player,
+                                            wine_details: wineDetails
+                                        };
+                                    } catch (error) {
+                                        console.error(`Error loading wine details for player ${player.id}:`, error);
+                                        return player;
+                                    }
+                                })
+                            );
+
                             setPlayers(playersWithWineDetails);
                         }
                     } catch (error) {
                         console.error('Error polling for updates:', error);
                     }
-                }, 2000);
+                }, 10000); // Increased from 2000ms to 10000ms (10 seconds)
 
                 // Store interval ID for cleanup
                 setPollingInterval(pollInterval);
@@ -305,12 +309,62 @@ export default function EventCreatedPage() {
 
         loadEventData();
 
-        // Cleanup polling interval on unmount
+        // Cleanup polling interval on unmount and pause when page is not visible
+        const handleVisibilityChange = () => {
+            if (document.hidden && pollingInterval) {
+                // Page hidden, pausing polling
+                clearInterval(pollingInterval);
+                setPollingInterval(null);
+            } else if (!document.hidden && !pollingInterval && urlEventId) {
+                // Page visible, resuming polling
+                // Restart polling when page becomes visible
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const event = await apiService.getEvent(urlEventId);
+                        const newPlayers = event.players || [];
+
+                        // Only load wine details if we have new players or player count changed
+                        const currentPlayerIds = players.map(p => p.id).sort();
+                        const newPlayerIds = newPlayers.map(p => p.id).sort();
+                        const hasNewPlayers = JSON.stringify(currentPlayerIds) !== JSON.stringify(newPlayerIds);
+
+                        if (hasNewPlayers) {
+                            // New players detected, loading wine details
+
+                            // Load wine details for new players only
+                            const playersWithWineDetails = await Promise.all(
+                                newPlayers.map(async (player) => {
+                                    try {
+                                        const wineDetails = await apiService.getPlayerWineDetails(player.id);
+                                        return {
+                                            ...player,
+                                            wine_details: wineDetails
+                                        };
+                                    } catch (error) {
+                                        console.error(`Error loading wine details for player ${player.id}:`, error);
+                                        return player;
+                                    }
+                                })
+                            );
+
+                            setPlayers(playersWithWineDetails);
+                        }
+                    } catch (error) {
+                        console.error('Error polling for updates:', error);
+                    }
+                }, 10000);
+                setPollingInterval(pollInterval);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         return () => {
             if (pollingInterval) {
-                console.log('🧹 Clearing polling interval');
+                // Clearing polling interval
                 clearInterval(pollingInterval);
             }
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [urlEventId, pollingInterval]);
 

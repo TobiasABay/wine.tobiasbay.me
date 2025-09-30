@@ -276,19 +276,14 @@ export default function JoinEventPage() {
                 wineAnswer: wineAnswers[category.id]
             }));
 
-            console.log('Frontend: Submitting wine answers:', {
-                playerId: result.playerId,
-                wineAnswers: wineAnswerData,
-                wineCategories: wineCategories,
-                wineAnswersState: wineAnswers
-            });
+            // Submit wine answers
 
             await apiService.submitWineAnswers({
                 playerId: result.playerId,
                 wineAnswers: wineAnswerData
             });
 
-            console.log('Joined event with wine details:', result);
+            // Successfully joined event
             navigate(`/event-created/${result.eventId}`);
         } catch (error: any) {
             console.error('Error joining event:', error);

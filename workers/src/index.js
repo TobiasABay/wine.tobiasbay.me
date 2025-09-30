@@ -521,7 +521,7 @@ async function testWineAnswers(env, corsHeaders) {
             ]
         };
 
-        console.log('Testing wine answers with data:', testData);
+        // Testing wine answers functionality
 
         // Test if we can insert into player_wine_details table
         const answerId = generateUUID();
