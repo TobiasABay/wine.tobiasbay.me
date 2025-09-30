@@ -193,6 +193,17 @@ class ApiService {
         });
     }
 
+    async getWineScores(eventId: string): Promise<{ success: boolean; averages: Record<string, { average: number; totalScores: number; scores: any[] }>; allScores: any[] }> {
+        return this.request<{ success: boolean; averages: Record<string, { average: number; totalScores: number; scores: any[] }>; allScores: any[] }>(`/api/events/${eventId}/scores`);
+    }
+
+    async submitWineScore(eventId: string, playerId: string, wineNumber: number, score: number): Promise<{ success: boolean; message: string }> {
+        return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}/scores`, {
+            method: 'POST',
+            body: JSON.stringify({ playerId, wineNumber, score })
+        });
+    }
+
     // Health check
     async healthCheck(): Promise<{ status: string; timestamp: string }> {
         return this.request<{ status: string; timestamp: string }>('/api/health');

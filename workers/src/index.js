@@ -104,6 +104,16 @@ export default {
                 return await updatePlayerReadyStatus(request, env, playerId, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'GET') {
+                const eventId = apiPath.split('/')[3];
+                return await getWineScores(env, eventId, corsHeaders);
+            }
+
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'POST') {
+                const eventId = apiPath.split('/')[3];
+                return await submitWineScore(request, env, eventId, corsHeaders);
+            }
+
             return new Response(JSON.stringify({
                 error: 'Route not found',
                 debug: {
@@ -609,6 +619,110 @@ async function updatePlayerReadyStatus(request, env, playerId, corsHeaders) {
         console.error('Error updating player ready status:', error);
         return new Response(JSON.stringify({
             error: 'Failed to update ready status',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getWineScores(env, eventId, corsHeaders) {
+    try {
+        // Get all scores for the event
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ?
+            ORDER BY ws.wine_number, p.presentation_order
+        `).bind(eventId).all();
+
+        // Calculate average scores by wine number
+        const wineAverages = {};
+        const wineCounts = {};
+
+        scores.results.forEach(score => {
+            const wineNum = score.wine_number;
+            if (!wineAverages[wineNum]) {
+                wineAverages[wineNum] = 0;
+                wineCounts[wineNum] = 0;
+            }
+            wineAverages[wineNum] += score.score;
+            wineCounts[wineNum]++;
+        });
+
+        // Calculate final averages
+        const averages = {};
+        Object.keys(wineAverages).forEach(wineNum => {
+            averages[wineNum] = {
+                average: Math.round((wineAverages[wineNum] / wineCounts[wineNum]) * 10) / 10,
+                totalScores: wineCounts[wineNum],
+                scores: scores.results.filter(s => s.wine_number == wineNum)
+            };
+        });
+
+        return new Response(JSON.stringify({
+            success: true,
+            averages: averages,
+            allScores: scores.results
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error getting wine scores:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to get wine scores',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function submitWineScore(request, env, eventId, corsHeaders) {
+    try {
+        const data = await request.json();
+        const { playerId, wineNumber, score } = data;
+
+        if (!playerId || !wineNumber || !score) {
+            return new Response(JSON.stringify({
+                error: 'Missing required fields: playerId, wineNumber, score'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        if (score < 1 || score > 10) {
+            return new Response(JSON.stringify({
+                error: 'Score must be between 1 and 10'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        const scoreId = generateUUID();
+
+        // Insert or update the score
+        await env.wine_events.prepare(`
+            INSERT OR REPLACE INTO wine_scores (
+                id, event_id, player_id, wine_number, score, updated_at
+            ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `).bind(scoreId, eventId, playerId, wineNumber, score).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Wine score submitted successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error submitting wine score:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to submit wine score',
             details: error.message
         }), {
             status: 500,

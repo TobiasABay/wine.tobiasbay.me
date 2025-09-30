@@ -9,6 +9,7 @@ import {
 import { ArrowBack } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Player } from '../services/api';
+import AverageScore from '../components/AverageScore';
 
 export default function EventPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
@@ -114,7 +115,7 @@ export default function EventPage() {
                     </Button>
 
                     {/* Player Name and Wine Number */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 4 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 4 }}>
                         <Typography
                             variant="h1"
                             sx={{
@@ -140,6 +141,16 @@ export default function EventPage() {
                         </Typography>
                     </Box>
                 </Box>
+
+                {/* Average Score Component */}
+                {eventId && currentPlayer && (
+                    <Box sx={{ mt: 4 }}>
+                        <AverageScore 
+                            eventId={eventId} 
+                            wineNumber={currentPlayer.presentation_order} 
+                        />
+                    </Box>
+                )}
             </Container>
         </Box>
     );
