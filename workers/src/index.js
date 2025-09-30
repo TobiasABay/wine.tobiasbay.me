@@ -49,6 +49,10 @@ export default {
                 return await debugDatabase(env, corsHeaders);
             }
 
+            if (apiPath === '/api/debug/test-wine-answers') {
+                return await testWineAnswers(env, corsHeaders);
+            }
+
             if (apiPath === '/api/events' && method === 'POST') {
                 return await createEvent(request, env, corsHeaders);
             }
@@ -498,6 +502,52 @@ async function debugDatabase(env, corsHeaders) {
         return new Response(JSON.stringify({
             error: 'Database debug failed',
             details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function testWineAnswers(env, corsHeaders) {
+    try {
+        const testData = {
+            playerId: 'test-player-id',
+            wineAnswers: [
+                {
+                    categoryId: 'test-category-id',
+                    wineAnswer: 'Test Answer'
+                }
+            ]
+        };
+
+        console.log('Testing wine answers with data:', testData);
+
+        // Test if we can insert into player_wine_details table
+        const answerId = generateUUID();
+        await env.wine_events.prepare(`
+            INSERT INTO player_wine_details (
+                id, player_id, category_id, wine_answer
+            ) VALUES (?, ?, ?, ?)
+        `).bind(answerId, testData.playerId, testData.wineAnswers[0].categoryId, testData.wineAnswers[0].wineAnswer).run();
+
+        // Clean up test data
+        await env.wine_events.prepare(`
+            DELETE FROM player_wine_details WHERE id = ?
+        `).bind(answerId).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Wine answers table is working correctly'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error in testWineAnswers:', error);
+        return new Response(JSON.stringify({
+            error: 'Wine answers test failed',
+            details: error.message,
+            stack: error.stack
         }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
