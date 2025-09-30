@@ -108,6 +108,19 @@ class Database {
         });
     }
 
+    getAllEvents() {
+        return new Promise((resolve, reject) => {
+            const sql = 'SELECT * FROM events ORDER BY created_at DESC';
+            this.db.all(sql, [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    }
+
     updateEventAutoShuffle(eventId, autoShuffle) {
         return new Promise((resolve, reject) => {
             const sql = 'UPDATE events SET auto_shuffle = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';

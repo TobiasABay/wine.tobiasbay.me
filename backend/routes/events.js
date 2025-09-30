@@ -55,14 +55,29 @@ router.get('/:eventId', async (req, res) => {
     }
 });
 
+// List all events (for debugging)
+router.get('/list', async (req, res) => {
+    try {
+        const events = await db.getAllEvents();
+        res.json(events);
+    } catch (error) {
+        console.error('Error listing events:', error);
+        res.status(500).json({ error: 'Failed to list events' });
+    }
+});
+
 // Get event by join code
 router.get('/join/:joinCode', async (req, res) => {
     try {
         const { joinCode } = req.params;
+        console.log('Looking for event with join code:', joinCode);
+
         const event = await db.getEventByJoinCode(joinCode);
+        console.log('Found event:', event ? 'Yes' : 'No');
 
         if (!event) {
-            return res.status(404).json({ error: 'Invalid join code' });
+            console.log('Event not found for join code:', joinCode);
+            return res.status(404).json({ error: 'Event not found' });
         }
 
         // Get players for this event
