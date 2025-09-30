@@ -71,6 +71,16 @@ export default {
                 return await getWineCategories(eventId, env, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'GET') {
+                const eventId = apiPath.split('/')[3];
+                return await getWineScores(env, eventId, corsHeaders);
+            }
+
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'POST') {
+                const eventId = apiPath.split('/')[3];
+                return await submitWineScore(request, env, eventId, corsHeaders);
+            }
+
             if (apiPath.startsWith('/api/events/') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
                 return await getEvent(eventId, env, corsHeaders);
@@ -102,16 +112,6 @@ export default {
             if (apiPath.startsWith('/api/players/') && apiPath.endsWith('/ready') && method === 'PUT') {
                 const playerId = apiPath.split('/')[3];
                 return await updatePlayerReadyStatus(request, env, playerId, corsHeaders);
-            }
-
-            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'GET') {
-                const eventId = apiPath.split('/')[3];
-                return await getWineScores(env, eventId, corsHeaders);
-            }
-
-            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'POST') {
-                const eventId = apiPath.split('/')[3];
-                return await submitWineScore(request, env, eventId, corsHeaders);
             }
 
             return new Response(JSON.stringify({

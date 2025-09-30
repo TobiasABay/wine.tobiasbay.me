@@ -35,11 +35,22 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
         const fetchScores = async () => {
             try {
                 const response = await apiService.getWineScores(eventId);
-                const wineData = response.averages[wineNumber.toString()];
 
-                if (wineData) {
-                    setScoreData(wineData);
+                // Check if response and averages exist
+                if (response && response.averages) {
+                    const wineData = response.averages[wineNumber.toString()];
+
+                    if (wineData) {
+                        setScoreData(wineData);
+                    } else {
+                        setScoreData({
+                            average: 0,
+                            totalScores: 0,
+                            scores: []
+                        });
+                    }
                 } else {
+                    // No scores data available yet
                     setScoreData({
                         average: 0,
                         totalScores: 0,
