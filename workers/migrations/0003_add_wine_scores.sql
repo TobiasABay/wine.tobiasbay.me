@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS wine_scores (
     event_id TEXT NOT NULL,
     player_id TEXT NOT NULL,
     wine_number INTEGER NOT NULL,
-    score INTEGER NOT NULL CHECK (score >= 1 AND score <= 10),
+    score INTEGER NOT NULL CHECK (score >= 1 AND score <= 5),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,

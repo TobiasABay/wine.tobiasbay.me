@@ -37,6 +37,12 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
     useEffect(() => {
         const fetchWineAnswers = async () => {
             try {
+                // First, let's test the wine categories endpoint
+                console.log('Testing wine categories endpoint...');
+                const categoriesResponse = await apiService.getWineCategories(eventId);
+                console.log('Wine categories response:', categoriesResponse);
+
+                // Now try the wine answers endpoint
                 const response = await apiService.getEventWineAnswers(eventId);
                 console.log('Wine answers response:', response);
 

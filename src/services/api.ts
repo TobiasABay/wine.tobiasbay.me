@@ -210,12 +210,16 @@ class ApiService {
                 }>;
             }>(`/api/events/${eventId}/wine-answers`);
 
+            console.log('Raw API response:', response);
+
             // Ensure the response has the expected structure
             if (!response) {
+                console.log('No response received');
                 return { success: false, categories: [] };
             }
 
             if (!response.categories || !Array.isArray(response.categories)) {
+                console.log('Invalid categories structure:', response);
                 return { success: response.success || false, categories: [] };
             }
 

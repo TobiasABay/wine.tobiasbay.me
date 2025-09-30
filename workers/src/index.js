@@ -797,6 +797,24 @@ async function getEventWineAnswers(eventId, env, corsHeaders) {
     try {
         console.log('Getting wine answers for event:', eventId);
 
+        // First check if the event exists
+        const eventCheck = await env.wine_events.prepare(`
+            SELECT id, name FROM events WHERE id = ?
+        `).bind(eventId).first();
+
+        console.log('Event check result:', eventCheck);
+
+        if (!eventCheck) {
+            console.log('Event not found:', eventId);
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Event not found',
+                categories: []
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
         // Get all wine categories for this event
         const categoriesResult = await env.wine_events.prepare(`
             SELECT id, guessing_element, difficulty_factor
