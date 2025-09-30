@@ -90,24 +90,6 @@ function SortablePlayerItem({ player, index, canDrag }: { player: Player; index:
                             <Typography variant="body2" sx={{ color: 'white', opacity: 0.7 }}>
                                 Wine #{index + 1} • Joined {new Date(player.joined_at).toLocaleString()}
                             </Typography>
-                            {player.wine_details && player.wine_details.length > 0 && (
-                                <Box sx={{ mt: 1 }}>
-                                    {player.wine_details.map((wineDetail, idx) => (
-                                        <Typography
-                                            key={idx}
-                                            variant="caption"
-                                            sx={{
-                                                color: 'white',
-                                                opacity: 0.6,
-                                                display: 'block',
-                                                fontSize: '0.75rem'
-                                            }}
-                                        >
-                                            {(wineDetail as any).guessing_element || 'Detail'}: {wineDetail.wine_answer}
-                                        </Typography>
-                                    ))}
-                                </Box>
-                            )}
                         </Box>
                     }
                 />
