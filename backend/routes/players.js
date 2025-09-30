@@ -190,4 +190,30 @@ router.get('/:playerId/wine-details', async (req, res) => {
     }
 });
 
+// Update player ready status
+router.put('/:playerId/ready', async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        const { isReady } = req.body;
+
+        if (typeof isReady !== 'boolean') {
+            return res.status(400).json({ error: 'isReady must be a boolean value' });
+        }
+
+        await db.updatePlayerReadyStatus(playerId, isReady);
+
+        // Get the player's event ID to emit update
+        const event = await db.getEventByPlayerId(playerId);
+        if (event) {
+            const io = req.app.get('io');
+            io.to(`event-${event.id}`).emit('player-ready-updated', { playerId, isReady });
+        }
+
+        res.json({ success: true, message: `Player ${isReady ? 'marked as ready' : 'marked as not ready'}` });
+    } catch (error) {
+        console.error('Error updating player ready status:', error);
+        res.status(500).json({ error: 'Failed to update ready status' });
+    }
+});
+
 module.exports = router;

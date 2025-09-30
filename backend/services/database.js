@@ -347,6 +347,45 @@ class Database {
         });
     }
 
+    startEvent(eventId) {
+        return new Promise((resolve, reject) => {
+            const sql = 'UPDATE events SET event_started = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+            this.db.run(sql, [eventId], function (err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    updatePlayerReadyStatus(playerId, isReady) {
+        return new Promise((resolve, reject) => {
+            const sql = 'UPDATE players SET is_ready = ? WHERE id = ?';
+            this.db.run(sql, [isReady ? 1 : 0, playerId], function (err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    getEventByPlayerId(playerId) {
+        return new Promise((resolve, reject) => {
+            const sql = 'SELECT e.* FROM events e JOIN players p ON e.id = p.event_id WHERE p.id = ?';
+            this.db.get(sql, [playerId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
     close() {
         this.db.close((err) => {
             if (err) {

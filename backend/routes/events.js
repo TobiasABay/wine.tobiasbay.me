@@ -127,6 +127,23 @@ router.get('/:id/wine-categories', async (req, res) => {
     }
 });
 
+// Start an event
+router.post('/:eventId/start', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        await db.startEvent(eventId);
+
+        // Emit real-time update
+        const io = req.app.get('io');
+        io.to(`event-${eventId}`).emit('event-started', { eventId });
+
+        res.json({ success: true, message: 'Event started successfully' });
+    } catch (error) {
+        console.error('Error starting event:', error);
+        res.status(500).json({ error: 'Failed to start event' });
+    }
+});
+
 // Update event auto shuffle setting
 router.put('/:eventId/shuffle', async (req, res) => {
     try {

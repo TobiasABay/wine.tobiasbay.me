@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS events (
     join_code TEXT UNIQUE NOT NULL,
     is_active BOOLEAN DEFAULT 1,
     auto_shuffle BOOLEAN DEFAULT 0,
+    event_started BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -25,6 +26,7 @@ CREATE TABLE IF NOT EXISTS players (
     presentation_order INTEGER,
     joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT 1,
+    is_ready BOOLEAN DEFAULT 0,
     FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
 );
 

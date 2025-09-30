@@ -1,6 +1,5 @@
-const API_BASE_URL = process.env.NODE_ENV === 'production'
-    ? 'https://wine.tobiasbay.me/backend'
-    : 'http://localhost:3001';
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_BASE_URL = isLocalhost ? 'http://localhost:3001' : 'https://wine.tobiasbay.me/backend';
 
 export interface WineCategory {
     id: string;
@@ -181,6 +180,10 @@ class ApiService {
 
     async getWineCategories(eventId: string): Promise<WineCategory[]> {
         return this.request<WineCategory[]>(`/api/events/${eventId}/wine-categories`);
+    }
+
+    async getEventByJoinCode(joinCode: string): Promise<Event> {
+        return this.request<Event>(`/api/events/join/${joinCode}`);
     }
 
     async getPlayerWineDetails(playerId: string): Promise<PlayerWineDetail[]> {
