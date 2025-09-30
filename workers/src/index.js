@@ -33,6 +33,8 @@ export default {
                 apiPath = path.substring(8); // Remove '/backend' (8 characters)
             }
 
+            console.log('Request path:', path, 'API path:', apiPath, 'Method:', method);
+
             // Route handling
             if (apiPath === '/api/health') {
                 return new Response(JSON.stringify({
@@ -43,18 +45,31 @@ export default {
                 });
             }
 
+            if (apiPath === '/api/debug/database') {
+                return await debugDatabase(env, corsHeaders);
+            }
+
             if (apiPath === '/api/events' && method === 'POST') {
                 return await createEvent(request, env, corsHeaders);
             }
 
-            if (apiPath.startsWith('/api/events/') && method === 'GET') {
-                const eventId = apiPath.split('/')[3];
-                return await getEvent(eventId, env, corsHeaders);
+            if (apiPath === '/api/events/list' && method === 'GET') {
+                return await getAllEvents(env, corsHeaders);
             }
 
             if (apiPath.startsWith('/api/events/join/') && method === 'GET') {
                 const joinCode = apiPath.split('/')[4];
                 return await getEventByJoinCode(joinCode, env, corsHeaders);
+            }
+
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/wine-categories') && method === 'GET') {
+                const eventId = apiPath.split('/')[3];
+                return await getWineCategories(eventId, env, corsHeaders);
+            }
+
+            if (apiPath.startsWith('/api/events/') && method === 'GET') {
+                const eventId = apiPath.split('/')[3];
+                return await getEvent(eventId, env, corsHeaders);
             }
 
             if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/shuffle') && method === 'PUT') {
@@ -76,20 +91,29 @@ export default {
                 return await updatePlayerOrder(eventId, request, env, corsHeaders);
             }
 
-            if (apiPath === '/api/events/list' && method === 'GET') {
-                return await getAllEvents(env, corsHeaders);
-            }
-
-            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/wine-categories') && method === 'GET') {
-                const eventId = apiPath.split('/')[3];
-                return await getWineCategories(eventId, env, corsHeaders);
-            }
-
             if (apiPath === '/api/players/wine-answers' && method === 'POST') {
                 return await submitWineAnswers(request, env, corsHeaders);
             }
 
-            return new Response(JSON.stringify({ error: 'Route not found' }), {
+            return new Response(JSON.stringify({
+                error: 'Route not found',
+                debug: {
+                    path: path,
+                    apiPath: apiPath,
+                    method: method,
+                    availableRoutes: [
+                        'GET /api/health',
+                        'GET /api/debug/database',
+                        'GET /api/events/list',
+                        'POST /api/events',
+                        'GET /api/events/:id',
+                        'GET /api/events/join/:joinCode',
+                        'GET /api/events/:id/wine-categories',
+                        'POST /api/players/join',
+                        'POST /api/players/wine-answers'
+                    ]
+                }
+            }), {
                 status: 404,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
@@ -413,6 +437,55 @@ async function submitWineAnswers(request, env, corsHeaders) {
     } catch (error) {
         console.error('Error submitting wine answers:', error);
         return new Response(JSON.stringify({ error: 'Failed to save wine answers' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function debugDatabase(env, corsHeaders) {
+    try {
+        const debug = {
+            timestamp: new Date().toISOString(),
+            database: 'connected',
+            tables: {}
+        };
+
+        // Check if tables exist and get row counts
+        const tables = ['events', 'players', 'wine_categories', 'player_wine_details'];
+
+        for (const table of tables) {
+            try {
+                const result = await env.wine_events.prepare(`SELECT COUNT(*) as count FROM ${table}`).first();
+                debug.tables[table] = {
+                    exists: true,
+                    rowCount: result.count
+                };
+            } catch (error) {
+                debug.tables[table] = {
+                    exists: false,
+                    error: error.message
+                };
+            }
+        }
+
+        // Get all events
+        try {
+            const events = await env.wine_events.prepare(`SELECT id, name, join_code, created_at FROM events ORDER BY created_at DESC`).all();
+            debug.events = events.results || [];
+        } catch (error) {
+            debug.events = { error: error.message };
+        }
+
+        return new Response(JSON.stringify(debug), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error in debugDatabase:', error);
+        return new Response(JSON.stringify({
+            error: 'Database debug failed',
+            details: error.message
+        }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
