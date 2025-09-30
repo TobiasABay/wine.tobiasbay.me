@@ -53,6 +53,11 @@ export default {
                 return await testWineAnswers(env, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/debug/event/') && apiPath.endsWith('/categories') && method === 'GET') {
+                const eventId = apiPath.split('/')[4];
+                return await debugEventCategories(eventId, env, corsHeaders);
+            }
+
             if (apiPath === '/api/events' && method === 'POST') {
                 return await createEvent(request, env, corsHeaders);
             }
@@ -790,6 +795,8 @@ async function startEvent(eventId, env, corsHeaders) {
 
 async function getEventWineAnswers(eventId, env, corsHeaders) {
     try {
+        console.log('Getting wine answers for event:', eventId);
+
         // Get all wine categories for this event
         const categoriesResult = await env.wine_events.prepare(`
             SELECT id, guessing_element, difficulty_factor
@@ -798,7 +805,10 @@ async function getEventWineAnswers(eventId, env, corsHeaders) {
             ORDER BY created_at
         `).bind(eventId).all();
 
+        console.log('Categories result:', categoriesResult);
+
         if (!categoriesResult.results || categoriesResult.results.length === 0) {
+            console.log('No categories found for event:', eventId);
             return new Response(JSON.stringify({
                 success: true,
                 categories: []
@@ -810,6 +820,8 @@ async function getEventWineAnswers(eventId, env, corsHeaders) {
         // Get all wine answers for this event grouped by category
         const categoriesWithAnswers = await Promise.all(
             categoriesResult.results.map(async (category) => {
+                console.log('Getting answers for category:', category.id, category.guessing_element);
+
                 const answersResult = await env.wine_events.prepare(`
                     SELECT pwd.wine_answer, p.name as player_name, p.presentation_order
                     FROM player_wine_details pwd
@@ -817,6 +829,8 @@ async function getEventWineAnswers(eventId, env, corsHeaders) {
                     WHERE pwd.category_id = ? AND p.event_id = ?
                     ORDER BY p.presentation_order
                 `).bind(category.id, eventId).all();
+
+                console.log('Answers for category', category.guessing_element, ':', answersResult);
 
                 return {
                     id: category.id,
@@ -837,6 +851,50 @@ async function getEventWineAnswers(eventId, env, corsHeaders) {
         console.error('Error getting event wine answers:', error);
         return new Response(JSON.stringify({
             error: 'Failed to get wine answers',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function debugEventCategories(eventId, env, corsHeaders) {
+    try {
+        console.log('Debug: Getting categories for event:', eventId);
+
+        // Get all wine categories for this event
+        const categoriesResult = await env.wine_events.prepare(`
+            SELECT id, guessing_element, difficulty_factor, created_at
+            FROM wine_categories
+            WHERE event_id = ?
+            ORDER BY created_at
+        `).bind(eventId).all();
+
+        console.log('Debug: Categories result:', categoriesResult);
+
+        // Also check if the event exists
+        const eventResult = await env.wine_events.prepare(`
+            SELECT id, name, join_code
+            FROM events
+            WHERE id = ?
+        `).bind(eventId).first();
+
+        console.log('Debug: Event result:', eventResult);
+
+        return new Response(JSON.stringify({
+            success: true,
+            eventId: eventId,
+            event: eventResult,
+            categories: categoriesResult.results || [],
+            categoriesCount: categoriesResult.results ? categoriesResult.results.length : 0
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error in debugEventCategories:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to debug event categories',
             details: error.message
         }), {
             status: 500,

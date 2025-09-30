@@ -110,8 +110,11 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                 <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', mb: 1 }}>
                     Wine Categories
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'white', opacity: 0.8 }}>
+                <Typography variant="body2" sx={{ color: 'white', opacity: 0.8, mb: 2 }}>
                     No wine categories defined for this event
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'white', opacity: 0.6, fontSize: '0.7rem' }}>
+                    Event ID: {eventId}
                 </Typography>
             </Paper>
         );
