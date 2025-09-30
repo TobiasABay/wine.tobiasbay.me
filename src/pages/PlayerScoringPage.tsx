@@ -90,16 +90,22 @@ export default function PlayerScoringPage() {
                 // Check if player has already submitted category guesses for this specific wine
                 try {
                     const guessesResponse = await apiService.getPlayerWineGuesses(playerId, sortedPlayers[0]?.presentation_order);
-                    if (guessesResponse && guessesResponse.guesses) {
+                    console.log('Guesses response:', guessesResponse);
+                    if (guessesResponse && guessesResponse.guesses && guessesResponse.guesses.length > 0) {
                         const guesses: Record<string, string> = {};
                         guessesResponse.guesses.forEach((guess: any) => {
                             guesses[guess.category_id] = guess.guess;
                         });
+                        console.log('Setting guesses:', guesses);
                         setCategoryGuesses(guesses);
                         setGuessesSubmitted(true);
+                    } else {
+                        console.log('No guesses found, setting submitted to false');
+                        setGuessesSubmitted(false);
                     }
                 } catch (guessesError) {
                     console.log('No existing guesses found for this wine:', guessesError);
+                    setGuessesSubmitted(false);
                 }
             } catch (error: any) {
                 console.error('Error loading event:', error);
@@ -485,7 +491,7 @@ export default function PlayerScoringPage() {
                             </Typography>
                         </Box>
 
-                        {guessesSubmitted ? (
+                        {guessesSubmitted && Object.keys(categoryGuesses).length > 0 ? (
                             <Box>
                                 <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', mb: 2 }}>
                                     Guesses Submitted!
