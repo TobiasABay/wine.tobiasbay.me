@@ -104,6 +104,11 @@ export default function EventDetailsPage() {
 
             const parsedBasicData = JSON.parse(basicEventData);
 
+            // Filter out empty wine categories and prepare them
+            const validWineCategories = wineCategories.filter(category =>
+                category.guessingElement.trim() !== '' && category.difficultyFactor.trim() !== ''
+            );
+
             // Combine basic event data with additional details
             const completeEventData = {
                 name: parsedBasicData.eventName.trim(),
@@ -114,7 +119,8 @@ export default function EventDetailsPage() {
                 description: description.trim(),
                 budget: budget.trim(),
                 duration: duration.trim(),
-                wineNotes: wineNotes.trim()
+                wineNotes: wineNotes.trim(),
+                wineCategories: validWineCategories
             };
 
             console.log('Creating event with data:', completeEventData);

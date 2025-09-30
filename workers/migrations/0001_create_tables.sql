@@ -38,8 +38,21 @@ CREATE TABLE IF NOT EXISTS wine_categories (
     FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
 );
 
+-- Player wine details table
+CREATE TABLE IF NOT EXISTS player_wine_details (
+    id TEXT PRIMARY KEY,
+    player_id TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    wine_answer TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_id) REFERENCES players (id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES wine_categories (id) ON DELETE CASCADE
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_events_join_code ON events(join_code);
 CREATE INDEX IF NOT EXISTS idx_players_event_id ON players(event_id);
 CREATE INDEX IF NOT EXISTS idx_wine_categories_event_id ON wine_categories(event_id);
 CREATE INDEX IF NOT EXISTS idx_players_presentation_order ON players(event_id, presentation_order);
+CREATE INDEX IF NOT EXISTS idx_player_wine_details_player_id ON player_wine_details(player_id);
+CREATE INDEX IF NOT EXISTS idx_player_wine_details_category_id ON player_wine_details(category_id);

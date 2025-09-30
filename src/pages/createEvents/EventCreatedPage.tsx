@@ -81,9 +81,29 @@ function SortablePlayerItem({ player, index, canDrag }: { player: Player; index:
                         </Typography>
                     }
                     secondary={
-                        <Typography variant="body2" sx={{ color: 'white', opacity: 0.7 }}>
-                            Wine #{index + 1} • Joined {new Date(player.joined_at).toLocaleString()}
-                        </Typography>
+                        <Box>
+                            <Typography variant="body2" sx={{ color: 'white', opacity: 0.7 }}>
+                                Wine #{index + 1} • Joined {new Date(player.joined_at).toLocaleString()}
+                            </Typography>
+                            {player.wine_details && player.wine_details.length > 0 && (
+                                <Box sx={{ mt: 1 }}>
+                                    {player.wine_details.map((wineDetail, idx) => (
+                                        <Typography
+                                            key={idx}
+                                            variant="caption"
+                                            sx={{
+                                                color: 'white',
+                                                opacity: 0.6,
+                                                display: 'block',
+                                                fontSize: '0.75rem'
+                                            }}
+                                        >
+                                            {wineDetail.guessing_element}: {wineDetail.wine_answer}
+                                        </Typography>
+                                    ))}
+                                </Box>
+                            )}
+                        </Box>
                     }
                 />
 
@@ -204,7 +224,24 @@ export default function EventCreatedPage() {
                 const event = await apiService.getEvent(urlEventId);
                 setEventData(event);
                 setJoinCode(event.join_code);
-                setPlayers(event.players || []);
+
+                // Load players with their wine details
+                const playersWithWineDetails = await Promise.all(
+                    (event.players || []).map(async (player) => {
+                        try {
+                            const wineDetails = await apiService.getPlayerWineDetails(player.id);
+                            return {
+                                ...player,
+                                wine_details: wineDetails
+                            };
+                        } catch (error) {
+                            console.error(`Error loading wine details for player ${player.id}:`, error);
+                            return player;
+                        }
+                    })
+                );
+
+                setPlayers(playersWithWineDetails);
                 setAutoShuffle(event.auto_shuffle);
 
                 // Generate QR code with join code as parameter
@@ -228,11 +265,27 @@ export default function EventCreatedPage() {
                         const event = await apiService.getEvent(urlEventId);
                         const newPlayers = event.players || [];
 
+                        // Load wine details for new players
+                        const playersWithWineDetails = await Promise.all(
+                            newPlayers.map(async (player) => {
+                                try {
+                                    const wineDetails = await apiService.getPlayerWineDetails(player.id);
+                                    return {
+                                        ...player,
+                                        wine_details: wineDetails
+                                    };
+                                } catch (error) {
+                                    console.error(`Error loading wine details for player ${player.id}:`, error);
+                                    return player;
+                                }
+                            })
+                        );
+
                         // Only update if players have actually changed
-                        const playersChanged = JSON.stringify(players) !== JSON.stringify(newPlayers);
+                        const playersChanged = JSON.stringify(players) !== JSON.stringify(playersWithWineDetails);
                         if (playersChanged) {
-                            console.log('📊 Players updated via polling:', newPlayers);
-                            setPlayers(newPlayers);
+                            console.log('📊 Players updated via polling:', playersWithWineDetails);
+                            setPlayers(playersWithWineDetails);
                         }
                     } catch (error) {
                         console.error('Error polling for updates:', error);

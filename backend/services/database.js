@@ -17,7 +17,7 @@ class Database {
 
     // Event methods
     createEvent(eventData) {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             const eventId = uuidv4();
             const joinCode = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -40,12 +40,44 @@ class Database {
                 eventData.duration || '',
                 eventData.wineNotes || '',
                 joinCode
-            ], function (err) {
+            ], async (err) => {
                 if (err) {
                     reject(err);
-                } else {
-                    resolve({ id: eventId, joinCode });
+                    return;
                 }
+
+                // Save wine categories if provided
+                if (eventData.wineCategories && eventData.wineCategories.length > 0) {
+                    try {
+                        for (const category of eventData.wineCategories) {
+                            const categoryId = uuidv4();
+                            await new Promise((categoryResolve, categoryReject) => {
+                                const categorySql = `
+                                    INSERT INTO wine_categories (
+                                        id, event_id, guessing_element, difficulty_factor
+                                    ) VALUES (?, ?, ?, ?)
+                                `;
+                                this.db.run(categorySql, [
+                                    categoryId,
+                                    eventId,
+                                    category.guessingElement,
+                                    category.difficultyFactor
+                                ], (categoryErr) => {
+                                    if (categoryErr) {
+                                        categoryReject(categoryErr);
+                                    } else {
+                                        categoryResolve();
+                                    }
+                                });
+                            });
+                        }
+                    } catch (categoryError) {
+                        reject(categoryError);
+                        return;
+                    }
+                }
+
+                resolve({ id: eventId, joinCode });
             });
         });
     }
@@ -226,8 +258,73 @@ class Database {
 
     getWineCategoriesByEventId(eventId) {
         return new Promise((resolve, reject) => {
-            const sql = 'SELECT * FROM wine_categories WHERE event_id = ?';
+            const sql = 'SELECT * FROM wine_categories WHERE event_id = ? ORDER BY created_at ASC';
             this.db.all(sql, [eventId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    }
+
+    // Wine answers methods
+    savePlayerWineAnswers(playerId, wineAnswers) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // First, delete any existing answers for this player
+                await new Promise((deleteResolve, deleteReject) => {
+                    const deleteSql = 'DELETE FROM player_wine_details WHERE player_id = ?';
+                    this.db.run(deleteSql, [playerId], (err) => {
+                        if (err) {
+                            deleteReject(err);
+                        } else {
+                            deleteResolve();
+                        }
+                    });
+                });
+
+                // Insert new answers
+                for (const answer of wineAnswers) {
+                    const answerId = uuidv4();
+                    await new Promise((answerResolve, answerReject) => {
+                        const answerSql = `
+                            INSERT INTO player_wine_details (
+                                id, player_id, category_id, wine_answer
+                            ) VALUES (?, ?, ?, ?)
+                        `;
+                        this.db.run(answerSql, [
+                            answerId,
+                            playerId,
+                            answer.categoryId,
+                            answer.wineAnswer
+                        ], (err) => {
+                            if (err) {
+                                answerReject(err);
+                            } else {
+                                answerResolve();
+                            }
+                        });
+                    });
+                }
+
+                resolve();
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    getPlayerWineDetails(playerId) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT pwd.*, wc.guessing_element 
+                FROM player_wine_details pwd
+                JOIN wine_categories wc ON pwd.category_id = wc.id
+                WHERE pwd.player_id = ?
+            `;
+            this.db.all(sql, [playerId], (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {

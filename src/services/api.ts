@@ -2,6 +2,12 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
     ? 'https://wine.tobiasbay.me/backend'
     : 'http://localhost:3001';
 
+export interface WineCategory {
+    id: string;
+    guessingElement: string;
+    difficultyFactor: string;
+}
+
 export interface EventData {
     name: string;
     date: string;
@@ -12,6 +18,15 @@ export interface EventData {
     budget?: string;
     duration?: string;
     wineNotes?: string;
+    wineCategories?: WineCategory[];
+}
+
+export interface PlayerWineDetail {
+    id: string;
+    player_id: string;
+    category_id: string;
+    wine_answer: string;
+    created_at: string;
 }
 
 export interface Player {
@@ -21,6 +36,7 @@ export interface Player {
     presentation_order: number;
     joined_at: string;
     is_active: boolean;
+    wine_details?: PlayerWineDetail[];
 }
 
 export interface Event {
@@ -40,11 +56,22 @@ export interface Event {
     created_at: string;
     updated_at: string;
     players: Player[];
+    wine_categories?: WineCategory[];
 }
 
 export interface JoinEventData {
     joinCode: string;
     playerName: string;
+}
+
+export interface WineAnswerData {
+    categoryId: string;
+    wineAnswer: string;
+}
+
+export interface SubmitWineAnswersData {
+    playerId: string;
+    wineAnswers: WineAnswerData[];
 }
 
 class ApiService {
@@ -139,6 +166,26 @@ class ApiService {
             method: 'PUT',
             body: JSON.stringify({ players }),
         });
+    }
+
+    // Wine categories and answers
+    async submitWineAnswers(data: SubmitWineAnswersData): Promise<void> {
+        return this.request<void>('/api/players/wine-answers', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async getWineCategories(eventId: string): Promise<WineCategory[]> {
+        return this.request<WineCategory[]>(`/api/events/${eventId}/wine-categories`);
+    }
+
+    async getEventByJoinCode(joinCode: string): Promise<Event> {
+        return this.request<Event>(`/api/events/join/${joinCode}`);
+    }
+
+    async getPlayerWineDetails(playerId: string): Promise<PlayerWineDetail[]> {
+        return this.request<PlayerWineDetail[]>(`/api/players/${playerId}/wine-details`);
     }
 
     // Health check

@@ -78,6 +78,18 @@ router.get('/join/:joinCode', async (req, res) => {
     }
 });
 
+// Get wine categories for an event
+router.get('/:id/wine-categories', async (req, res) => {
+    try {
+        const eventId = req.params.id;
+        const wineCategories = await db.getWineCategoriesByEventId(eventId);
+        res.json(wineCategories);
+    } catch (error) {
+        console.error('Error fetching wine categories:', error);
+        res.status(500).json({ error: 'Failed to fetch wine categories' });
+    }
+});
+
 // Update event auto shuffle setting
 router.put('/:eventId/shuffle', async (req, res) => {
     try {

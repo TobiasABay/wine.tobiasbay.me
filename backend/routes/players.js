@@ -148,4 +148,46 @@ router.put('/:playerId/order', async (req, res) => {
     }
 });
 
+// Submit wine answers for a player
+router.post('/wine-answers', async (req, res) => {
+    try {
+        const { playerId, wineAnswers } = req.body;
+
+        if (!playerId || !wineAnswers || !Array.isArray(wineAnswers)) {
+            return res.status(400).json({
+                error: 'Player ID and wine answers array are required'
+            });
+        }
+
+        // Validate wine answers
+        for (const answer of wineAnswers) {
+            if (!answer.categoryId || !answer.wineAnswer) {
+                return res.status(400).json({
+                    error: 'Each wine answer must have categoryId and wineAnswer'
+                });
+            }
+        }
+
+        // Save wine answers
+        await db.savePlayerWineAnswers(playerId, wineAnswers);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving wine answers:', error);
+        res.status(500).json({ error: 'Failed to save wine answers' });
+    }
+});
+
+// Get wine details for a player
+router.get('/:playerId/wine-details', async (req, res) => {
+    try {
+        const playerId = req.params.playerId;
+        const wineDetails = await db.getPlayerWineDetails(playerId);
+        res.json(wineDetails);
+    } catch (error) {
+        console.error('Error fetching player wine details:', error);
+        res.status(500).json({ error: 'Failed to fetch wine details' });
+    }
+});
+
 module.exports = router;
