@@ -4,12 +4,9 @@ import {
     Typography,
     Paper,
     Chip,
-    CircularProgress,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails
+    CircularProgress
 } from '@mui/material';
-import { ExpandMore, WineBar } from '@mui/icons-material';
+import { WineBar } from '@mui/icons-material';
 import { apiService } from '../services/api';
 
 interface WineCategoriesDisplayProps {
@@ -142,96 +139,179 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
     }
 
     return (
-        <Paper sx={{
-            p: 3,
-            background: 'rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: 3,
-            border: '1px solid rgba(255,255,255,0.2)'
-        }}>
+        <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <WineBar sx={{ color: 'white', mr: 1 }} />
                 <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-                    Wine Categories
+                    Wine Categories & Player Guesses
                 </Typography>
             </Box>
 
-            {categories.map((category) => {
-                if (!category || !category.id) return null;
+            <Box sx={{ display: 'grid', gap: 3 }}>
+                {categories.map((category) => {
+                    if (!category || !category.id) return null;
 
-                const answers = category.answers || [];
-                const answerCount = answers.length;
+                    const answers = category.answers || [];
+                    const answerCount = answers.length;
 
-                return (
-                    <Accordion
-                        key={category.id}
-                        sx={{
-                            backgroundColor: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: 2,
-                            mb: 2,
-                            '&:before': {
-                                display: 'none',
-                            },
-                            '&.Mui-expanded': {
-                                margin: '0 0 16px 0',
-                            }
-                        }}
-                    >
-                        <AccordionSummary
-                            expandIcon={<ExpandMore sx={{ color: 'white' }} />}
+                    return (
+                        <Paper
+                            key={category.id}
                             sx={{
-                                '& .MuiAccordionSummary-content': {
-                                    margin: '12px 0',
-                                }
+                                p: 3,
+                                background: 'rgba(255,255,255,0.95)',
+                                backdropFilter: 'blur(10px)',
+                                borderRadius: 3,
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
                             }}
                         >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Typography variant="h6" sx={{ color: 'white', fontWeight: 'medium' }}>
+                            {/* Category Header */}
+                            <Box sx={{ mb: 3 }}>
+                                <Typography
+                                    variant="h5"
+                                    sx={{
+                                        color: '#2c3e50',
+                                        fontWeight: 'bold',
+                                        mb: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            width: 12,
+                                            height: 12,
+                                            borderRadius: '50%',
+                                            backgroundColor: '#667eea',
+                                            flexShrink: 0
+                                        }}
+                                    />
                                     {category.guessing_element || 'Unknown Category'}
                                 </Typography>
-                                <Chip
-                                    label={`${answerCount} answer${answerCount !== 1 ? 's' : ''}`}
-                                    size="small"
-                                    sx={{
-                                        backgroundColor: 'rgba(255,255,255,0.2)',
-                                        color: 'white',
-                                        fontWeight: 'medium'
-                                    }}
-                                />
+
+                                {category.difficulty_factor && (
+                                    <Chip
+                                        label={`Difficulty: ${category.difficulty_factor}`}
+                                        size="small"
+                                        sx={{
+                                            backgroundColor: category.difficulty_factor === 'Easy' ? '#e8f5e8' :
+                                                category.difficulty_factor === 'Medium' ? '#fff3cd' : '#f8d7da',
+                                            color: category.difficulty_factor === 'Easy' ? '#155724' :
+                                                category.difficulty_factor === 'Medium' ? '#856404' : '#721c24',
+                                            fontWeight: 'medium',
+                                            fontSize: '0.75rem',
+                                            mb: 2
+                                        }}
+                                    />
+                                )}
                             </Box>
-                        </AccordionSummary>
-                        <AccordionDetails sx={{ pt: 0 }}>
-                            {answerCount === 0 ? (
-                                <Typography variant="body2" sx={{ color: 'white', opacity: 0.6, fontStyle: 'italic' }}>
-                                    No answers submitted yet
+
+                            {/* Player Guesses */}
+                            <Box>
+                                <Typography
+                                    variant="h6"
+                                    sx={{
+                                        color: '#34495e',
+                                        fontWeight: 'medium',
+                                        mb: 2,
+                                        fontSize: '1rem'
+                                    }}
+                                >
+                                    Player Guesses ({answerCount})
                                 </Typography>
-                            ) : (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                    {answers.map((answer, index) => {
-                                        if (!answer) return null;
-                                        return (
-                                            <Chip
-                                                key={index}
-                                                label={`${answer.player_name || 'Unknown'}: ${answer.wine_answer || 'No answer'}`}
-                                                sx={{
-                                                    backgroundColor: 'rgba(255,255,255,0.15)',
-                                                    color: 'white',
-                                                    fontSize: '0.875rem',
-                                                    height: 32,
-                                                    '& .MuiChip-label': {
-                                                        px: 2
-                                                    }
-                                                }}
-                                            />
-                                        );
-                                    })}
-                                </Box>
-                            )}
-                        </AccordionDetails>
-                    </Accordion>
-                );
-            })}
-        </Paper>
+
+                                {answerCount === 0 ? (
+                                    <Box
+                                        sx={{
+                                            p: 3,
+                                            textAlign: 'center',
+                                            backgroundColor: 'rgba(0,0,0,0.05)',
+                                            borderRadius: 2,
+                                            border: '2px dashed rgba(0,0,0,0.1)'
+                                        }}
+                                    >
+                                        <Typography
+                                            variant="body1"
+                                            sx={{
+                                                color: '#7f8c8d',
+                                                fontStyle: 'italic',
+                                                fontWeight: 'medium'
+                                            }}
+                                        >
+                                            No guesses submitted yet
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                color: '#95a5a6',
+                                                mt: 1
+                                            }}
+                                        >
+                                            Players will appear here once they submit their guesses
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                                        {answers.map((answer, index) => {
+                                            if (!answer) return null;
+                                            return (
+                                                <Paper
+                                                    key={index}
+                                                    sx={{
+                                                        p: 2,
+                                                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                                        border: '1px solid rgba(102, 126, 234, 0.2)',
+                                                        borderRadius: 2,
+                                                        minWidth: '200px',
+                                                        flex: '1 1 auto'
+                                                    }}
+                                                >
+                                                    <Typography
+                                                        variant="subtitle2"
+                                                        sx={{
+                                                            color: '#2c3e50',
+                                                            fontWeight: 'bold',
+                                                            mb: 1,
+                                                            fontSize: '0.9rem'
+                                                        }}
+                                                    >
+                                                        {answer.player_name || 'Unknown Player'}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="body1"
+                                                        sx={{
+                                                            color: '#34495e',
+                                                            fontWeight: 'medium',
+                                                            fontSize: '1rem'
+                                                        }}
+                                                    >
+                                                        {answer.wine_answer || 'No answer'}
+                                                    </Typography>
+                                                    {answer.presentation_order && (
+                                                        <Typography
+                                                            variant="caption"
+                                                            sx={{
+                                                                color: '#7f8c8d',
+                                                                fontSize: '0.75rem',
+                                                                display: 'block',
+                                                                mt: 0.5
+                                                            }}
+                                                        >
+                                                            Order: #{answer.presentation_order}
+                                                        </Typography>
+                                                    )}
+                                                </Paper>
+                                            );
+                                        })}
+                                    </Box>
+                                )}
+                            </Box>
+                        </Paper>
+                    );
+                })}
+            </Box>
+        </Box>
     );
 }
