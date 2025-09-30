@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
     Box,
     Typography,
@@ -31,6 +31,7 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
     const [categories, setCategories] = useState<WineCategoryWithGuesses[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
+    const pollingInterval = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         const fetchWineCategoriesWithGuesses = async () => {
@@ -82,6 +83,47 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
         } else {
             setLoading(false);
         }
+    }, [eventId]);
+
+    // Add polling for real-time updates
+    useEffect(() => {
+        if (!eventId) return;
+
+        const fetchWineCategoriesWithGuesses = async () => {
+            try {
+                const guessesResponse = await apiService.getEventWineGuesses(eventId);
+                if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
+                    setCategories(guessesResponse.categories);
+                }
+            } catch (error) {
+                console.error('Error refreshing wine guesses:', error);
+            }
+        };
+
+        // Start polling every 5 seconds
+        const pollInterval = setInterval(fetchWineCategoriesWithGuesses, 5000);
+        pollingInterval.current = pollInterval;
+
+        // Handle visibility change to pause/resume polling
+        const handleVisibilityChange = () => {
+            if (document.hidden && pollingInterval.current) {
+                clearInterval(pollingInterval.current);
+                pollingInterval.current = null;
+            } else if (!document.hidden && !pollingInterval.current) {
+                const newPollInterval = setInterval(fetchWineCategoriesWithGuesses, 5000);
+                pollingInterval.current = newPollInterval;
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Cleanup
+        return () => {
+            if (pollingInterval.current) {
+                clearInterval(pollingInterval.current);
+            }
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, [eventId]);
 
     if (loading) {
@@ -270,22 +312,12 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                                     }}
                                                 >
                                                     <Typography
-                                                        variant="subtitle2"
-                                                        sx={{
-                                                            color: '#2c3e50',
-                                                            fontWeight: 'bold',
-                                                            mb: 1,
-                                                            fontSize: '0.9rem'
-                                                        }}
-                                                    >
-                                                        {guess.player_name || 'Unknown Player'}
-                                                    </Typography>
-                                                    <Typography
                                                         variant="body1"
                                                         sx={{
                                                             color: '#34495e',
                                                             fontWeight: 'medium',
-                                                            fontSize: '1rem'
+                                                            fontSize: '1rem',
+                                                            textAlign: 'center'
                                                         }}
                                                     >
                                                         {guess.guess || 'No guess'}
@@ -296,10 +328,11 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                                             color: '#7f8c8d',
                                                             fontSize: '0.75rem',
                                                             display: 'block',
-                                                            mt: 0.5
+                                                            mt: 0.5,
+                                                            textAlign: 'center'
                                                         }}
                                                     >
-                                                        Player #{guess.presentation_order} • Wine #{guess.wine_number}
+                                                        Wine #{guess.wine_number}
                                                     </Typography>
                                                 </Paper>
                                             );

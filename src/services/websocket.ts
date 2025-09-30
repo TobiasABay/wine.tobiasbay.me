@@ -111,6 +111,7 @@ class WebSocketService {
         }
     }
 
+
     // Remove event listeners
     offPlayerJoined(callback?: (data: any) => void): void {
         if (this.socket) {
@@ -147,6 +148,7 @@ class WebSocketService {
             this.socket.off('event-created', callback);
         }
     }
+
 
     // Remove all listeners
     removeAllListeners(): void {
