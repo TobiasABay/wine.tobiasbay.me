@@ -297,9 +297,31 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                     </Box>
                                 ) : (
                                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                                        {category.guesses.map((guess, index) => {
-                                            if (!guess) return null;
-                                            return (
+                                        {(() => {
+                                            // Group guesses by guess value and wine number
+                                            const groupedGuesses = category.guesses.reduce((acc, guess) => {
+                                                if (!guess) return acc;
+                                                const key = `${guess.guess || 'No guess'}_${guess.wine_number}`;
+                                                if (!acc[key]) {
+                                                    acc[key] = {
+                                                        guess: guess.guess || 'No guess',
+                                                        wine_number: guess.wine_number,
+                                                        count: 0
+                                                    };
+                                                }
+                                                acc[key].count++;
+                                                return acc;
+                                            }, {} as Record<string, { guess: string; wine_number: number; count: number }>);
+
+                                            // Convert to array and sort by wine number, then by guess
+                                            const sortedGuesses = Object.values(groupedGuesses).sort((a, b) => {
+                                                if (a.wine_number !== b.wine_number) {
+                                                    return a.wine_number - b.wine_number;
+                                                }
+                                                return a.guess.localeCompare(b.guess);
+                                            });
+
+                                            return sortedGuesses.map((groupedGuess, index) => (
                                                 <Paper
                                                     key={index}
                                                     sx={{
@@ -320,23 +342,24 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                                             textAlign: 'center'
                                                         }}
                                                     >
-                                                        {guess.guess || 'No guess'}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="caption"
-                                                        sx={{
-                                                            color: '#7f8c8d',
-                                                            fontSize: '0.75rem',
-                                                            display: 'block',
-                                                            mt: 0.5,
-                                                            textAlign: 'center'
-                                                        }}
-                                                    >
-                                                        Wine #{guess.wine_number}
+                                                        {groupedGuess.guess}
+                                                        {groupedGuess.count > 1 && (
+                                                            <Typography
+                                                                component="span"
+                                                                sx={{
+                                                                    color: '#7f8c8d',
+                                                                    fontWeight: 'normal',
+                                                                    fontSize: '0.9rem',
+                                                                    ml: 0.5
+                                                                }}
+                                                            >
+                                                                ({groupedGuess.count})
+                                                            </Typography>
+                                                        )}
                                                     </Typography>
                                                 </Paper>
-                                            );
-                                        })}
+                                            ));
+                                        })()}
                                     </Box>
                                 )}
                             </Box>
