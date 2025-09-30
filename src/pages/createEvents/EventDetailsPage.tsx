@@ -90,7 +90,6 @@ export default function EventDetailsPage() {
     };
 
     const handleNext = async () => {
-        console.log('handleNext called!');
         // For now, allow creating events without wine categories
         // if (allCategoriesValid) {
         try {
@@ -123,12 +122,8 @@ export default function EventDetailsPage() {
                 wineCategories: validWineCategories
             };
 
-            console.log('Creating event with data:', completeEventData);
-            console.log('About to call API...');
-
             // Create the event in the database
             const result = await apiService.createEvent(completeEventData);
-            console.log('Event created successfully:', result);
 
             // Set the event creator flag so drag and drop is enabled
             // Store the creator session with a unique identifier and timestamp

@@ -9,27 +9,26 @@ class WebSocketService {
             const wsUrl = process.env.NODE_ENV === 'production'
                 ? 'https://backend.wine.tobiasbay.me'
                 : 'http://localhost:3001';
-            console.log('🔌 Connecting to WebSocket URL:', wsUrl, 'NODE_ENV:', process.env.NODE_ENV);
+            // Connecting to WebSocket
             this.socket = io(wsUrl, {
                 transports: ['websocket', 'polling'],
             });
 
             this.socket.on('connect', () => {
-                console.log('✅ Connected to WebSocket server with ID:', this.socket?.id);
-                console.log('✅ WebSocket connection state:', this.socket?.connected);
+                // Connected to WebSocket server
             });
 
-            this.socket.on('disconnect', (reason) => {
-                console.log('❌ Disconnected from WebSocket server. Reason:', reason);
+            this.socket.on('disconnect', () => {
+                // Disconnected from WebSocket server
             });
 
             this.socket.on('connect_error', (error) => {
                 console.error('❌ WebSocket connection error:', error);
             });
 
-            // Add listener for all events to debug
-            this.socket.onAny((event, ...args) => {
-                console.log('🔔 Received WebSocket event:', event, args);
+            // Add listener for all events
+            this.socket.onAny(() => {
+                // Received WebSocket event
             });
         }
 
@@ -49,7 +48,6 @@ class WebSocketService {
 
     joinEvent(eventId: string): void {
         if (this.socket) {
-            console.log('Emitting join-event for:', eventId);
             this.socket.emit('join-event', eventId);
             this.eventId = eventId;
         } else {
@@ -69,7 +67,6 @@ class WebSocketService {
     // Event listeners
     onPlayerJoined(callback: (data: any) => void): void {
         if (this.socket) {
-            console.log('🎧 Setting up player-joined listener');
             this.socket.on('player-joined', callback);
         } else {
             console.error('❌ Socket not connected when setting up player-joined listener');
@@ -78,7 +75,6 @@ class WebSocketService {
 
     onPlayerLeft(callback: (data: any) => void): void {
         if (this.socket) {
-            console.log('🎧 Setting up player-left listener');
             this.socket.on('player-left', callback);
         } else {
             console.error('❌ Socket not connected when setting up player-left listener');
@@ -87,7 +83,6 @@ class WebSocketService {
 
     onPlayersShuffled(callback: (players: any[]) => void): void {
         if (this.socket) {
-            console.log('🎧 Setting up players-shuffled listener');
             this.socket.on('players-shuffled', callback);
         } else {
             console.error('❌ Socket not connected when setting up players-shuffled listener');
@@ -96,7 +91,6 @@ class WebSocketService {
 
     onPlayerOrderUpdated(callback: (players: any[]) => void): void {
         if (this.socket) {
-            console.log('🎧 Setting up player-order-updated listener');
             this.socket.on('player-order-updated', callback);
         } else {
             console.error('❌ Socket not connected when setting up player-order-updated listener');
@@ -105,7 +99,6 @@ class WebSocketService {
 
     onPlayersReordered(callback: (players: any[]) => void): void {
         if (this.socket) {
-            console.log('🎧 Setting up players-reordered listener');
             this.socket.on('players-reordered', callback);
         } else {
             console.error('❌ Socket not connected when setting up players-reordered listener');

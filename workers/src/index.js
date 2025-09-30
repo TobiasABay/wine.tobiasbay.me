@@ -33,7 +33,7 @@ export default {
                 apiPath = path.substring(8); // Remove '/backend' (8 characters)
             }
 
-            console.log('Request path:', path, 'API path:', apiPath, 'Method:', method);
+            // Processing request
 
             // Route handling
             if (apiPath === '/api/health') {
@@ -154,12 +154,11 @@ export default {
 async function createEvent(request, env, corsHeaders) {
     try {
         const eventData = await request.json();
-        console.log('Creating event with data:', eventData);
 
         const eventId = generateUUID();
         const joinCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-        console.log('Generated eventId:', eventId, 'joinCode:', joinCode);
+        // Generated event ID and join code
 
         const result = await env.wine_events.prepare(`
       INSERT INTO events (
@@ -180,7 +179,7 @@ async function createEvent(request, env, corsHeaders) {
             joinCode
         ).run();
 
-        console.log('Database insert result:', result);
+        // Event created successfully
 
         // Save wine categories if provided
         if (eventData.wineCategories && eventData.wineCategories.length > 0) {
@@ -431,10 +430,8 @@ async function getWineCategories(eventId, env, corsHeaders) {
 async function submitWineAnswers(request, env, corsHeaders) {
     try {
         const { playerId, wineAnswers } = await request.json();
-        console.log('Submitting wine answers:', { playerId, wineAnswers });
 
         if (!playerId || !wineAnswers || !Array.isArray(wineAnswers)) {
-            console.log('Validation failed:', { playerId, wineAnswers, isArray: Array.isArray(wineAnswers) });
             return new Response(JSON.stringify({
                 error: 'Player ID and wine answers array are required'
             }), {
@@ -446,7 +443,6 @@ async function submitWineAnswers(request, env, corsHeaders) {
         // Validate wine answers
         for (const answer of wineAnswers) {
             if (!answer.categoryId || !answer.wineAnswer) {
-                console.log('Answer validation failed:', answer);
                 return new Response(JSON.stringify({
                     error: 'Each wine answer must have categoryId and wineAnswer'
                 }), {
@@ -456,25 +452,20 @@ async function submitWineAnswers(request, env, corsHeaders) {
             }
         }
 
-        console.log('About to delete existing answers...');
         // First, delete any existing answers for this player
         await env.wine_events.prepare(`
             DELETE FROM player_wine_details WHERE player_id = ?
         `).bind(playerId).run();
-        console.log('Existing answers deleted');
 
-        console.log('About to insert new answers...');
         // Insert new answers
         for (const answer of wineAnswers) {
             const answerId = generateUUID();
-            console.log('Inserting answer:', { answerId, playerId, categoryId: answer.categoryId, wineAnswer: answer.wineAnswer });
             await env.wine_events.prepare(`
                 INSERT INTO player_wine_details (
                     id, player_id, category_id, wine_answer
                 ) VALUES (?, ?, ?, ?)
             `).bind(answerId, playerId, answer.categoryId, answer.wineAnswer).run();
         }
-        console.log('All answers inserted successfully');
 
         return new Response(JSON.stringify({ success: true }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }

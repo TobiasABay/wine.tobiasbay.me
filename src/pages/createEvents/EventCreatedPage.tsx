@@ -182,9 +182,7 @@ export default function EventCreatedPage() {
 
             // Update presentation order in database
             try {
-                console.log('Calling API to update player order:', newPlayers);
                 await apiService.updatePlayerOrder(urlEventId!, newPlayers);
-                console.log('API call successful - WebSocket event should be emitted');
             } catch (error) {
                 console.error('Error updating player order:', error);
                 // Revert the change if API call fails
@@ -214,17 +212,7 @@ export default function EventCreatedPage() {
             // Fallback: if localStorage exists but no timestamp, assume they're the creator (for backward compatibility)
             const isCreator = hasCreatorSession || (hasCreatorLocalStorage && isRecentCreator) || (hasCreatorLocalStorage && !creatorTime);
 
-            // Debug logging to troubleshoot the issue
-            console.log('Event creator check:', {
-                urlEventId,
-                hasCreatorSession,
-                hasCreatorLocalStorage,
-                isRecentCreator,
-                isCreator,
-                sessionStorageValue: sessionStorage.getItem(`is-creator-${urlEventId}`),
-                localStorageValue: localStorage.getItem(`event-creator-${urlEventId}`),
-                creatorTime: localStorage.getItem(`creator-time-${urlEventId}`)
-            });
+            // Set event creator status
             setIsEventCreator(isCreator);
 
             try {
