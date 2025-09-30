@@ -209,11 +209,11 @@ async function createEvent(request, env, corsHeaders) {
                     INSERT INTO wine_categories (
                         id, event_id, guessing_element, difficulty_factor
                     ) VALUES (?, ?, ?, ?)
-                `).bind(
+                `                ).bind(
                     categoryId,
                     eventId,
-                    category.guessingElement,
-                    category.difficultyFactor
+                    category.guessing_element,
+                    category.difficulty_factor
                 ).run();
             }
         }
