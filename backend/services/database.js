@@ -60,8 +60,8 @@ class Database {
                                 this.db.run(categorySql, [
                                     categoryId,
                                     eventId,
-                                    category.guessing_element || category.guessingElement,
-                                    category.difficulty_factor || category.difficultyFactor
+                                    category.guessingElement,
+                                    category.difficultyFactor
                                 ], (categoryErr) => {
                                     if (categoryErr) {
                                         categoryReject(categoryErr);
@@ -342,56 +342,6 @@ class Database {
                     reject(err);
                 } else {
                     resolve(rows);
-                }
-            });
-        });
-    }
-
-    getEventWineAnswers(eventId) {
-        return new Promise((resolve, reject) => {
-            const sql = `
-                SELECT 
-                    wc.id,
-                    wc.guessing_element,
-                    wc.difficulty_factor,
-                    pwd.wine_answer,
-                    p.name as player_name,
-                    p.presentation_order
-                FROM wine_categories wc
-                LEFT JOIN player_wine_details pwd ON wc.id = pwd.category_id
-                LEFT JOIN players p ON pwd.player_id = p.id
-                WHERE wc.event_id = ?
-                ORDER BY wc.created_at ASC, p.presentation_order ASC
-            `;
-            this.db.all(sql, [eventId], (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    // Group the results by category
-                    const categoriesMap = new Map();
-
-                    rows.forEach(row => {
-                        if (!categoriesMap.has(row.id)) {
-                            categoriesMap.set(row.id, {
-                                id: row.id,
-                                guessing_element: row.guessing_element,
-                                difficulty_factor: row.difficulty_factor,
-                                answers: []
-                            });
-                        }
-
-                        // Add answer if it exists
-                        if (row.wine_answer && row.player_name) {
-                            categoriesMap.get(row.id).answers.push({
-                                wine_answer: row.wine_answer,
-                                player_name: row.player_name,
-                                presentation_order: row.presentation_order
-                            });
-                        }
-                    });
-
-                    const categories = Array.from(categoriesMap.values());
-                    resolve({ success: true, categories });
                 }
             });
         });

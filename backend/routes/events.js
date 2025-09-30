@@ -127,18 +127,6 @@ router.get('/:id/wine-categories', async (req, res) => {
     }
 });
 
-// Get wine answers for an event (grouped by categories)
-router.get('/:id/wine-answers', async (req, res) => {
-    try {
-        const eventId = req.params.id;
-        const wineAnswers = await db.getEventWineAnswers(eventId);
-        res.json(wineAnswers);
-    } catch (error) {
-        console.error('Error fetching wine answers:', error);
-        res.status(500).json({ error: 'Failed to fetch wine answers' });
-    }
-});
-
 // Start an event
 router.post('/:eventId/start', async (req, res) => {
     try {

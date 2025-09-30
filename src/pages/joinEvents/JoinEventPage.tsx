@@ -195,7 +195,8 @@ export default function JoinEventPage() {
     useEffect(() => {
         if (wineCategories.length > 0) {
             const countryCategory = wineCategories.find(cat => {
-                return cat.guessing_element === 'Country';
+                const element = (cat as any).guessing_element || cat.guessingElement;
+                return element === 'Country';
             });
             if (countryCategory && wineAnswers[countryCategory.id]) {
                 setSelectedCountry(wineAnswers[countryCategory.id]);
@@ -304,11 +305,13 @@ export default function JoinEventPage() {
         // Check if this is a country selection and update selectedCountry
         const category = wineCategories.find(cat => cat.id === categoryId);
         if (category) {
-            if (category.guessing_element === 'Country') {
+            const guessingElement = (category as any).guessing_element || category.guessingElement;
+            if (guessingElement === 'Country') {
                 setSelectedCountry(value);
                 // Clear region selection when country changes
                 const regionCategory = wineCategories.find(cat => {
-                    return cat.guessing_element === 'Region';
+                    const element = (cat as any).guessing_element || cat.guessingElement;
+                    return element === 'Region';
                 });
                 if (regionCategory) {
                     setWineAnswers(prev => ({
