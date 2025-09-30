@@ -355,6 +355,12 @@ export default function EventCreatedPage() {
 
                             setPlayers(playersWithWineDetails);
                         }
+
+                        // Check if event has started and redirect non-creator players
+                        if (event.event_started && !isEventCreator) {
+                            navigate(`/score/${urlEventId}`);
+                            return;
+                        }
                     } catch (error) {
                         console.error('Error polling for updates:', error);
                     }
@@ -393,9 +399,14 @@ export default function EventCreatedPage() {
         navigate('/');
     };
 
-    const handleStart = () => {
+    const handleStart = async () => {
         if (urlEventId) {
-            navigate(`/event/${urlEventId}`);
+            try {
+                await apiService.startEvent(urlEventId);
+                navigate(`/event/${urlEventId}`);
+            } catch (error) {
+                console.error('Error starting event:', error);
+            }
         }
     };
 

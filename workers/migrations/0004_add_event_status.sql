@@ -1,0 +1,1 @@
+ALTER TABLE events ADD COLUMN event_started BOOLEAN DEFAULT 0;

@@ -55,6 +55,7 @@ export interface Event {
     join_code: string;
     is_active: boolean;
     auto_shuffle: boolean;
+    event_started: boolean;
     created_at: string;
     updated_at: string;
     players: Player[];
@@ -201,6 +202,12 @@ class ApiService {
         return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}/scores`, {
             method: 'POST',
             body: JSON.stringify({ playerId, wineNumber, score })
+        });
+    }
+
+    async startEvent(eventId: string): Promise<{ success: boolean; message: string }> {
+        return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}/start`, {
+            method: 'POST'
         });
     }
 

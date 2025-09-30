@@ -81,6 +81,11 @@ export default {
                 return await submitWineScore(request, env, eventId, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/start') && method === 'POST') {
+                const eventId = apiPath.split('/')[3];
+                return await startEvent(eventId, env, corsHeaders);
+            }
+
             if (apiPath.startsWith('/api/events/') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
                 return await getEvent(eventId, env, corsHeaders);
@@ -246,6 +251,7 @@ async function getEvent(eventId, env, corsHeaders) {
         ...event,
         is_active: Boolean(event.is_active),
         auto_shuffle: Boolean(event.auto_shuffle),
+        event_started: Boolean(event.event_started),
         players: processedPlayers
     }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -281,6 +287,7 @@ async function getEventByJoinCode(joinCode, env, corsHeaders) {
         ...event,
         is_active: Boolean(event.is_active),
         auto_shuffle: Boolean(event.auto_shuffle),
+        event_started: Boolean(event.event_started),
         players: processedPlayers
     }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -744,6 +751,30 @@ async function getPlayerWineDetails(env, playerId, corsHeaders) {
     } catch (error) {
         return new Response(JSON.stringify({
             error: 'Failed to fetch player wine details',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function startEvent(eventId, env, corsHeaders) {
+    try {
+        await env.wine_events.prepare(`
+            UPDATE events SET event_started = 1, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        `).bind(eventId).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Event started successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({
+            error: 'Failed to start event',
             details: error.message
         }), {
             status: 500,
