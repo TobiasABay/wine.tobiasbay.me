@@ -114,6 +114,11 @@ export default {
                 return await updatePlayerReadyStatus(request, env, playerId, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/players/') && apiPath.endsWith('/wine-details') && method === 'GET') {
+                const playerId = apiPath.split('/')[3];
+                return await getPlayerWineDetails(env, playerId, corsHeaders);
+            }
+
             return new Response(JSON.stringify({
                 error: 'Route not found',
                 debug: {
@@ -714,6 +719,31 @@ async function submitWineScore(request, env, eventId, corsHeaders) {
         console.error('Error submitting wine score:', error);
         return new Response(JSON.stringify({
             error: 'Failed to submit wine score',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getPlayerWineDetails(env, playerId, corsHeaders) {
+    try {
+        const sql = `
+            SELECT pwd.*, wc.guessing_element 
+            FROM player_wine_details pwd
+            JOIN wine_categories wc ON pwd.category_id = wc.id
+            WHERE pwd.player_id = ?
+        `;
+
+        const result = await env.wine_events.prepare(sql).bind(playerId).all();
+
+        return new Response(JSON.stringify(result.results), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch player wine details',
             details: error.message
         }), {
             status: 500,
