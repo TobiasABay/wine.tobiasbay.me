@@ -106,7 +106,11 @@ export default function EventDetailsPage() {
             // Filter out empty wine categories and prepare them
             const validWineCategories = wineCategories.filter(category =>
                 category.guessingElement.trim() !== '' && category.difficultyFactor.trim() !== ''
-            );
+            ).map(category => ({
+                id: category.id,
+                guessing_element: category.guessingElement,
+                difficulty_factor: category.difficultyFactor
+            }));
 
             // Combine basic event data with additional details
             const completeEventData = {
