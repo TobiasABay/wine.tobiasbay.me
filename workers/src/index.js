@@ -698,9 +698,9 @@ async function submitWineScore(request, env, eventId, corsHeaders) {
             });
         }
 
-        if (score < 1 || score > 10) {
+        if (score < 1 || score > 5) {
             return new Response(JSON.stringify({
-                error: 'Score must be between 1 and 10'
+                error: 'Score must be between 1 and 5'
             }), {
                 status: 400,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }

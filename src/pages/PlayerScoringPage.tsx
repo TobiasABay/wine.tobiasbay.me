@@ -38,7 +38,7 @@ export default function PlayerScoringPage() {
                 console.log('PlayerScoringPage: eventId =', eventId);
                 console.log('PlayerScoringPage: playerId from localStorage =', playerId);
                 console.log('PlayerScoringPage: all localStorage keys =', Object.keys(localStorage));
-                
+
                 if (!playerId) {
                     setError('Player not found. Please join the event first.');
                     setLoading(false);
@@ -94,8 +94,8 @@ export default function PlayerScoringPage() {
 
     const handleScoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
-        // Only allow numbers 1-10
-        if (value === '' || (parseInt(value) >= 1 && parseInt(value) <= 10)) {
+        // Only allow numbers 1-5
+        if (value === '' || (parseInt(value) >= 1 && parseInt(value) <= 5)) {
             setScore(value);
         }
     };
@@ -104,8 +104,8 @@ export default function PlayerScoringPage() {
         if (submitting || !currentPlayer || !currentPlayerId) return;
 
         const scoreNum = parseInt(score);
-        if (isNaN(scoreNum) || scoreNum < 1 || scoreNum > 10) {
-            setError('Please enter a score between 1 and 10');
+        if (isNaN(scoreNum) || scoreNum < 1 || scoreNum > 5) {
+            setError('Please enter a score between 1 and 5');
             return;
         }
 
@@ -285,7 +285,7 @@ export default function PlayerScoringPage() {
                                 Score Submitted!
                             </Typography>
                             <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-                                Your Score: {score}/10
+                                Your Score: {score}/5
                             </Typography>
                             <Typography variant="body1" sx={{ color: 'white', opacity: 0.8 }}>
                                 Thank you for rating this wine! The results will be shown to the event creator.
@@ -298,11 +298,11 @@ export default function PlayerScoringPage() {
                             </Typography>
 
                             <TextField
-                                label="Score (1-10)"
+                                label="Score (1-5)"
                                 type="number"
                                 value={score}
                                 onChange={handleScoreChange}
-                                inputProps={{ min: 1, max: 10 }}
+                                inputProps={{ min: 1, max: 5 }}
                                 sx={{
                                     mb: 3,
                                     '& .MuiOutlinedInput-root': {
@@ -336,7 +336,7 @@ export default function PlayerScoringPage() {
 
                             <Button
                                 onClick={handleSubmit}
-                                disabled={submitting || !score || parseInt(score) < 1 || parseInt(score) > 10}
+                                disabled={submitting || !score || parseInt(score) < 1 || parseInt(score) > 5}
                                 variant="contained"
                                 sx={{
                                     backgroundColor: '#ffd700',

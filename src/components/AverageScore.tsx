@@ -193,6 +193,9 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
                     {renderStars(0)}
                 </Box>
+                <Typography variant="caption" sx={{ color: 'white', opacity: 0.6, fontSize: '0.6rem', mt: 0.5 }}>
+                    0 votes
+                </Typography>
             </Box>
         );
     }
@@ -223,6 +226,9 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
                 {renderStars(scoreData.average)}
             </Box>
+            <Typography variant="caption" sx={{ color: 'white', opacity: 0.6, fontSize: '0.6rem', mt: 0.5 }}>
+                {scoreData.totalScores} vote{scoreData.totalScores !== 1 ? 's' : ''}
+            </Typography>
         </Box>
     );
 }
