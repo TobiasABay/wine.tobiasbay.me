@@ -216,4 +216,36 @@ router.put('/:playerId/ready', async (req, res) => {
     }
 });
 
+// Submit player wine guesses
+router.post('/:playerId/wine-guesses', async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        const { guesses } = req.body;
+
+        if (!guesses || !Array.isArray(guesses)) {
+            return res.status(400).json({ error: 'Guesses must be an array' });
+        }
+
+        await db.submitPlayerWineGuesses(playerId, guesses);
+
+        res.json({ success: true, message: 'Wine guesses submitted successfully' });
+    } catch (error) {
+        console.error('Error submitting wine guesses:', error);
+        res.status(500).json({ error: 'Failed to submit wine guesses' });
+    }
+});
+
+// Get player wine guesses
+router.get('/:playerId/wine-guesses', async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        const guesses = await db.getPlayerWineGuesses(playerId);
+
+        res.json({ success: true, guesses });
+    } catch (error) {
+        console.error('Error fetching player wine guesses:', error);
+        res.status(500).json({ error: 'Failed to fetch wine guesses' });
+    }
+});
+
 module.exports = router;

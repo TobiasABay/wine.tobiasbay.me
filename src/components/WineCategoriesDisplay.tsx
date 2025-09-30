@@ -13,26 +13,56 @@ interface WineCategoriesDisplayProps {
     eventId: string;
 }
 
-interface WineCategory {
+interface WineGuess {
+    player_name: string;
+    guess: string;
+    presentation_order: number;
+}
+
+interface WineCategoryWithGuesses {
     id: string;
     guessing_element: string;
     difficulty_factor: string;
+    guesses: WineGuess[];
 }
 
 export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplayProps) {
-    const [categories, setCategories] = useState<WineCategory[]>([]);
+    const [categories, setCategories] = useState<WineCategoryWithGuesses[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
 
     useEffect(() => {
-        const fetchWineCategories = async () => {
+        const fetchWineCategoriesWithGuesses = async () => {
             try {
-                console.log('Fetching wine categories...');
+                console.log('Fetching wine categories with guesses...');
+                
+                // Try to get categories with guesses first
+                try {
+                    const guessesResponse = await apiService.getEventWineGuesses(eventId);
+                    console.log('Wine guesses response:', guessesResponse);
+                    
+                    if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
+                        setCategories(guessesResponse.categories);
+                        setLoading(false);
+                        return;
+                    }
+                } catch (guessesError) {
+                    console.log('Wine guesses API failed, falling back to categories only:', guessesError);
+                }
+
+                // Fallback to categories only
                 const categoriesResponse = await apiService.getWineCategories(eventId);
                 console.log('Wine categories response:', categoriesResponse);
 
                 if (categoriesResponse && Array.isArray(categoriesResponse)) {
-                    setCategories(categoriesResponse);
+                    // Convert categories to the expected format with empty guesses
+                    const categoriesWithEmptyGuesses = categoriesResponse.map(category => ({
+                        id: category.id,
+                        guessing_element: category.guessing_element,
+                        difficulty_factor: category.difficulty_factor,
+                        guesses: []
+                    }));
+                    setCategories(categoriesWithEmptyGuesses);
                 } else {
                     console.log('No valid categories found');
                     setCategories([]);
@@ -47,7 +77,7 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
         };
 
         if (eventId) {
-            fetchWineCategories();
+            fetchWineCategoriesWithGuesses();
         } else {
             setLoading(false);
         }
@@ -178,35 +208,105 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                 )}
                             </Box>
 
-                            {/* Placeholder for future guesses from rating page */}
-                            <Box
-                                sx={{
-                                    p: 3,
-                                    textAlign: 'center',
-                                    backgroundColor: 'rgba(0,0,0,0.05)',
-                                    borderRadius: 2,
-                                    border: '2px dashed rgba(0,0,0,0.1)'
-                                }}
-                            >
-                                <Typography
-                                    variant="body1"
-                                    sx={{
-                                        color: '#7f8c8d',
-                                        fontStyle: 'italic',
-                                        fontWeight: 'medium'
+                            {/* Player Guesses */}
+                            <Box>
+                                <Typography 
+                                    variant="h6" 
+                                    sx={{ 
+                                        color: '#34495e',
+                                        fontWeight: 'medium',
+                                        mb: 2,
+                                        fontSize: '1rem'
                                     }}
                                 >
-                                    Player guesses will appear here
+                                    Player Guesses ({category.guesses.length})
                                 </Typography>
-                                <Typography
-                                    variant="body2"
-                                    sx={{
-                                        color: '#95a5a6',
-                                        mt: 1
-                                    }}
-                                >
-                                    After players rate and guess the wines
-                                </Typography>
+
+                                {category.guesses.length === 0 ? (
+                                    <Box 
+                                        sx={{ 
+                                            p: 3, 
+                                            textAlign: 'center',
+                                            backgroundColor: 'rgba(0,0,0,0.05)',
+                                            borderRadius: 2,
+                                            border: '2px dashed rgba(0,0,0,0.1)'
+                                        }}
+                                    >
+                                        <Typography 
+                                            variant="body1" 
+                                            sx={{ 
+                                                color: '#7f8c8d',
+                                                fontStyle: 'italic',
+                                                fontWeight: 'medium'
+                                            }}
+                                        >
+                                            No guesses submitted yet
+                                        </Typography>
+                                        <Typography 
+                                            variant="body2" 
+                                            sx={{ 
+                                                color: '#95a5a6',
+                                                mt: 1
+                                            }}
+                                        >
+                                            Players will appear here once they submit their guesses
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                                        {category.guesses.map((guess, index) => {
+                                            if (!guess) return null;
+                                            return (
+                                                <Paper
+                                                    key={index}
+                                                    sx={{
+                                                        p: 2,
+                                                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                                        border: '1px solid rgba(102, 126, 234, 0.2)',
+                                                        borderRadius: 2,
+                                                        minWidth: '200px',
+                                                        flex: '1 1 auto'
+                                                    }}
+                                                >
+                                                    <Typography 
+                                                        variant="subtitle2" 
+                                                        sx={{ 
+                                                            color: '#2c3e50',
+                                                            fontWeight: 'bold',
+                                                            mb: 1,
+                                                            fontSize: '0.9rem'
+                                                        }}
+                                                    >
+                                                        {guess.player_name || 'Unknown Player'}
+                                                    </Typography>
+                                                    <Typography 
+                                                        variant="body1" 
+                                                        sx={{ 
+                                                            color: '#34495e',
+                                                            fontWeight: 'medium',
+                                                            fontSize: '1rem'
+                                                        }}
+                                                    >
+                                                        {guess.guess || 'No guess'}
+                                                    </Typography>
+                                                    {guess.presentation_order && (
+                                                        <Typography 
+                                                            variant="caption" 
+                                                            sx={{ 
+                                                                color: '#7f8c8d',
+                                                                fontSize: '0.75rem',
+                                                                display: 'block',
+                                                                mt: 0.5
+                                                            }}
+                                                        >
+                                                            Order: #{guess.presentation_order}
+                                                        </Typography>
+                                                    )}
+                                                </Paper>
+                                            );
+                                        })}
+                                    </Box>
+                                )}
                             </Box>
                         </Paper>
                     );

@@ -7,11 +7,15 @@ import {
     Button,
     TextField,
     Paper,
-    Alert
+    Alert,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem
 } from '@mui/material';
-import { ArrowBack } from '@mui/icons-material';
+import { ArrowBack, WineBar } from '@mui/icons-material';
 import { apiService } from '../services/api';
-import type { Player } from '../services/api';
+import type { Player, WineCategory } from '../services/api';
 
 export default function PlayerScoringPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
@@ -21,6 +25,9 @@ export default function PlayerScoringPage() {
     const [error, setError] = useState<string>('');
     const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [wineCategories, setWineCategories] = useState<WineCategory[]>([]);
+    const [categoryGuesses, setCategoryGuesses] = useState<Record<string, string>>({});
+    const [guessesSubmitted, setGuessesSubmitted] = useState<boolean>(false);
     const { eventId } = useParams();
     const navigate = useNavigate();
 
@@ -51,6 +58,10 @@ export default function PlayerScoringPage() {
                 const event = await apiService.getEvent(eventId);
                 console.log('PlayerScoringPage: Event data loaded =', event);
 
+                // Load wine categories
+                const categories = await apiService.getWineCategories(eventId);
+                setWineCategories(categories);
+
                 // Check if event has started
                 if (!event.event_started) {
                     setError('Event has not started yet. Please wait for the event creator to start the event.');
@@ -75,6 +86,21 @@ export default function PlayerScoringPage() {
                         setSubmitted(true);
                     }
                 }
+
+                // Check if player has already submitted category guesses
+                try {
+                    const guessesResponse = await apiService.getPlayerWineGuesses(playerId);
+                    if (guessesResponse && guessesResponse.guesses) {
+                        const guesses: Record<string, string> = {};
+                        guessesResponse.guesses.forEach((guess: any) => {
+                            guesses[guess.category_id] = guess.guess;
+                        });
+                        setCategoryGuesses(guesses);
+                        setGuessesSubmitted(true);
+                    }
+                } catch (guessesError) {
+                    console.log('No existing guesses found:', guessesError);
+                }
             } catch (error: any) {
                 console.error('Error loading event:', error);
                 if (error.message?.includes('Event not found')) {
@@ -97,6 +123,88 @@ export default function PlayerScoringPage() {
         // Only allow numbers 1-5
         if (value === '' || (parseInt(value) >= 1 && parseInt(value) <= 5)) {
             setScore(value);
+        }
+    };
+
+    const handleCategoryGuessChange = (categoryId: string, guess: string) => {
+        setCategoryGuesses(prev => ({
+            ...prev,
+            [categoryId]: guess
+        }));
+    };
+
+    const getOptionsForCategory = (guessingElement: string): string[] => {
+        const element = guessingElement || '';
+        
+        if (element === 'Country') {
+            return [
+                'France', 'Italy', 'Spain', 'Germany', 'Portugal', 'Austria', 
+                'United States', 'Australia', 'Chile', 'Argentina', 'South Africa', 
+                'New Zealand', 'Canada', 'Greece', 'Hungary', 'Romania', 'Bulgaria',
+                'Croatia', 'Slovenia', 'Georgia', 'Turkey', 'Lebanon', 'Israel',
+                'Brazil', 'Uruguay', 'Mexico', 'Peru', 'Other'
+            ];
+        } else if (element === 'Region') {
+            return [
+                'Bordeaux', 'Burgundy', 'Champagne', 'Loire Valley', 'Rhône Valley',
+                'Alsace', 'Languedoc-Roussillon', 'Provence', 'Tuscany', 'Piedmont',
+                'Veneto', 'Sicily', 'Puglia', 'Rioja', 'Ribera del Duero', 'Priorat',
+                'Catalonia', 'Andalusia', 'Mosel', 'Rheingau', 'Pfalz', 'Baden',
+                'Douro', 'Alentejo', 'Vinho Verde', 'Napa Valley', 'Sonoma',
+                'Central Coast', 'Willamette Valley', 'Columbia Valley', 'Barossa Valley',
+                'Hunter Valley', 'Margaret River', 'Marlborough', 'Central Otago',
+                'Mendoza', 'Colchagua Valley', 'Casablanca Valley', 'Stellenbosch',
+                'Paarl', 'Other'
+            ];
+        } else if (element === 'Grape Variety') {
+            return [
+                'Cabernet Sauvignon', 'Merlot', 'Pinot Noir', 'Syrah/Shiraz', 'Malbec',
+                'Sangiovese', 'Nebbiolo', 'Barbera', 'Dolcetto', 'Primitivo',
+                'Tempranillo', 'Garnacha/Grenache', 'Monastrell', 'Albariño',
+                'Chardonnay', 'Sauvignon Blanc', 'Riesling', 'Pinot Grigio/Pinot Gris',
+                'Chenin Blanc', 'Viognier', 'Gewürztraminer', 'Muscat', 'Semillon',
+                'Verdejo', 'Torrontés', 'Carménère', 'Petit Verdot', 'Cabernet Franc',
+                'Zinfandel', 'Pinotage', 'Other'
+            ];
+        } else if (element === 'Vintage') {
+            const currentYear = new Date().getFullYear();
+            const years = [];
+            for (let year = currentYear; year >= currentYear - 30; year--) {
+                years.push(year.toString());
+            }
+            return years;
+        } else if (element === 'Price Range') {
+            return [
+                'Under $10', '$10-$20', '$20-$30', '$30-$50', '$50-$75', 
+                '$75-$100', '$100-$150', '$150-$200', 'Over $200'
+            ];
+        } else if (element === 'Alcohol Content') {
+            return [
+                'Under 12%', '12-13%', '13-14%', '14-15%', '15-16%', 'Over 16%'
+            ];
+        }
+        
+        return ['Option 1', 'Option 2', 'Option 3', 'Other'];
+    };
+
+    const handleSubmitGuesses = async () => {
+        if (submitting || !currentPlayerId) return;
+
+        setSubmitting(true);
+        setError('');
+
+        try {
+            const guesses = Object.entries(categoryGuesses).map(([categoryId, guess]) => ({
+                category_id: categoryId,
+                guess: guess
+            }));
+
+            await apiService.submitPlayerWineGuesses(currentPlayerId, guesses);
+            setGuessesSubmitted(true);
+        } catch (error: any) {
+            setError(error.message || 'Failed to submit guesses');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -359,6 +467,124 @@ export default function PlayerScoringPage() {
                         </Box>
                     )}
                 </Paper>
+
+                {/* Category Guessing Interface */}
+                {wineCategories.length > 0 && (
+                    <Paper sx={{
+                        p: 4,
+                        background: 'rgba(255,255,255,0.1)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: 3,
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        mt: 3
+                    }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                            <WineBar sx={{ color: 'white', mr: 1 }} />
+                            <Typography variant="h5" sx={{ color: 'white', fontWeight: 'bold' }}>
+                                Guess the Wine Details
+                            </Typography>
+                        </Box>
+
+                        {guessesSubmitted ? (
+                            <Box>
+                                <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', mb: 2 }}>
+                                    Guesses Submitted!
+                                </Typography>
+                                <Typography variant="body1" sx={{ color: 'white', opacity: 0.8, mb: 2 }}>
+                                    Your guesses for this wine:
+                                </Typography>
+                                {wineCategories.map((category) => (
+                                    <Box key={category.id} sx={{ mb: 2 }}>
+                                        <Typography variant="body2" sx={{ color: 'white', fontWeight: 'medium' }}>
+                                            {category.guessing_element}: {categoryGuesses[category.id] || 'No guess'}
+                                        </Typography>
+                                    </Box>
+                                ))}
+                            </Box>
+                        ) : (
+                            <Box>
+                                <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', mb: 3 }}>
+                                    What do you think about this wine?
+                                </Typography>
+
+                                {wineCategories.map((category) => {
+                                    const options = getOptionsForCategory(category.guessing_element);
+                                    return (
+                                        <Box key={category.id} sx={{ mb: 3 }}>
+                                            <FormControl fullWidth>
+                                                <InputLabel 
+                                                    id={`category-${category.id}`}
+                                                    sx={{
+                                                        color: 'rgba(255,255,255,0.7)',
+                                                        '&.Mui-focused': {
+                                                            color: '#ffd700',
+                                                        },
+                                                    }}
+                                                >
+                                                    {category.guessing_element}
+                                                </InputLabel>
+                                                <Select
+                                                    labelId={`category-${category.id}`}
+                                                    value={categoryGuesses[category.id] || ''}
+                                                    label={category.guessing_element}
+                                                    onChange={(e) => handleCategoryGuessChange(category.id, e.target.value)}
+                                                    disabled={submitting}
+                                                    sx={{
+                                                        '& .MuiOutlinedInput-root': {
+                                                            backgroundColor: 'rgba(255,255,255,0.1)',
+                                                            color: 'white',
+                                                            '& fieldset': {
+                                                                borderColor: 'rgba(255,255,255,0.3)',
+                                                            },
+                                                            '&:hover fieldset': {
+                                                                borderColor: 'rgba(255,255,255,0.5)',
+                                                            },
+                                                            '&.Mui-focused fieldset': {
+                                                                borderColor: '#ffd700',
+                                                            },
+                                                        },
+                                                        '& .MuiSelect-icon': {
+                                                            color: 'rgba(255,255,255,0.7)',
+                                                        },
+                                                    }}
+                                                >
+                                                    {options.map((option) => (
+                                                        <MenuItem key={option} value={option}>
+                                                            {option}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        </Box>
+                                    );
+                                })}
+
+                                <Button
+                                    onClick={handleSubmitGuesses}
+                                    disabled={submitting || Object.keys(categoryGuesses).length === 0}
+                                    variant="contained"
+                                    sx={{
+                                        backgroundColor: '#ffd700',
+                                        color: '#333',
+                                        fontWeight: 'bold',
+                                        px: 4,
+                                        py: 1.5,
+                                        fontSize: '1.1rem',
+                                        '&:hover': {
+                                            backgroundColor: '#ffc107',
+                                        },
+                                        '&:disabled': {
+                                            backgroundColor: 'rgba(255,255,255,0.3)',
+                                            color: 'rgba(255,255,255,0.7)',
+                                        }
+                                    }}
+                                >
+                                    {submitting ? 'Submitting...' : 'Submit Guesses'}
+                                </Button>
+                            </Box>
+                        )}
+                    </Paper>
+                )}
             </Container>
         </Box>
     );

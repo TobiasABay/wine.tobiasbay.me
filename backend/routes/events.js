@@ -216,4 +216,17 @@ router.put('/:eventId/players/order', async (req, res) => {
     }
 });
 
+// Get event wine guesses
+router.get('/:eventId/wine-guesses', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const categories = await db.getEventWineGuesses(eventId);
+
+        res.json({ success: true, categories });
+    } catch (error) {
+        console.error('Error fetching event wine guesses:', error);
+        res.status(500).json({ error: 'Failed to fetch wine guesses' });
+    }
+});
+
 module.exports = router;

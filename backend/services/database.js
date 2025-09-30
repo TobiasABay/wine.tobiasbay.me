@@ -395,6 +395,98 @@ class Database {
             }
         });
     }
+
+    // Wine guesses methods
+    submitPlayerWineGuesses(playerId, guesses) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // First, delete existing guesses for this player
+                await new Promise((deleteResolve, deleteReject) => {
+                    this.db.run('DELETE FROM player_wine_guesses WHERE player_id = ?', [playerId], (err) => {
+                        if (err) deleteReject(err);
+                        else deleteResolve();
+                    });
+                });
+
+                // Insert new guesses
+                for (const guess of guesses) {
+                    await new Promise((insertResolve, insertReject) => {
+                        const guessId = uuidv4();
+                        const sql = `
+                            INSERT INTO player_wine_guesses (
+                                id, player_id, category_id, guess
+                            ) VALUES (?, ?, ?, ?)
+                        `;
+                        this.db.run(sql, [guessId, playerId, guess.category_id, guess.guess], (err) => {
+                            if (err) insertReject(err);
+                            else insertResolve();
+                        });
+                    });
+                }
+
+                resolve();
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    getPlayerWineGuesses(playerId) {
+        return new Promise((resolve, reject) => {
+            const sql = 'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ?';
+            this.db.all(sql, [playerId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    }
+
+    getEventWineGuesses(eventId) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Get all wine categories for the event
+                const categories = await new Promise((resolve, reject) => {
+                    const sql = 'SELECT * FROM wine_categories WHERE event_id = ? ORDER BY created_at ASC';
+                    this.db.all(sql, [eventId], (err, rows) => {
+                        if (err) reject(err);
+                        else resolve(rows);
+                    });
+                });
+
+                // For each category, get all guesses
+                const categoriesWithGuesses = [];
+                for (const category of categories) {
+                    const guesses = await new Promise((resolve, reject) => {
+                        const sql = `
+                            SELECT pwg.guess, p.name as player_name, p.presentation_order
+                            FROM player_wine_guesses pwg
+                            JOIN players p ON pwg.player_id = p.id
+                            WHERE pwg.category_id = ? AND p.event_id = ?
+                            ORDER BY p.presentation_order ASC
+                        `;
+                        this.db.all(sql, [category.id, eventId], (err, rows) => {
+                            if (err) reject(err);
+                            else resolve(rows);
+                        });
+                    });
+
+                    categoriesWithGuesses.push({
+                        id: category.id,
+                        guessing_element: category.guessing_element,
+                        difficulty_factor: category.difficulty_factor,
+                        guesses: guesses
+                    });
+                }
+
+                resolve(categoriesWithGuesses);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
 }
 
 module.exports = new Database();

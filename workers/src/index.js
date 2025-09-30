@@ -96,6 +96,11 @@ export default {
                 return await startEvent(eventId, env, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/wine-guesses') && method === 'GET') {
+                const eventId = apiPath.split('/')[3];
+                return await getEventWineGuesses(eventId, env, corsHeaders);
+            }
+
             if (apiPath.startsWith('/api/events/') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
                 return await getEvent(eventId, env, corsHeaders);
@@ -132,6 +137,16 @@ export default {
             if (apiPath.startsWith('/api/players/') && apiPath.endsWith('/wine-details') && method === 'GET') {
                 const playerId = apiPath.split('/')[3];
                 return await getPlayerWineDetails(env, playerId, corsHeaders);
+            }
+
+            if (apiPath.startsWith('/api/players/') && apiPath.endsWith('/wine-guesses') && method === 'POST') {
+                const playerId = apiPath.split('/')[3];
+                return await submitPlayerWineGuesses(playerId, request, env, corsHeaders);
+            }
+
+            if (apiPath.startsWith('/api/players/') && apiPath.endsWith('/wine-guesses') && method === 'GET') {
+                const playerId = apiPath.split('/')[3];
+                return await getPlayerWineGuesses(playerId, env, corsHeaders);
             }
 
             return new Response(JSON.stringify({
@@ -915,6 +930,111 @@ async function debugEventCategories(eventId, env, corsHeaders) {
             error: 'Failed to debug event categories',
             details: error.message
         }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Wine guesses functions
+async function submitPlayerWineGuesses(playerId, request, env, corsHeaders) {
+    try {
+        const { guesses } = await request.json();
+
+        if (!guesses || !Array.isArray(guesses)) {
+            return new Response(JSON.stringify({ error: 'Guesses must be an array' }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Delete existing guesses for this player
+        await env.wine_events.prepare('DELETE FROM player_wine_guesses WHERE player_id = ?')
+            .bind(playerId)
+            .run();
+
+        // Insert new guesses
+        for (const guess of guesses) {
+            const guessId = generateUUID();
+            await env.wine_events.prepare(`
+                INSERT INTO player_wine_guesses (id, player_id, category_id, guess)
+                VALUES (?, ?, ?, ?)
+            `).bind(guessId, playerId, guess.category_id, guess.guess).run();
+        }
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Wine guesses submitted successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error submitting wine guesses:', error);
+        return new Response(JSON.stringify({ error: 'Failed to submit wine guesses' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getPlayerWineGuesses(playerId, env, corsHeaders) {
+    try {
+        const result = await env.wine_events.prepare(
+            'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ?'
+        ).bind(playerId).all();
+
+        return new Response(JSON.stringify({
+            success: true,
+            guesses: result.results || []
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error fetching player wine guesses:', error);
+        return new Response(JSON.stringify({ error: 'Failed to fetch wine guesses' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getEventWineGuesses(eventId, env, corsHeaders) {
+    try {
+        // Get all wine categories for the event
+        const categoriesResult = await env.wine_events.prepare(
+            'SELECT * FROM wine_categories WHERE event_id = ? ORDER BY created_at ASC'
+        ).bind(eventId).all();
+
+        const categories = categoriesResult.results || [];
+        const categoriesWithGuesses = [];
+
+        // For each category, get all guesses
+        for (const category of categories) {
+            const guessesResult = await env.wine_events.prepare(`
+                SELECT pwg.guess, p.name as player_name, p.presentation_order
+                FROM player_wine_guesses pwg
+                JOIN players p ON pwg.player_id = p.id
+                WHERE pwg.category_id = ? AND p.event_id = ?
+                ORDER BY p.presentation_order ASC
+            `).bind(category.id, eventId).all();
+
+            categoriesWithGuesses.push({
+                id: category.id,
+                guessing_element: category.guessing_element,
+                difficulty_factor: category.difficulty_factor,
+                guesses: guessesResult.results || []
+            });
+        }
+
+        return new Response(JSON.stringify({
+            success: true,
+            categories: categoriesWithGuesses
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error fetching event wine guesses:', error);
+        return new Response(JSON.stringify({ error: 'Failed to fetch wine guesses' }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
