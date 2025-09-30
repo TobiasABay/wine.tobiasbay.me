@@ -182,10 +182,6 @@ class ApiService {
         return this.request<WineCategory[]>(`/api/events/${eventId}/wine-categories`);
     }
 
-    async getEventByJoinCode(joinCode: string): Promise<Event> {
-        return this.request<Event>(`/api/events/join/${joinCode}`);
-    }
-
     async getPlayerWineDetails(playerId: string): Promise<PlayerWineDetail[]> {
         return this.request<PlayerWineDetail[]>(`/api/players/${playerId}/wine-details`);
     }
