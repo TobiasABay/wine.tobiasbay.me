@@ -146,7 +146,9 @@ export default {
 
             if (apiPath.startsWith('/api/players/') && apiPath.endsWith('/wine-guesses') && method === 'GET') {
                 const playerId = apiPath.split('/')[3];
-                return await getPlayerWineGuesses(playerId, env, corsHeaders);
+                const url = new URL(request.url);
+                const wineNumber = url.searchParams.get('wineNumber');
+                return await getPlayerWineGuesses(playerId, env, corsHeaders, wineNumber ? parseInt(wineNumber) : undefined);
             }
 
             return new Response(JSON.stringify({
@@ -939,7 +941,7 @@ async function debugEventCategories(eventId, env, corsHeaders) {
 // Wine guesses functions
 async function submitPlayerWineGuesses(playerId, request, env, corsHeaders) {
     try {
-        const { guesses } = await request.json();
+        const { wineNumber, guesses } = await request.json();
 
         if (!guesses || !Array.isArray(guesses)) {
             return new Response(JSON.stringify({ error: 'Guesses must be an array' }), {
@@ -948,18 +950,25 @@ async function submitPlayerWineGuesses(playerId, request, env, corsHeaders) {
             });
         }
 
-        // Delete existing guesses for this player
-        await env.wine_events.prepare('DELETE FROM player_wine_guesses WHERE player_id = ?')
-            .bind(playerId)
+        if (!wineNumber) {
+            return new Response(JSON.stringify({ error: 'Wine number is required' }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Delete existing guesses for this player and wine
+        await env.wine_events.prepare('DELETE FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?')
+            .bind(playerId, wineNumber)
             .run();
 
         // Insert new guesses
         for (const guess of guesses) {
             const guessId = generateUUID();
             await env.wine_events.prepare(`
-                INSERT INTO player_wine_guesses (id, player_id, category_id, guess)
-                VALUES (?, ?, ?, ?)
-            `).bind(guessId, playerId, guess.category_id, guess.guess).run();
+                INSERT INTO player_wine_guesses (id, player_id, category_id, guess, wine_number)
+                VALUES (?, ?, ?, ?, ?)
+            `).bind(guessId, playerId, guess.category_id, guess.guess, wineNumber).run();
         }
 
         return new Response(JSON.stringify({
@@ -977,11 +986,18 @@ async function submitPlayerWineGuesses(playerId, request, env, corsHeaders) {
     }
 }
 
-async function getPlayerWineGuesses(playerId, env, corsHeaders) {
+async function getPlayerWineGuesses(playerId, env, corsHeaders, wineNumber) {
     try {
-        const result = await env.wine_events.prepare(
-            'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ?'
-        ).bind(playerId).all();
+        let result;
+        if (wineNumber) {
+            result = await env.wine_events.prepare(
+                'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?'
+            ).bind(playerId, wineNumber).all();
+        } else {
+            result = await env.wine_events.prepare(
+                'SELECT category_id, guess, wine_number FROM player_wine_guesses WHERE player_id = ?'
+            ).bind(playerId).all();
+        }
 
         return new Response(JSON.stringify({
             success: true,
@@ -1011,11 +1027,11 @@ async function getEventWineGuesses(eventId, env, corsHeaders) {
         // For each category, get all guesses
         for (const category of categories) {
             const guessesResult = await env.wine_events.prepare(`
-                SELECT pwg.guess, p.name as player_name, p.presentation_order
+                SELECT pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
                 FROM player_wine_guesses pwg
                 JOIN players p ON pwg.player_id = p.id
                 WHERE pwg.category_id = ? AND p.event_id = ?
-                ORDER BY p.presentation_order ASC
+                ORDER BY p.presentation_order ASC, pwg.wine_number ASC
             `).bind(category.id, eventId).all();
 
             categoriesWithGuesses.push({

@@ -87,9 +87,9 @@ export default function PlayerScoringPage() {
                     }
                 }
 
-                // Check if player has already submitted category guesses
+                // Check if player has already submitted category guesses for this specific wine
                 try {
-                    const guessesResponse = await apiService.getPlayerWineGuesses(playerId);
+                    const guessesResponse = await apiService.getPlayerWineGuesses(playerId, sortedPlayers[0]?.presentation_order);
                     if (guessesResponse && guessesResponse.guesses) {
                         const guesses: Record<string, string> = {};
                         guessesResponse.guesses.forEach((guess: any) => {
@@ -99,7 +99,7 @@ export default function PlayerScoringPage() {
                         setGuessesSubmitted(true);
                     }
                 } catch (guessesError) {
-                    console.log('No existing guesses found:', guessesError);
+                    console.log('No existing guesses found for this wine:', guessesError);
                 }
             } catch (error: any) {
                 console.error('Error loading event:', error);
@@ -188,7 +188,7 @@ export default function PlayerScoringPage() {
     };
 
     const handleSubmitGuesses = async () => {
-        if (submitting || !currentPlayerId) return;
+        if (submitting || !currentPlayerId || !currentPlayer) return;
 
         setSubmitting(true);
         setError('');
@@ -199,7 +199,7 @@ export default function PlayerScoringPage() {
                 guess: guess
             }));
 
-            await apiService.submitPlayerWineGuesses(currentPlayerId, guesses);
+            await apiService.submitPlayerWineGuesses(currentPlayerId, currentPlayer.presentation_order, guesses);
             setGuessesSubmitted(true);
         } catch (error: any) {
             setError(error.message || 'Failed to submit guesses');

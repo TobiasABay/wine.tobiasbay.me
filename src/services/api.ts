@@ -252,19 +252,22 @@ class ApiService {
         });
     }
 
-    async submitPlayerWineGuesses(playerId: string, guesses: Array<{ category_id: string; guess: string }>): Promise<{ success: boolean; message: string }> {
+    async submitPlayerWineGuesses(playerId: string, wineNumber: number, guesses: Array<{ category_id: string; guess: string }>): Promise<{ success: boolean; message: string }> {
         return this.request<{ success: boolean; message: string }>(`/api/players/${playerId}/wine-guesses`, {
             method: 'POST',
-            body: JSON.stringify({ guesses })
+            body: JSON.stringify({ wineNumber, guesses })
         });
     }
 
-    async getPlayerWineGuesses(playerId: string): Promise<{ success: boolean; guesses: Array<{ category_id: string; guess: string }> }> {
-        return this.request<{ success: boolean; guesses: Array<{ category_id: string; guess: string }> }>(`/api/players/${playerId}/wine-guesses`);
+    async getPlayerWineGuesses(playerId: string, wineNumber?: number): Promise<{ success: boolean; guesses: Array<{ category_id: string; guess: string }> }> {
+        const url = wineNumber
+            ? `/api/players/${playerId}/wine-guesses?wineNumber=${wineNumber}`
+            : `/api/players/${playerId}/wine-guesses`;
+        return this.request<{ success: boolean; guesses: Array<{ category_id: string; guess: string }> }>(url);
     }
 
-    async getEventWineGuesses(eventId: string): Promise<{ success: boolean; categories: Array<{ id: string; guessing_element: string; difficulty_factor: string; guesses: Array<{ player_name: string; guess: string; presentation_order: number }> }> }> {
-        return this.request<{ success: boolean; categories: Array<{ id: string; guessing_element: string; difficulty_factor: string; guesses: Array<{ player_name: string; guess: string; presentation_order: number }> }> }>(`/api/events/${eventId}/wine-guesses`);
+    async getEventWineGuesses(eventId: string): Promise<{ success: boolean; categories: Array<{ id: string; guessing_element: string; difficulty_factor: string; guesses: Array<{ player_name: string; guess: string; presentation_order: number; wine_number: number }> }> }> {
+        return this.request<{ success: boolean; categories: Array<{ id: string; guessing_element: string; difficulty_factor: string; guesses: Array<{ player_name: string; guess: string; presentation_order: number; wine_number: number }> }> }>(`/api/events/${eventId}/wine-guesses`);
     }
 
     async startEvent(eventId: string): Promise<{ success: boolean; message: string }> {

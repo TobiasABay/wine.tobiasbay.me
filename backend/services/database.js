@@ -397,12 +397,12 @@ class Database {
     }
 
     // Wine guesses methods
-    submitPlayerWineGuesses(playerId, guesses) {
+    submitPlayerWineGuesses(playerId, wineNumber, guesses) {
         return new Promise(async (resolve, reject) => {
             try {
-                // First, delete existing guesses for this player
+                // First, delete existing guesses for this player and wine
                 await new Promise((deleteResolve, deleteReject) => {
-                    this.db.run('DELETE FROM player_wine_guesses WHERE player_id = ?', [playerId], (err) => {
+                    this.db.run('DELETE FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?', [playerId, wineNumber], (err) => {
                         if (err) deleteReject(err);
                         else deleteResolve();
                     });
@@ -414,10 +414,10 @@ class Database {
                         const guessId = uuidv4();
                         const sql = `
                             INSERT INTO player_wine_guesses (
-                                id, player_id, category_id, guess
-                            ) VALUES (?, ?, ?, ?)
+                                id, player_id, category_id, guess, wine_number
+                            ) VALUES (?, ?, ?, ?, ?)
                         `;
-                        this.db.run(sql, [guessId, playerId, guess.category_id, guess.guess], (err) => {
+                        this.db.run(sql, [guessId, playerId, guess.category_id, guess.guess, wineNumber], (err) => {
                             if (err) insertReject(err);
                             else insertResolve();
                         });
@@ -431,10 +431,18 @@ class Database {
         });
     }
 
-    getPlayerWineGuesses(playerId) {
+    getPlayerWineGuesses(playerId, wineNumber) {
         return new Promise((resolve, reject) => {
-            const sql = 'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ?';
-            this.db.all(sql, [playerId], (err, rows) => {
+            let sql, params;
+            if (wineNumber) {
+                sql = 'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?';
+                params = [playerId, wineNumber];
+            } else {
+                sql = 'SELECT category_id, guess, wine_number FROM player_wine_guesses WHERE player_id = ?';
+                params = [playerId];
+            }
+
+            this.db.all(sql, params, (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -461,11 +469,11 @@ class Database {
                 for (const category of categories) {
                     const guesses = await new Promise((resolve, reject) => {
                         const sql = `
-                            SELECT pwg.guess, p.name as player_name, p.presentation_order
+                            SELECT pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
                             FROM player_wine_guesses pwg
                             JOIN players p ON pwg.player_id = p.id
                             WHERE pwg.category_id = ? AND p.event_id = ?
-                            ORDER BY p.presentation_order ASC
+                            ORDER BY p.presentation_order ASC, pwg.wine_number ASC
                         `;
                         this.db.all(sql, [category.id, eventId], (err, rows) => {
                             if (err) reject(err);

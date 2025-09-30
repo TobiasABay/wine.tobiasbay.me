@@ -88,6 +88,7 @@ db.serialize(() => {
             player_id TEXT NOT NULL,
             category_id TEXT NOT NULL,
             guess TEXT NOT NULL,
+            wine_number INTEGER NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (player_id) REFERENCES players (id) ON DELETE CASCADE,
             FOREIGN KEY (category_id) REFERENCES wine_categories (id) ON DELETE CASCADE

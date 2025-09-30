@@ -220,13 +220,17 @@ router.put('/:playerId/ready', async (req, res) => {
 router.post('/:playerId/wine-guesses', async (req, res) => {
     try {
         const { playerId } = req.params;
-        const { guesses } = req.body;
+        const { wineNumber, guesses } = req.body;
 
         if (!guesses || !Array.isArray(guesses)) {
             return res.status(400).json({ error: 'Guesses must be an array' });
         }
 
-        await db.submitPlayerWineGuesses(playerId, guesses);
+        if (!wineNumber) {
+            return res.status(400).json({ error: 'Wine number is required' });
+        }
+
+        await db.submitPlayerWineGuesses(playerId, wineNumber, guesses);
 
         res.json({ success: true, message: 'Wine guesses submitted successfully' });
     } catch (error) {
@@ -239,7 +243,9 @@ router.post('/:playerId/wine-guesses', async (req, res) => {
 router.get('/:playerId/wine-guesses', async (req, res) => {
     try {
         const { playerId } = req.params;
-        const guesses = await db.getPlayerWineGuesses(playerId);
+        const { wineNumber } = req.query;
+
+        const guesses = await db.getPlayerWineGuesses(playerId, wineNumber ? parseInt(wineNumber) : undefined);
 
         res.json({ success: true, guesses });
     } catch (error) {

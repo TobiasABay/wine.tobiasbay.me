@@ -17,6 +17,7 @@ interface WineGuess {
     player_name: string;
     guess: string;
     presentation_order: number;
+    wine_number: number;
 }
 
 interface WineCategoryWithGuesses {
@@ -289,19 +290,17 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                                     >
                                                         {guess.guess || 'No guess'}
                                                     </Typography>
-                                                    {guess.presentation_order && (
-                                                        <Typography
-                                                            variant="caption"
-                                                            sx={{
-                                                                color: '#7f8c8d',
-                                                                fontSize: '0.75rem',
-                                                                display: 'block',
-                                                                mt: 0.5
-                                                            }}
-                                                        >
-                                                            Order: #{guess.presentation_order}
-                                                        </Typography>
-                                                    )}
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            color: '#7f8c8d',
+                                                            fontSize: '0.75rem',
+                                                            display: 'block',
+                                                            mt: 0.5
+                                                        }}
+                                                    >
+                                                        Player #{guess.presentation_order} • Wine #{guess.wine_number}
+                                                    </Typography>
                                                 </Paper>
                                             );
                                         })}
