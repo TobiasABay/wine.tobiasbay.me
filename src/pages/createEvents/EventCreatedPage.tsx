@@ -220,6 +220,12 @@ export default function EventCreatedPage() {
                 setEventData(event);
                 setJoinCode(event.join_code);
 
+                // Check if event has already started and redirect non-creator players immediately
+                if (event.event_started && !isCreator) {
+                    navigate(`/score/${urlEventId}`);
+                    return;
+                }
+
                 // If not the creator, find the current player
                 if (!isCreator) {
                     const currentPlayer = event.players?.find(player =>
@@ -270,6 +276,12 @@ export default function EventCreatedPage() {
                     try {
                         const event = await apiService.getEvent(urlEventId);
                         const newPlayers = event.players || [];
+
+                        // Check if event has started and redirect non-creator players
+                        if (event.event_started && !isCreator) {
+                            navigate(`/score/${urlEventId}`);
+                            return;
+                        }
 
                         // Only load wine details if we have new players or player count changed
                         const currentPlayerIds = players.map(p => p.id).sort();
@@ -329,6 +341,12 @@ export default function EventCreatedPage() {
                         const event = await apiService.getEvent(urlEventId);
                         const newPlayers = event.players || [];
 
+                        // Check if event has started and redirect non-creator players
+                        if (event.event_started && !isEventCreator) {
+                            navigate(`/score/${urlEventId}`);
+                            return;
+                        }
+
                         // Only load wine details if we have new players or player count changed
                         const currentPlayerIds = players.map(p => p.id).sort();
                         const newPlayerIds = newPlayers.map(p => p.id).sort();
@@ -354,12 +372,6 @@ export default function EventCreatedPage() {
                             );
 
                             setPlayers(playersWithWineDetails);
-                        }
-
-                        // Check if event has started and redirect non-creator players
-                        if (event.event_started && !isEventCreator) {
-                            navigate(`/score/${urlEventId}`);
-                            return;
                         }
                     } catch (error) {
                         console.error('Error polling for updates:', error);
