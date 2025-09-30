@@ -97,7 +97,7 @@ export default function EventPage() {
             py: 4
         }}>
             <Container maxWidth="md">
-                {/* Header with Back Button */}
+                {/* Header with Back Button and Player Info */}
                 <Box sx={{ mb: 4 }}>
                     <Button
                         onClick={handleBack}
@@ -112,33 +112,33 @@ export default function EventPage() {
                     >
                         Back
                     </Button>
-                </Box>
 
-                {/* Player Name and Wine Number */}
-                <Box sx={{ textAlign: 'center', mt: 8 }}>
-                    <Typography
-                        variant="h1"
-                        sx={{
-                            color: 'white',
-                            fontWeight: 'bold',
-                            fontSize: { xs: '3rem', md: '4rem' },
-                            textShadow: '0 4px 8px rgba(0,0,0,0.3)',
-                            mb: 2
-                        }}
-                    >
-                        {currentPlayer.name}
-                    </Typography>
-                    <Typography
-                        variant="h3"
-                        sx={{
-                            color: 'white',
-                            opacity: 0.8,
-                            fontWeight: 'medium',
-                            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                        }}
-                    >
-                        Wine #{currentPlayer.presentation_order}
-                    </Typography>
+                    {/* Player Name and Wine Number */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 4 }}>
+                        <Typography
+                            variant="h1"
+                            sx={{
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                                textShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                            }}
+                        >
+                            {currentPlayer.name}
+                        </Typography>
+                        <Typography
+                            variant="h2"
+                            sx={{
+                                color: 'white',
+                                opacity: 0.8,
+                                fontWeight: 'medium',
+                                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                                fontSize: { xs: '1.5rem', md: '2rem' }
+                            }}
+                        >
+                            Wine #{currentPlayer.presentation_order}
+                        </Typography>
+                    </Box>
                 </Box>
             </Container>
         </Box>
