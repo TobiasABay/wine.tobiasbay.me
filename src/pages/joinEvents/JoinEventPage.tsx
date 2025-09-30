@@ -276,6 +276,13 @@ export default function JoinEventPage() {
                 wineAnswer: wineAnswers[category.id]
             }));
 
+            console.log('Frontend: Submitting wine answers:', {
+                playerId: result.playerId,
+                wineAnswers: wineAnswerData,
+                wineCategories: wineCategories,
+                wineAnswersState: wineAnswers
+            });
+
             await apiService.submitWineAnswers({
                 playerId: result.playerId,
                 wineAnswers: wineAnswerData
