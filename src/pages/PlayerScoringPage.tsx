@@ -35,6 +35,10 @@ export default function PlayerScoringPage() {
             try {
                 // Get current player ID from localStorage
                 const playerId = localStorage.getItem(`player-id-${eventId}`);
+                console.log('PlayerScoringPage: eventId =', eventId);
+                console.log('PlayerScoringPage: playerId from localStorage =', playerId);
+                console.log('PlayerScoringPage: all localStorage keys =', Object.keys(localStorage));
+                
                 if (!playerId) {
                     setError('Player not found. Please join the event first.');
                     setLoading(false);
@@ -43,7 +47,16 @@ export default function PlayerScoringPage() {
                 setCurrentPlayerId(playerId);
 
                 // Load event data
+                console.log('PlayerScoringPage: Loading event data for eventId =', eventId);
                 const event = await apiService.getEvent(eventId);
+                console.log('PlayerScoringPage: Event data loaded =', event);
+
+                // Check if event has started
+                if (!event.event_started) {
+                    setError('Event has not started yet. Please wait for the event creator to start the event.');
+                    setLoading(false);
+                    return;
+                }
 
                 // Find the first player in the sequence (lowest presentation_order)
                 const sortedPlayers = (event.players || []).sort((a, b) => a.presentation_order - b.presentation_order);
@@ -64,7 +77,13 @@ export default function PlayerScoringPage() {
                 }
             } catch (error: any) {
                 console.error('Error loading event:', error);
-                setError(error.message || 'Failed to load event data');
+                if (error.message?.includes('Event not found')) {
+                    setError('Event not found. Please check if the event ID is correct.');
+                } else if (error.message?.includes('Player not found')) {
+                    setError('Player session expired. Please rejoin the event.');
+                } else {
+                    setError(`Failed to load event data: ${error.message || 'Unknown error'}`);
+                }
             } finally {
                 setLoading(false);
             }
@@ -147,6 +166,24 @@ export default function PlayerScoringPage() {
                     <Alert severity="error" sx={{ backgroundColor: 'rgba(244, 67, 54, 0.1)' }}>
                         {error}
                     </Alert>
+                    {error.includes('Player session expired') && (
+                        <Box sx={{ mt: 2, textAlign: 'center' }}>
+                            <Button
+                                onClick={() => navigate('/join-event')}
+                                variant="contained"
+                                sx={{
+                                    backgroundColor: '#ffd700',
+                                    color: '#333',
+                                    fontWeight: 'bold',
+                                    '&:hover': {
+                                        backgroundColor: '#ffc107',
+                                    }
+                                }}
+                            >
+                                Rejoin Event
+                            </Button>
+                        </Box>
+                    )}
                 </Container>
             </Box>
         );
