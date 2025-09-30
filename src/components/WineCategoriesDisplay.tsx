@@ -211,44 +211,44 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                         >
                             {/* Category Header */}
                             <Box sx={{ mb: 3 }}>
-                                <Typography
-                                    variant="h5"
-                                    sx={{
-                                        color: '#2c3e50',
-                                        fontWeight: 'bold',
-                                        mb: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1
-                                    }}
-                                >
-                                    <Box
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                                    <Typography
+                                        variant="h5"
                                         sx={{
-                                            width: 12,
-                                            height: 12,
-                                            borderRadius: '50%',
-                                            backgroundColor: '#667eea',
-                                            flexShrink: 0
+                                            color: '#2c3e50',
+                                            fontWeight: 'bold',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1
                                         }}
-                                    />
-                                    {category.guessing_element || 'Unknown Category'}
-                                </Typography>
+                                    >
+                                        <Box
+                                            sx={{
+                                                width: 12,
+                                                height: 12,
+                                                borderRadius: '50%',
+                                                backgroundColor: '#667eea',
+                                                flexShrink: 0
+                                            }}
+                                        />
+                                        {category.guessing_element || 'Unknown Category'}
+                                    </Typography>
 
-                                {category.difficulty_factor && (
-                                    <Chip
-                                        label={`Difficulty: ${category.difficulty_factor}`}
-                                        size="small"
-                                        sx={{
-                                            backgroundColor: category.difficulty_factor === 'Easy' ? '#e8f5e8' :
-                                                category.difficulty_factor === 'Medium' ? '#fff3cd' : '#f8d7da',
-                                            color: category.difficulty_factor === 'Easy' ? '#155724' :
-                                                category.difficulty_factor === 'Medium' ? '#856404' : '#721c24',
-                                            fontWeight: 'medium',
-                                            fontSize: '0.75rem',
-                                            mb: 2
-                                        }}
-                                    />
-                                )}
+                                    {category.difficulty_factor && (
+                                        <Chip
+                                            label={`Difficulty: ${category.difficulty_factor}`}
+                                            size="small"
+                                            sx={{
+                                                backgroundColor: category.difficulty_factor === 'Easy' ? '#e8f5e8' :
+                                                    category.difficulty_factor === 'Medium' ? '#fff3cd' : '#f8d7da',
+                                                color: category.difficulty_factor === 'Easy' ? '#155724' :
+                                                    category.difficulty_factor === 'Medium' ? '#856404' : '#721c24',
+                                                fontWeight: 'medium',
+                                                fontSize: '0.75rem'
+                                            }}
+                                        />
+                                    )}
+                                </Box>
                             </Box>
 
                             {/* Player Guesses */}
@@ -325,20 +325,20 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                                 <Paper
                                                     key={index}
                                                     sx={{
-                                                        p: 2,
+                                                        p: 1.5,
                                                         backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                                         border: '1px solid rgba(102, 126, 234, 0.2)',
-                                                        borderRadius: 2,
-                                                        minWidth: '200px',
+                                                        borderRadius: 4,
+                                                        minWidth: '120px',
                                                         flex: '1 1 auto'
                                                     }}
                                                 >
                                                     <Typography
-                                                        variant="body1"
+                                                        variant="body2"
                                                         sx={{
                                                             color: '#34495e',
                                                             fontWeight: 'medium',
-                                                            fontSize: '1rem',
+                                                            fontSize: '0.875rem',
                                                             textAlign: 'center'
                                                         }}
                                                     >
@@ -349,7 +349,7 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                                                 sx={{
                                                                     color: '#7f8c8d',
                                                                     fontWeight: 'normal',
-                                                                    fontSize: '0.9rem',
+                                                                    fontSize: '0.8rem',
                                                                     ml: 0.5
                                                                 }}
                                                             >
