@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     Box,
     Typography,
-    Paper,
-    CircularProgress,
-    Chip
+    CircularProgress
 } from '@mui/material';
 import { Star, StarBorder } from '@mui/icons-material';
 import { apiService } from '../services/api';
@@ -85,7 +83,7 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
                         key={i}
                         sx={{
                             color: '#ffd700',
-                            fontSize: '1.2rem',
+                            fontSize: '0.8rem',
                             filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
                         }}
                     />
@@ -96,7 +94,7 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
                         key={i}
                         sx={{
                             color: '#ffd700',
-                            fontSize: '1.2rem',
+                            fontSize: '0.8rem',
                             filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
                             opacity: 0.5
                         }}
@@ -108,7 +106,7 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
                         key={i}
                         sx={{
                             color: 'rgba(255,255,255,0.3)',
-                            fontSize: '1.2rem'
+                            fontSize: '0.8rem'
                         }}
                     />
                 );
@@ -119,127 +117,112 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
 
     if (loading) {
         return (
-            <Paper sx={{
-                p: 3,
+            <Box sx={{
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
                 background: 'rgba(255,255,255,0.1)',
                 backdropFilter: 'blur(10px)',
-                borderRadius: 3,
-                border: '1px solid rgba(255,255,255,0.2)',
-                textAlign: 'center'
+                border: '2px solid rgba(255,255,255,0.2)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'fixed',
+                top: 20,
+                right: 20,
+                zIndex: 1000
             }}>
-                <CircularProgress sx={{ color: 'white' }} />
-                <Typography variant="body2" sx={{ color: 'white', mt: 1, opacity: 0.8 }}>
-                    Loading scores...
+                <CircularProgress sx={{ color: 'white', mb: 1 }} size={24} />
+                <Typography variant="caption" sx={{ color: 'white', opacity: 0.8, fontSize: '0.7rem' }}>
+                    Loading...
                 </Typography>
-            </Paper>
+            </Box>
         );
     }
 
     if (error) {
         return (
-            <Paper sx={{
-                p: 3,
+            <Box sx={{
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
                 background: 'rgba(255,255,255,0.1)',
                 backdropFilter: 'blur(10px)',
-                borderRadius: 3,
-                border: '1px solid rgba(255,255,255,0.2)',
-                textAlign: 'center'
+                border: '2px solid rgba(255,255,255,0.2)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'fixed',
+                top: 20,
+                right: 20,
+                zIndex: 1000
             }}>
-                <Typography variant="body2" sx={{ color: 'white', opacity: 0.8 }}>
-                    Error loading scores: {error}
+                <Typography variant="caption" sx={{ color: 'white', opacity: 0.8, fontSize: '0.7rem', textAlign: 'center' }}>
+                    Error
                 </Typography>
-            </Paper>
+            </Box>
         );
     }
 
     if (!scoreData || scoreData.totalScores === 0) {
         return (
-            <Paper sx={{
-                p: 3,
+            <Box sx={{
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
                 background: 'rgba(255,255,255,0.1)',
                 backdropFilter: 'blur(10px)',
-                borderRadius: 3,
-                border: '1px solid rgba(255,255,255,0.2)',
-                textAlign: 'center'
+                border: '2px solid rgba(255,255,255,0.2)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'fixed',
+                top: 20,
+                right: 20,
+                zIndex: 1000
             }}>
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', mb: 1 }}>
-                    Average Score
+                <Typography variant="caption" sx={{ color: 'white', opacity: 0.8, fontSize: '0.7rem', mb: 0.5 }}>
+                    Average
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'white', opacity: 0.8 }}>
-                    No scores yet
+                <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                    0.0
                 </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
                     {renderStars(0)}
                 </Box>
-            </Paper>
+            </Box>
         );
     }
 
     return (
-        <Paper sx={{
-            p: 3,
+        <Box sx={{
+            width: 120,
+            height: 120,
+            borderRadius: '50%',
             background: 'rgba(255,255,255,0.1)',
             backdropFilter: 'blur(10px)',
-            borderRadius: 3,
-            border: '1px solid rgba(255,255,255,0.2)',
-            textAlign: 'center'
+            border: '2px solid rgba(255,255,255,0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'fixed',
+            top: 20,
+            right: 20,
+            zIndex: 1000
         }}>
-            <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', mb: 1 }}>
-                Average Score
+            <Typography variant="caption" sx={{ color: 'white', opacity: 0.8, fontSize: '0.7rem', mb: 0.5 }}>
+                Average
             </Typography>
-
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2 }}>
-                <Typography
-                    variant="h3"
-                    sx={{
-                        color: 'white',
-                        fontWeight: 'bold',
-                        mr: 2,
-                        textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                    }}
-                >
-                    {scoreData.average.toFixed(1)}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {renderStars(scoreData.average)}
-                </Box>
+            <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                {scoreData.average.toFixed(1)}
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
+                {renderStars(scoreData.average)}
             </Box>
-
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
-                <Chip
-                    label={`${scoreData.totalScores} rating${scoreData.totalScores !== 1 ? 's' : ''}`}
-                    size="small"
-                    sx={{
-                        backgroundColor: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        fontWeight: 'medium'
-                    }}
-                />
-            </Box>
-
-            {/* Individual Scores */}
-            {scoreData.scores.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" sx={{ color: 'white', opacity: 0.8, mb: 1 }}>
-                        Individual Scores:
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.5 }}>
-                        {scoreData.scores.map((score) => (
-                            <Chip
-                                key={score.id}
-                                label={`${score.player_name}: ${score.score}`}
-                                size="small"
-                                sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.15)',
-                                    color: 'white',
-                                    fontSize: '0.75rem',
-                                    height: 24
-                                }}
-                            />
-                        ))}
-                    </Box>
-                </Box>
-            )}
-        </Paper>
+        </Box>
     );
 }
