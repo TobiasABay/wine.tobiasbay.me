@@ -165,7 +165,7 @@ export default function EventPage() {
                 )}
 
                 {/* Wine Categories Display */}
-                {eventId && (
+                {eventId && !loading && !error && (
                     <Box sx={{ mt: 4 }}>
                         <WineCategoriesDisplay eventId={eventId} />
                     </Box>

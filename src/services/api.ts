@@ -195,19 +195,35 @@ class ApiService {
             }>;
         }>;
     }> {
-        return this.request<{
-            success: boolean;
-            categories: Array<{
-                id: string;
-                guessing_element: string;
-                difficulty_factor: string;
-                answers: Array<{
-                    wine_answer: string;
-                    player_name: string;
-                    presentation_order: number;
+        try {
+            const response = await this.request<{
+                success: boolean;
+                categories: Array<{
+                    id: string;
+                    guessing_element: string;
+                    difficulty_factor: string;
+                    answers: Array<{
+                        wine_answer: string;
+                        player_name: string;
+                        presentation_order: number;
+                    }>;
                 }>;
-            }>;
-        }>(`/api/events/${eventId}/wine-answers`);
+            }>(`/api/events/${eventId}/wine-answers`);
+
+            // Ensure the response has the expected structure
+            if (!response) {
+                return { success: false, categories: [] };
+            }
+
+            if (!response.categories || !Array.isArray(response.categories)) {
+                return { success: response.success || false, categories: [] };
+            }
+
+            return response;
+        } catch (error) {
+            console.error('Error in getEventWineAnswers:', error);
+            return { success: false, categories: [] };
+        }
     }
 
     async getPlayerWineDetails(playerId: string): Promise<PlayerWineDetail[]> {
