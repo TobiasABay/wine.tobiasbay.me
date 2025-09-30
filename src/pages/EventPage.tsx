@@ -10,9 +10,12 @@ import { ArrowBack } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Player } from '../services/api';
 import AverageScore from '../components/AverageScore';
+import WineScoring from '../components/WineScoring';
 
 export default function EventPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+    const [isEventCreator, setIsEventCreator] = useState<boolean>(false);
+    const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
     const { eventId } = useParams();
@@ -27,6 +30,15 @@ export default function EventPage() {
             }
 
             try {
+                // Check if user is the event creator
+                const hasCreatorSession = sessionStorage.getItem(`is-creator-${eventId}`) === 'true';
+                const hasCreatorLocalStorage = localStorage.getItem(`event-creator-${eventId}`) !== null;
+                const creatorTime = localStorage.getItem(`creator-time-${eventId}`);
+                const isRecentCreator = creatorTime !== null && (Date.now() - parseInt(creatorTime)) < (24 * 60 * 60 * 1000);
+                const isCreator = hasCreatorSession || (hasCreatorLocalStorage && isRecentCreator) || (hasCreatorLocalStorage && !creatorTime);
+
+                setIsEventCreator(isCreator);
+
                 // Load event data
                 const event = await apiService.getEvent(eventId);
 
@@ -34,6 +46,16 @@ export default function EventPage() {
                 const sortedPlayers = (event.players || []).sort((a, b) => a.presentation_order - b.presentation_order);
                 if (sortedPlayers.length > 0) {
                     setCurrentPlayer(sortedPlayers[0]);
+                }
+
+                // If not the creator, find the current player
+                if (!isCreator) {
+                    const currentPlayer = event.players?.find(player =>
+                        localStorage.getItem(`player-id-${eventId}`) === player.id
+                    );
+                    if (currentPlayer) {
+                        setCurrentPlayerId(currentPlayer.id);
+                    }
                 }
 
             } catch (error: any) {
@@ -148,6 +170,21 @@ export default function EventPage() {
                         <AverageScore
                             eventId={eventId}
                             wineNumber={currentPlayer.presentation_order}
+                        />
+                    </Box>
+                )}
+
+                {/* Wine Scoring Component - Only for non-creator players */}
+                {eventId && currentPlayer && !isEventCreator && currentPlayerId && (
+                    <Box sx={{ mt: 4 }}>
+                        <WineScoring
+                            eventId={eventId}
+                            wineNumber={currentPlayer.presentation_order}
+                            playerId={currentPlayerId}
+                            onScoreSubmitted={() => {
+                                // Refresh the average score display
+                                window.location.reload();
+                            }}
                         />
                     </Box>
                 )}
