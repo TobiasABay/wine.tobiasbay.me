@@ -3,8 +3,8 @@ const API_BASE_URL = isLocalhost ? 'http://localhost:3001' : 'https://wine.tobia
 
 export interface WineCategory {
     id: string;
-    guessingElement: string;
-    difficultyFactor: string;
+    guessing_element: string;
+    difficulty_factor: string;
 }
 
 export interface EventData {
