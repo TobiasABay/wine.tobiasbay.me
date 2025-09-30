@@ -35,12 +35,12 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
         const fetchWineCategoriesWithGuesses = async () => {
             try {
                 console.log('Fetching wine categories with guesses...');
-                
+
                 // Try to get categories with guesses first
                 try {
                     const guessesResponse = await apiService.getEventWineGuesses(eventId);
                     console.log('Wine guesses response:', guessesResponse);
-                    
+
                     if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
                         setCategories(guessesResponse.categories);
                         setLoading(false);
@@ -210,9 +210,9 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
 
                             {/* Player Guesses */}
                             <Box>
-                                <Typography 
-                                    variant="h6" 
-                                    sx={{ 
+                                <Typography
+                                    variant="h6"
+                                    sx={{
                                         color: '#34495e',
                                         fontWeight: 'medium',
                                         mb: 2,
@@ -223,18 +223,18 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                 </Typography>
 
                                 {category.guesses.length === 0 ? (
-                                    <Box 
-                                        sx={{ 
-                                            p: 3, 
+                                    <Box
+                                        sx={{
+                                            p: 3,
                                             textAlign: 'center',
                                             backgroundColor: 'rgba(0,0,0,0.05)',
                                             borderRadius: 2,
                                             border: '2px dashed rgba(0,0,0,0.1)'
                                         }}
                                     >
-                                        <Typography 
-                                            variant="body1" 
-                                            sx={{ 
+                                        <Typography
+                                            variant="body1"
+                                            sx={{
                                                 color: '#7f8c8d',
                                                 fontStyle: 'italic',
                                                 fontWeight: 'medium'
@@ -242,9 +242,9 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                         >
                                             No guesses submitted yet
                                         </Typography>
-                                        <Typography 
-                                            variant="body2" 
-                                            sx={{ 
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
                                                 color: '#95a5a6',
                                                 mt: 1
                                             }}
@@ -268,9 +268,9 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                                         flex: '1 1 auto'
                                                     }}
                                                 >
-                                                    <Typography 
-                                                        variant="subtitle2" 
-                                                        sx={{ 
+                                                    <Typography
+                                                        variant="subtitle2"
+                                                        sx={{
                                                             color: '#2c3e50',
                                                             fontWeight: 'bold',
                                                             mb: 1,
@@ -279,9 +279,9 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                                     >
                                                         {guess.player_name || 'Unknown Player'}
                                                     </Typography>
-                                                    <Typography 
-                                                        variant="body1" 
-                                                        sx={{ 
+                                                    <Typography
+                                                        variant="body1"
+                                                        sx={{
                                                             color: '#34495e',
                                                             fontWeight: 'medium',
                                                             fontSize: '1rem'
@@ -290,9 +290,9 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                                                         {guess.guess || 'No guess'}
                                                     </Typography>
                                                     {guess.presentation_order && (
-                                                        <Typography 
-                                                            variant="caption" 
-                                                            sx={{ 
+                                                        <Typography
+                                                            variant="caption"
+                                                            sx={{
                                                                 color: '#7f8c8d',
                                                                 fontSize: '0.75rem',
                                                                 display: 'block',

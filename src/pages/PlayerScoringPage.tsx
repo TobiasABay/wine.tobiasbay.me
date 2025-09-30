@@ -135,11 +135,11 @@ export default function PlayerScoringPage() {
 
     const getOptionsForCategory = (guessingElement: string): string[] => {
         const element = guessingElement || '';
-        
+
         if (element === 'Country') {
             return [
-                'France', 'Italy', 'Spain', 'Germany', 'Portugal', 'Austria', 
-                'United States', 'Australia', 'Chile', 'Argentina', 'South Africa', 
+                'France', 'Italy', 'Spain', 'Germany', 'Portugal', 'Austria',
+                'United States', 'Australia', 'Chile', 'Argentina', 'South Africa',
                 'New Zealand', 'Canada', 'Greece', 'Hungary', 'Romania', 'Bulgaria',
                 'Croatia', 'Slovenia', 'Georgia', 'Turkey', 'Lebanon', 'Israel',
                 'Brazil', 'Uruguay', 'Mexico', 'Peru', 'Other'
@@ -175,7 +175,7 @@ export default function PlayerScoringPage() {
             return years;
         } else if (element === 'Price Range') {
             return [
-                'Under $10', '$10-$20', '$20-$30', '$30-$50', '$50-$75', 
+                'Under $10', '$10-$20', '$20-$30', '$30-$50', '$50-$75',
                 '$75-$100', '$100-$150', '$150-$200', 'Over $200'
             ];
         } else if (element === 'Alcohol Content') {
@@ -183,7 +183,7 @@ export default function PlayerScoringPage() {
                 'Under 12%', '12-13%', '13-14%', '14-15%', '15-16%', 'Over 16%'
             ];
         }
-        
+
         return ['Option 1', 'Option 2', 'Option 3', 'Other'];
     };
 
@@ -512,7 +512,7 @@ export default function PlayerScoringPage() {
                                     return (
                                         <Box key={category.id} sx={{ mb: 3 }}>
                                             <FormControl fullWidth>
-                                                <InputLabel 
+                                                <InputLabel
                                                     id={`category-${category.id}`}
                                                     sx={{
                                                         color: 'rgba(255,255,255,0.7)',
