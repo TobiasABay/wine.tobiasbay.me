@@ -10,12 +10,9 @@ import { ArrowBack } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Player } from '../services/api';
 import AverageScore from '../components/AverageScore';
-import WineScoring from '../components/WineScoring';
 
 export default function EventPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
-    const [isEventCreator, setIsEventCreator] = useState<boolean>(false);
-    const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
     const { eventId } = useParams();
@@ -37,8 +34,6 @@ export default function EventPage() {
                 const isRecentCreator = creatorTime !== null && (Date.now() - parseInt(creatorTime)) < (24 * 60 * 60 * 1000);
                 const isCreator = hasCreatorSession || (hasCreatorLocalStorage && isRecentCreator) || (hasCreatorLocalStorage && !creatorTime);
 
-                setIsEventCreator(isCreator);
-
                 // Load event data
                 const event = await apiService.getEvent(eventId);
 
@@ -48,14 +43,10 @@ export default function EventPage() {
                     setCurrentPlayer(sortedPlayers[0]);
                 }
 
-                // If not the creator, find the current player
+                // If not the creator, redirect to scoring page
                 if (!isCreator) {
-                    const currentPlayer = event.players?.find(player =>
-                        localStorage.getItem(`player-id-${eventId}`) === player.id
-                    );
-                    if (currentPlayer) {
-                        setCurrentPlayerId(currentPlayer.id);
-                    }
+                    navigate(`/score/${eventId}`);
+                    return;
                 }
 
             } catch (error: any) {
@@ -174,20 +165,6 @@ export default function EventPage() {
                     </Box>
                 )}
 
-                {/* Wine Scoring Component - Only for non-creator players */}
-                {eventId && currentPlayer && !isEventCreator && currentPlayerId && (
-                    <Box sx={{ mt: 4 }}>
-                        <WineScoring
-                            eventId={eventId}
-                            wineNumber={currentPlayer.presentation_order}
-                            playerId={currentPlayerId}
-                            onScoreSubmitted={() => {
-                                // Refresh the average score display
-                                window.location.reload();
-                            }}
-                        />
-                    </Box>
-                )}
             </Container>
         </Box>
     );
