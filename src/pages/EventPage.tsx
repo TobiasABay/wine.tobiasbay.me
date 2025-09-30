@@ -10,6 +10,7 @@ import { ArrowBack } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Player } from '../services/api';
 import AverageScore from '../components/AverageScore';
+import WineCategoriesDisplay from '../components/WineCategoriesDisplay';
 
 export default function EventPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
@@ -161,6 +162,13 @@ export default function EventPage() {
                         eventId={eventId}
                         wineNumber={currentPlayer.presentation_order}
                     />
+                )}
+
+                {/* Wine Categories Display */}
+                {eventId && (
+                    <Box sx={{ mt: 4 }}>
+                        <WineCategoriesDisplay eventId={eventId} />
+                    </Box>
                 )}
 
             </Container>

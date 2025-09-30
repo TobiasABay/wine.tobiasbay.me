@@ -71,6 +71,11 @@ export default {
                 return await getWineCategories(eventId, env, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/wine-answers') && method === 'GET') {
+                const eventId = apiPath.split('/')[3];
+                return await getEventWineAnswers(eventId, env, corsHeaders);
+            }
+
             if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
                 return await getWineScores(env, eventId, corsHeaders);
@@ -775,6 +780,63 @@ async function startEvent(eventId, env, corsHeaders) {
     } catch (error) {
         return new Response(JSON.stringify({
             error: 'Failed to start event',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getEventWineAnswers(eventId, env, corsHeaders) {
+    try {
+        // Get all wine categories for this event
+        const categoriesResult = await env.wine_events.prepare(`
+            SELECT id, guessing_element, difficulty_factor
+            FROM wine_categories
+            WHERE event_id = ?
+            ORDER BY created_at
+        `).bind(eventId).all();
+
+        if (!categoriesResult.results || categoriesResult.results.length === 0) {
+            return new Response(JSON.stringify({
+                success: true,
+                categories: []
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get all wine answers for this event grouped by category
+        const categoriesWithAnswers = await Promise.all(
+            categoriesResult.results.map(async (category) => {
+                const answersResult = await env.wine_events.prepare(`
+                    SELECT pwd.wine_answer, p.name as player_name, p.presentation_order
+                    FROM player_wine_details pwd
+                    JOIN players p ON pwd.player_id = p.id
+                    WHERE pwd.category_id = ? AND p.event_id = ?
+                    ORDER BY p.presentation_order
+                `).bind(category.id, eventId).all();
+
+                return {
+                    id: category.id,
+                    guessing_element: category.guessing_element,
+                    difficulty_factor: category.difficulty_factor,
+                    answers: answersResult.results || []
+                };
+            })
+        );
+
+        return new Response(JSON.stringify({
+            success: true,
+            categories: categoriesWithAnswers
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error getting event wine answers:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to get wine answers',
             details: error.message
         }), {
             status: 500,

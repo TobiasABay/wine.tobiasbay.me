@@ -182,6 +182,34 @@ class ApiService {
         return this.request<WineCategory[]>(`/api/events/${eventId}/wine-categories`);
     }
 
+    async getEventWineAnswers(eventId: string): Promise<{
+        success: boolean;
+        categories: Array<{
+            id: string;
+            guessing_element: string;
+            difficulty_factor: string;
+            answers: Array<{
+                wine_answer: string;
+                player_name: string;
+                presentation_order: number;
+            }>;
+        }>;
+    }> {
+        return this.request<{
+            success: boolean;
+            categories: Array<{
+                id: string;
+                guessing_element: string;
+                difficulty_factor: string;
+                answers: Array<{
+                    wine_answer: string;
+                    player_name: string;
+                    presentation_order: number;
+                }>;
+            }>;
+        }>(`/api/events/${eventId}/wine-answers`);
+    }
+
     async getPlayerWineDetails(playerId: string): Promise<PlayerWineDetail[]> {
         return this.request<PlayerWineDetail[]>(`/api/players/${playerId}/wine-details`);
     }
