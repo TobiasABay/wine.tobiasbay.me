@@ -60,8 +60,8 @@ class Database {
                                 this.db.run(categorySql, [
                                     categoryId,
                                     eventId,
-                                    category.guessingElement,
-                                    category.difficultyFactor
+                                    category.guessing_element || category.guessingElement,
+                                    category.difficulty_factor || category.difficultyFactor
                                 ], (categoryErr) => {
                                     if (categoryErr) {
                                         categoryReject(categoryErr);
