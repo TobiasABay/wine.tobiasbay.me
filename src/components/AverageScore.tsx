@@ -36,7 +36,7 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
             try {
                 const response = await apiService.getWineScores(eventId);
                 const wineData = response.averages[wineNumber.toString()];
-                
+
                 if (wineData) {
                     setScoreData(wineData);
                 } else {
@@ -55,10 +55,10 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
         };
 
         fetchScores();
-        
+
         // Poll for updates every 5 seconds
         const interval = setInterval(fetchScores, 5000);
-        
+
         return () => clearInterval(interval);
     }, [eventId, wineNumber]);
 
@@ -70,35 +70,35 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
         for (let i = 0; i < 5; i++) {
             if (i < fullStars) {
                 stars.push(
-                    <Star 
-                        key={i} 
-                        sx={{ 
-                            color: '#ffd700', 
+                    <Star
+                        key={i}
+                        sx={{
+                            color: '#ffd700',
                             fontSize: '1.2rem',
                             filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
-                        }} 
+                        }}
                     />
                 );
             } else if (i === fullStars && hasHalfStar) {
                 stars.push(
-                    <Star 
-                        key={i} 
-                        sx={{ 
-                            color: '#ffd700', 
+                    <Star
+                        key={i}
+                        sx={{
+                            color: '#ffd700',
                             fontSize: '1.2rem',
                             filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
                             opacity: 0.5
-                        }} 
+                        }}
                     />
                 );
             } else {
                 stars.push(
-                    <StarBorder 
-                        key={i} 
-                        sx={{ 
-                            color: 'rgba(255,255,255,0.3)', 
+                    <StarBorder
+                        key={i}
+                        sx={{
+                            color: 'rgba(255,255,255,0.3)',
                             fontSize: '1.2rem'
-                        }} 
+                        }}
                     />
                 );
             }
@@ -176,12 +176,12 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
             <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', mb: 1 }}>
                 Average Score
             </Typography>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2 }}>
-                <Typography 
-                    variant="h3" 
-                    sx={{ 
-                        color: 'white', 
+                <Typography
+                    variant="h3"
+                    sx={{
+                        color: 'white',
                         fontWeight: 'bold',
                         mr: 2,
                         textShadow: '0 2px 4px rgba(0,0,0,0.3)'

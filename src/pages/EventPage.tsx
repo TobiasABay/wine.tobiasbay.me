@@ -145,9 +145,9 @@ export default function EventPage() {
                 {/* Average Score Component */}
                 {eventId && currentPlayer && (
                     <Box sx={{ mt: 4 }}>
-                        <AverageScore 
-                            eventId={eventId} 
-                            wineNumber={currentPlayer.presentation_order} 
+                        <AverageScore
+                            eventId={eventId}
+                            wineNumber={currentPlayer.presentation_order}
                         />
                     </Box>
                 )}
