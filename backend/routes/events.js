@@ -32,7 +32,40 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Get event by ID
+// Database health check
+router.get('/health', async (req, res) => {
+    try {
+        // Test database connection
+        const events = await db.getAllEvents();
+        res.json({
+            status: 'healthy',
+            database: 'connected',
+            eventsCount: events.length,
+            events: events
+        });
+    } catch (error) {
+        console.error('Database health check failed:', error);
+        res.status(500).json({
+            status: 'unhealthy',
+            database: 'disconnected',
+            error: error.message
+        });
+    }
+});
+
+// List all events (for debugging)
+router.get('/list', async (req, res) => {
+    try {
+        const events = await db.getAllEvents();
+        console.log('All events in database:', events);
+        res.json(events);
+    } catch (error) {
+        console.error('Error listing events:', error);
+        res.status(500).json({ error: 'Failed to list events' });
+    }
+});
+
+// Get event by ID (must be after specific routes like /list and /health)
 router.get('/:eventId', async (req, res) => {
     try {
         const { eventId } = req.params;
@@ -52,17 +85,6 @@ router.get('/:eventId', async (req, res) => {
     } catch (error) {
         console.error('Error fetching event:', error);
         res.status(500).json({ error: 'Failed to fetch event' });
-    }
-});
-
-// List all events (for debugging)
-router.get('/list', async (req, res) => {
-    try {
-        const events = await db.getAllEvents();
-        res.json(events);
-    } catch (error) {
-        console.error('Error listing events:', error);
-        res.status(500).json({ error: 'Failed to list events' });
     }
 });
 
