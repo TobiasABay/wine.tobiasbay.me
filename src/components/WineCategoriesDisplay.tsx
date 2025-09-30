@@ -58,8 +58,8 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
                     // Convert categories to the expected format with empty answers
                     const categoriesWithEmptyAnswers = categoriesResponse.map(category => ({
                         id: category.id,
-                        guessing_element: category.guessingElement,
-                        difficulty_factor: category.difficultyFactor,
+                        guessing_element: category.guessing_element,
+                        difficulty_factor: category.difficulty_factor,
                         answers: []
                     }));
                     setCategories(categoriesWithEmptyAnswers);

@@ -22,12 +22,12 @@ export default function EventDetailsPage() {
     const [wineNotes, setWineNotes] = useState('');
     const [wineCategories, setWineCategories] = useState<Array<{
         id: string;
-        guessingElement: string;
-        difficultyFactor: string;
+        guessing_element: string;
+        difficulty_factor: string;
     }>>([{
         id: '1',
-        guessingElement: '',
-        difficultyFactor: ''
+        guessing_element: '',
+        difficulty_factor: ''
     }]);
     const navigate = useNavigate();
     const isInitialized = useRef(false);
@@ -43,8 +43,8 @@ export default function EventDetailsPage() {
             setWineNotes(formData.wineNotes || '');
             setWineCategories(formData.wineCategories || [{
                 id: '1',
-                guessingElement: '',
-                difficultyFactor: ''
+                guessing_element: '',
+                difficulty_factor: ''
             }]);
         }
         isInitialized.current = true;
@@ -71,8 +71,8 @@ export default function EventDetailsPage() {
     const addNewCategory = () => {
         const newCategory = {
             id: Date.now().toString(),
-            guessingElement: '',
-            difficultyFactor: ''
+            guessing_element: '',
+            difficulty_factor: ''
         };
         setWineCategories(prev => [...prev, newCategory]);
     };
@@ -83,7 +83,7 @@ export default function EventDetailsPage() {
         }
     };
 
-    const updateCategory = (categoryId: string, field: 'guessingElement' | 'difficultyFactor', value: string) => {
+    const updateCategory = (categoryId: string, field: 'guessing_element' | 'difficulty_factor', value: string) => {
         setWineCategories(prev => prev.map(category =>
             category.id === categoryId ? { ...category, [field]: value } : category
         ));
@@ -105,9 +105,10 @@ export default function EventDetailsPage() {
 
             // Filter out empty wine categories and prepare them
             const validWineCategories = wineCategories.filter(category =>
-                category.guessingElement.trim() !== '' && category.difficultyFactor.trim() !== ''
+                category.guessing_element.trim() !== '' && category.difficulty_factor.trim() !== ''
+            );
 
-            );            // Combine basic event data with additional details
+            // Combine basic event data with additional details
             const completeEventData = {
                 name: parsedBasicData.eventName.trim(),
                 date: parsedBasicData.eventDate,
@@ -273,8 +274,8 @@ export default function EventDetailsPage() {
                                             <Grid size={{ xs: 12, sm: 8 }}>
                                                 <FormControl fullWidth>
                                                     <Select
-                                                        value={category.guessingElement}
-                                                        onChange={(e) => updateCategory(category.id, 'guessingElement', e.target.value)}
+                                                        value={category.guessing_element}
+                                                        onChange={(e) => updateCategory(category.id, 'guessing_element', e.target.value)}
                                                         displayEmpty
                                                         sx={{
                                                             backgroundColor: 'rgba(0,0,0,0.3)',
@@ -309,8 +310,8 @@ export default function EventDetailsPage() {
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     <FormControl fullWidth>
                                                         <Select
-                                                            value={category.difficultyFactor}
-                                                            onChange={(e) => updateCategory(category.id, 'difficultyFactor', e.target.value)}
+                                                            value={category.difficulty_factor}
+                                                            onChange={(e) => updateCategory(category.id, 'difficulty_factor', e.target.value)}
                                                             displayEmpty
                                                             sx={{
                                                                 backgroundColor: 'rgba(0,0,0,0.3)',

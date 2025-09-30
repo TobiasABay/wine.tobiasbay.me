@@ -195,7 +195,7 @@ export default function JoinEventPage() {
     useEffect(() => {
         if (wineCategories.length > 0) {
             const countryCategory = wineCategories.find(cat => {
-                const element = (cat as any).guessing_element || cat.guessingElement;
+                const element = cat.guessing_element;
                 return element === 'Country';
             });
             if (countryCategory && wineAnswers[countryCategory.id]) {
@@ -305,12 +305,12 @@ export default function JoinEventPage() {
         // Check if this is a country selection and update selectedCountry
         const category = wineCategories.find(cat => cat.id === categoryId);
         if (category) {
-            const guessingElement = (category as any).guessing_element || category.guessingElement;
+            const guessingElement = category.guessing_element;
             if (guessingElement === 'Country') {
                 setSelectedCountry(value);
                 // Clear region selection when country changes
                 const regionCategory = wineCategories.find(cat => {
-                    const element = (cat as any).guessing_element || cat.guessingElement;
+                    const element = cat.guessing_element;
                     return element === 'Region';
                 });
                 if (regionCategory) {
@@ -433,7 +433,7 @@ export default function JoinEventPage() {
 
                         {wineCategories.map((category: any) => {
                             // Use the actual database field name (snake_case) instead of camelCase
-                            const guessingElement = category.guessing_element || category.guessingElement;
+                            const guessingElement = category.guessing_element;
                             const options = getOptionsForCategory(guessingElement, selectedCountry);
                             return (
                                 <Box key={category.id} sx={{ mb: 3 }}>
