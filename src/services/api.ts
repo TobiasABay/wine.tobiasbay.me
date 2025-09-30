@@ -27,6 +27,7 @@ export interface PlayerWineDetail {
     category_id: string;
     wine_answer: string;
     created_at: string;
+    guessing_element?: string;
 }
 
 export interface Player {
@@ -178,10 +179,6 @@ class ApiService {
 
     async getWineCategories(eventId: string): Promise<WineCategory[]> {
         return this.request<WineCategory[]>(`/api/events/${eventId}/wine-categories`);
-    }
-
-    async getEventByJoinCode(joinCode: string): Promise<Event> {
-        return this.request<Event>(`/api/events/join/${joinCode}`);
     }
 
     async getPlayerWineDetails(playerId: string): Promise<PlayerWineDetail[]> {

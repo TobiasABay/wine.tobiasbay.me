@@ -98,7 +98,7 @@ function SortablePlayerItem({ player, index, canDrag }: { player: Player; index:
                                                 fontSize: '0.75rem'
                                             }}
                                         >
-                                            {wineDetail.guessing_element}: {wineDetail.wine_answer}
+                                            {(wineDetail as any).guessing_element || 'Detail'}: {wineDetail.wine_answer}
                                         </Typography>
                                     ))}
                                 </Box>
