@@ -16,6 +16,7 @@ export default function EventPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
+    const [isEventCreator, setIsEventCreator] = useState<boolean>(false);
     const { eventId } = useParams();
     const navigate = useNavigate();
 
@@ -34,6 +35,7 @@ export default function EventPage() {
                 const creatorTime = localStorage.getItem(`creator-time-${eventId}`);
                 const isRecentCreator = creatorTime !== null && (Date.now() - parseInt(creatorTime)) < (24 * 60 * 60 * 1000);
                 const isCreator = hasCreatorSession || (hasCreatorLocalStorage && isRecentCreator) || (hasCreatorLocalStorage && !creatorTime);
+                setIsEventCreator(isCreator);
 
                 // Load event data
                 const event = await apiService.getEvent(eventId);
@@ -167,7 +169,7 @@ export default function EventPage() {
                 {/* Wine Categories Display */}
                 {eventId && !loading && !error && (
                     <Box sx={{ mt: 4 }}>
-                        <WineCategoriesDisplay eventId={eventId} />
+                        <WineCategoriesDisplay eventId={eventId} isEventCreator={isEventCreator} />
                     </Box>
                 )}
 

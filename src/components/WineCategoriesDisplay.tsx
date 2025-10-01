@@ -4,13 +4,15 @@ import {
     Typography,
     Paper,
     Chip,
-    CircularProgress
+    CircularProgress,
+    Button
 } from '@mui/material';
 import { WineBar } from '@mui/icons-material';
 import { apiService } from '../services/api';
 
 interface WineCategoriesDisplayProps {
     eventId: string;
+    isEventCreator?: boolean;
 }
 
 interface WineGuess {
@@ -27,16 +29,23 @@ interface WineCategoryWithGuesses {
     guesses: WineGuess[];
 }
 
-export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplayProps) {
+export default function WineCategoriesDisplay({ eventId, isEventCreator = false }: WineCategoriesDisplayProps) {
     const [categories, setCategories] = useState<WineCategoryWithGuesses[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
+    const [currentWineNumber, setCurrentWineNumber] = useState<number>(1);
+    const [totalWines, setTotalWines] = useState<number>(0);
     const pollingInterval = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         const fetchWineCategoriesWithGuesses = async () => {
             try {
                 console.log('Fetching wine categories with guesses...');
+
+                // Get event data to know current wine number and total wines
+                const event = await apiService.getEvent(eventId);
+                setCurrentWineNumber(event.current_wine_number || 1);
+                setTotalWines(event.players?.length || 0);
 
                 // Try to get categories with guesses first
                 try {
@@ -85,12 +94,45 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
         }
     }, [eventId]);
 
+    const handleNextWine = async () => {
+        if (!eventId || !totalWines) return;
+
+        const nextWineNumber = currentWineNumber + 1;
+        if (nextWineNumber <= totalWines) {
+            try {
+                await apiService.setCurrentWine(eventId, nextWineNumber);
+                setCurrentWineNumber(nextWineNumber);
+            } catch (error) {
+                console.error('Error setting current wine:', error);
+            }
+        }
+    };
+
+    const handlePreviousWine = async () => {
+        if (!eventId) return;
+
+        const prevWineNumber = currentWineNumber - 1;
+        if (prevWineNumber >= 1) {
+            try {
+                await apiService.setCurrentWine(eventId, prevWineNumber);
+                setCurrentWineNumber(prevWineNumber);
+            } catch (error) {
+                console.error('Error setting current wine:', error);
+            }
+        }
+    };
+
     // Add polling for real-time updates
     useEffect(() => {
         if (!eventId) return;
 
         const fetchWineCategoriesWithGuesses = async () => {
             try {
+                // Update current wine number and total wines
+                const event = await apiService.getEvent(eventId);
+                setCurrentWineNumber(event.current_wine_number || 1);
+                setTotalWines(event.players?.length || 0);
+
                 const guessesResponse = await apiService.getEventWineGuesses(eventId);
                 if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
                     setCategories(guessesResponse.categories);
@@ -186,11 +228,71 @@ export default function WineCategoriesDisplay({ eventId }: WineCategoriesDisplay
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <WineBar sx={{ color: 'white', mr: 1 }} />
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-                    Wine Categories & Player Guesses
-                </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <WineBar sx={{ color: 'white', mr: 1 }} />
+                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+                        Wine Categories & Player Guesses
+                    </Typography>
+                </Box>
+
+                {/* Wine Navigation - Only for Event Creator */}
+                {isEventCreator && totalWines > 0 && (
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                        <Button
+                            onClick={handlePreviousWine}
+                            disabled={currentWineNumber === 1}
+                            variant="outlined"
+                            size="small"
+                            sx={{
+                                color: 'white',
+                                borderColor: 'rgba(255,255,255,0.5)',
+                                fontWeight: 'bold',
+                                px: 2,
+                                py: 0.75,
+                                fontSize: '0.875rem',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    borderColor: 'white',
+                                },
+                                '&:disabled': {
+                                    borderColor: 'rgba(255,255,255,0.2)',
+                                    color: 'rgba(255,255,255,0.3)',
+                                }
+                            }}
+                        >
+                            Previous
+                        </Button>
+
+                        <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold', px: 1 }}>
+                            Wine {currentWineNumber} of {totalWines}
+                        </Typography>
+
+                        <Button
+                            onClick={handleNextWine}
+                            disabled={currentWineNumber === totalWines}
+                            variant="contained"
+                            size="small"
+                            sx={{
+                                backgroundColor: '#ffd700',
+                                color: '#333',
+                                fontWeight: 'bold',
+                                px: 2,
+                                py: 0.75,
+                                fontSize: '0.875rem',
+                                '&:hover': {
+                                    backgroundColor: '#ffc107',
+                                },
+                                '&:disabled': {
+                                    backgroundColor: 'rgba(255,255,255,0.3)',
+                                    color: 'rgba(255,255,255,0.5)',
+                                }
+                            }}
+                        >
+                            Next
+                        </Button>
+                    </Box>
+                )}
             </Box>
 
             <Box sx={{ display: 'grid', gap: 3 }}>
