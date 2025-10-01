@@ -104,7 +104,12 @@ export default function PlayerScoringPage() {
     // Load score and guesses for the current wine
     useEffect(() => {
         const loadCurrentWineData = async () => {
-            if (!eventId || !currentPlayerId || !currentPlayer) return;
+            if (!eventId || !currentPlayerId || !currentPlayer) {
+                console.log('Skipping loadCurrentWineData - missing data');
+                return;
+            }
+
+            console.log('Loading data for Wine #' + currentPlayer.presentation_order, 'Player:', currentPlayer.name);
 
             try {
                 // Reset states
@@ -120,6 +125,7 @@ export default function PlayerScoringPage() {
                 if (wineData && wineData.scores) {
                     const playerScore = wineData.scores.find(s => s.player_id === currentPlayerId);
                     if (playerScore) {
+                        console.log('Found existing score:', playerScore.score);
                         setScore(playerScore.score.toString());
                         setSubmitted(true);
                     }
@@ -128,7 +134,7 @@ export default function PlayerScoringPage() {
                 // Check if player has already submitted category guesses for this specific wine
                 try {
                     const guessesResponse = await apiService.getPlayerWineGuesses(currentPlayerId, currentPlayer.presentation_order);
-                    console.log('Guesses response:', guessesResponse);
+                    console.log('Guesses response for Wine #' + currentPlayer.presentation_order + ':', guessesResponse);
                     if (guessesResponse && guessesResponse.guesses && guessesResponse.guesses.length > 0) {
                         const guesses: Record<string, string> = {};
                         guessesResponse.guesses.forEach((guess: any) => {
@@ -151,7 +157,7 @@ export default function PlayerScoringPage() {
         };
 
         loadCurrentWineData();
-    }, [eventId, currentPlayerId, currentPlayer]);
+    }, [eventId, currentPlayerId, currentPlayer, currentWineNumber]);
 
     // Poll for current wine number changes (set by event creator)
     useEffect(() => {
