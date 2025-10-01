@@ -284,6 +284,32 @@ class ApiService {
         });
     }
 
+    async getLeaderboard(eventId: string): Promise<{
+        success: boolean;
+        leaderboard: Array<{
+            player_id: string;
+            player_name: string;
+            presentation_order: number;
+            total_points: number;
+            correct_guesses: number;
+            total_guesses: number;
+            accuracy: string;
+        }>
+    }> {
+        return this.request<{
+            success: boolean;
+            leaderboard: Array<{
+                player_id: string;
+                player_name: string;
+                presentation_order: number;
+                total_points: number;
+                correct_guesses: number;
+                total_guesses: number;
+                accuracy: string;
+            }>
+        }>(`/api/events/${eventId}/leaderboard`);
+    }
+
     // Health check
     async healthCheck(): Promise<{ status: string; timestamp: string }> {
         return this.request<{ status: string; timestamp: string }>('/api/health');

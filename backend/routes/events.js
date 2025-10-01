@@ -248,4 +248,17 @@ router.put('/:eventId/current-wine', async (req, res) => {
     }
 });
 
+// Get leaderboard for event
+router.get('/:eventId/leaderboard', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const leaderboard = await db.calculateLeaderboard(eventId);
+
+        res.json({ success: true, leaderboard });
+    } catch (error) {
+        console.error('Error calculating leaderboard:', error);
+        res.status(500).json({ error: 'Failed to calculate leaderboard' });
+    }
+});
+
 module.exports = router;

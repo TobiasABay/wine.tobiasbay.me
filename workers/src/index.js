@@ -106,6 +106,11 @@ export default {
                 return await setCurrentWine(eventId, request, env, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/leaderboard') && method === 'GET') {
+                const eventId = apiPath.split('/')[3];
+                return await getLeaderboard(eventId, env, corsHeaders);
+            }
+
             if (apiPath.startsWith('/api/events/') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
                 return await getEvent(eventId, env, corsHeaders);
@@ -1089,6 +1094,91 @@ async function getEventWineGuesses(eventId, env, corsHeaders) {
     } catch (error) {
         console.error('Error fetching event wine guesses:', error);
         return new Response(JSON.stringify({ error: 'Failed to fetch wine guesses' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getLeaderboard(eventId, env, corsHeaders) {
+    try {
+        // Get all players for the event
+        const playersResult = await env.wine_events.prepare(
+            'SELECT * FROM players WHERE event_id = ? ORDER BY presentation_order ASC'
+        ).bind(eventId).all();
+        const players = playersResult.results || [];
+
+        // Get all wine categories for the event
+        const categoriesResult = await env.wine_events.prepare(
+            'SELECT * FROM wine_categories WHERE event_id = ? ORDER BY created_at ASC'
+        ).bind(eventId).all();
+        const categories = categoriesResult.results || [];
+
+        // Calculate scores for each player
+        const leaderboard = [];
+        for (const player of players) {
+            let totalPoints = 0;
+            let correctGuesses = 0;
+            let totalGuesses = 0;
+
+            // For each wine (other players' wines)
+            for (const wineOwner of players) {
+                if (wineOwner.id === player.id) continue; // Skip their own wine
+
+                // Get the actual wine details for this wine
+                const actualWineDetailsResult = await env.wine_events.prepare(
+                    'SELECT category_id, wine_answer FROM player_wine_details WHERE player_id = ?'
+                ).bind(wineOwner.id).all();
+                const actualWineDetails = actualWineDetailsResult.results || [];
+
+                // Get this player's guesses for this wine
+                const playerGuessesResult = await env.wine_events.prepare(
+                    'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?'
+                ).bind(player.id, wineOwner.presentation_order).all();
+                const playerGuesses = playerGuessesResult.results || [];
+
+                // Compare guesses with actual details
+                for (const guess of playerGuesses) {
+                    totalGuesses++;
+                    const actualDetail = actualWineDetails.find(d => d.category_id === guess.category_id);
+
+                    if (actualDetail && actualDetail.wine_answer.toLowerCase() === guess.guess.toLowerCase()) {
+                        // Correct guess! Get the difficulty factor
+                        const category = categories.find(c => c.id === guess.category_id);
+                        const difficultyFactor = category ? parseInt(category.difficulty_factor) || 1 : 1;
+
+                        totalPoints += difficultyFactor;
+                        correctGuesses++;
+                    }
+                }
+            }
+
+            leaderboard.push({
+                player_id: player.id,
+                player_name: player.name,
+                presentation_order: player.presentation_order,
+                total_points: totalPoints,
+                correct_guesses: correctGuesses,
+                total_guesses: totalGuesses,
+                accuracy: totalGuesses > 0 ? (correctGuesses / totalGuesses * 100).toFixed(1) : '0.0'
+            });
+        }
+
+        // Sort by total points descending
+        leaderboard.sort((a, b) => b.total_points - a.total_points);
+
+        return new Response(JSON.stringify({
+            success: true,
+            leaderboard: leaderboard
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error calculating leaderboard:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to calculate leaderboard',
+            details: error.message
+        }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });

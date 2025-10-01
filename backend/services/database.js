@@ -508,6 +508,93 @@ class Database {
             }
         });
     }
+
+    calculateLeaderboard(eventId) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Get all players for the event
+                const players = await new Promise((resolve, reject) => {
+                    const sql = 'SELECT * FROM players WHERE event_id = ? ORDER BY presentation_order ASC';
+                    this.db.all(sql, [eventId], (err, rows) => {
+                        if (err) reject(err);
+                        else resolve(rows);
+                    });
+                });
+
+                // Get all wine categories for the event
+                const categories = await new Promise((resolve, reject) => {
+                    const sql = 'SELECT * FROM wine_categories WHERE event_id = ? ORDER BY created_at ASC';
+                    this.db.all(sql, [eventId], (err, rows) => {
+                        if (err) reject(err);
+                        else resolve(rows);
+                    });
+                });
+
+                // Calculate scores for each player
+                const leaderboard = [];
+                for (const player of players) {
+                    let totalPoints = 0;
+                    let correctGuesses = 0;
+                    let totalGuesses = 0;
+
+                    // For each wine (other players' wines)
+                    for (const wineOwner of players) {
+                        if (wineOwner.id === player.id) continue; // Skip their own wine
+
+                        // Get the actual wine details for this wine
+                        const actualWineDetails = await new Promise((resolve, reject) => {
+                            const sql = 'SELECT category_id, wine_answer FROM player_wine_details WHERE player_id = ?';
+                            this.db.all(sql, [wineOwner.id], (err, rows) => {
+                                if (err) reject(err);
+                                else resolve(rows);
+                            });
+                        });
+
+                        // Get this player's guesses for this wine
+                        const playerGuesses = await new Promise((resolve, reject) => {
+                            const sql = 'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?';
+                            this.db.all(sql, [player.id, wineOwner.presentation_order], (err, rows) => {
+                                if (err) reject(err);
+                                else resolve(rows);
+                            });
+                        });
+
+                        // Compare guesses with actual details
+                        for (const guess of playerGuesses) {
+                            totalGuesses++;
+                            const actualDetail = actualWineDetails.find(d => d.category_id === guess.category_id);
+
+                            if (actualDetail && actualDetail.wine_answer.toLowerCase() === guess.guess.toLowerCase()) {
+                                // Correct guess! Get the difficulty factor
+                                const category = categories.find(c => c.id === guess.category_id);
+                                const difficultyFactor = category ? parseInt(category.difficulty_factor) || 1 : 1;
+
+                                totalPoints += difficultyFactor;
+                                correctGuesses++;
+                            }
+                        }
+                    }
+
+                    leaderboard.push({
+                        player_id: player.id,
+                        player_name: player.name,
+                        presentation_order: player.presentation_order,
+                        total_points: totalPoints,
+                        correct_guesses: correctGuesses,
+                        total_guesses: totalGuesses,
+                        accuracy: totalGuesses > 0 ? (correctGuesses / totalGuesses * 100).toFixed(1) : '0.0'
+                    });
+                }
+
+                // Sort by total points descending
+                leaderboard.sort((a, b) => b.total_points - a.total_points);
+
+                resolve(leaderboard);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
 }
 
 module.exports = new Database();

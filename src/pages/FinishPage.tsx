@@ -7,15 +7,26 @@ import {
     Button,
     Paper,
     Avatar,
-    CircularProgress
+    CircularProgress,
+    Chip
 } from '@mui/material';
-import { ArrowBack, EmojiEvents } from '@mui/icons-material';
+import { ArrowBack, EmojiEvents, Star } from '@mui/icons-material';
 import { apiService } from '../services/api';
-import type { Event, Player } from '../services/api';
+import type { Event } from '../services/api';
+
+interface LeaderboardPlayer {
+    player_id: string;
+    player_name: string;
+    presentation_order: number;
+    total_points: number;
+    correct_guesses: number;
+    total_guesses: number;
+    accuracy: string;
+}
 
 export default function FinishPage() {
     const [event, setEvent] = useState<Event | null>(null);
-    const [players, setPlayers] = useState<Player[]>([]);
+    const [leaderboard, setLeaderboard] = useState<LeaderboardPlayer[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
     const { eventId } = useParams();
@@ -33,9 +44,9 @@ export default function FinishPage() {
                 const eventData = await apiService.getEvent(eventId);
                 setEvent(eventData);
 
-                // Sort players by presentation order
-                const sortedPlayers = (eventData.players || []).sort((a, b) => a.presentation_order - b.presentation_order);
-                setPlayers(sortedPlayers);
+                // Get leaderboard data
+                const leaderboardData = await apiService.getLeaderboard(eventId);
+                setLeaderboard(leaderboardData.leaderboard);
             } catch (error: any) {
                 console.error('Error loading event:', error);
                 setError(error.message || 'Failed to load event data');
@@ -142,7 +153,7 @@ export default function FinishPage() {
                     </Typography>
                 </Box>
 
-                {/* Players List */}
+                {/* Leaderboard */}
                 <Paper sx={{
                     p: 4,
                     background: 'rgba(255,255,255,0.95)',
@@ -160,79 +171,141 @@ export default function FinishPage() {
                             textAlign: 'center'
                         }}
                     >
-                        Participants
+                        🏆 Final Leaderboard
                     </Typography>
 
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {players.map((player, index) => (
-                            <Paper
-                                key={player.id}
-                                sx={{
-                                    p: 3,
-                                    backgroundColor: 'rgba(102, 126, 234, 0.05)',
-                                    border: '1px solid rgba(102, 126, 234, 0.2)',
-                                    borderRadius: 3,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 2,
-                                    transition: 'all 0.2s',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                        transform: 'translateY(-2px)',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                                    }
-                                }}
-                            >
-                                <Avatar
+                        {leaderboard.map((player, index) => {
+                            const isWinner = index === 0;
+                            const medalColor = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : '#667eea';
+
+                            return (
+                                <Paper
+                                    key={player.player_id}
                                     sx={{
-                                        width: 50,
-                                        height: 50,
-                                        backgroundColor: '#667eea',
-                                        fontSize: '1.25rem',
-                                        fontWeight: 'bold'
+                                        p: 3,
+                                        backgroundColor: isWinner ? 'rgba(255, 215, 0, 0.1)' : 'rgba(102, 126, 234, 0.05)',
+                                        border: isWinner ? '2px solid #ffd700' : '1px solid rgba(102, 126, 234, 0.2)',
+                                        borderRadius: 3,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 2,
+                                        transition: 'all 0.2s',
+                                        position: 'relative',
+                                        '&:hover': {
+                                            backgroundColor: isWinner ? 'rgba(255, 215, 0, 0.15)' : 'rgba(102, 126, 234, 0.1)',
+                                            transform: 'translateY(-2px)',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                        }
                                     }}
                                 >
-                                    {player.name.charAt(0).toUpperCase()}
-                                </Avatar>
+                                    {/* Winner Crown */}
+                                    {isWinner && (
+                                        <EmojiEvents
+                                            sx={{
+                                                position: 'absolute',
+                                                top: -15,
+                                                left: -15,
+                                                fontSize: '2rem',
+                                                color: '#ffd700',
+                                                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
+                                            }}
+                                        />
+                                    )}
 
-                                <Box sx={{ flex: 1 }}>
-                                    <Typography
-                                        variant="h6"
+                                    {/* Rank Badge */}
+                                    <Box
                                         sx={{
-                                            color: '#2c3e50',
+                                            backgroundColor: medalColor,
+                                            color: 'white',
+                                            borderRadius: '50%',
+                                            width: 50,
+                                            height: 50,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontWeight: 'bold',
+                                            fontSize: '1.3rem',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                                        }}
+                                    >
+                                        #{index + 1}
+                                    </Box>
+
+                                    {/* Player Avatar */}
+                                    <Avatar
+                                        sx={{
+                                            width: 50,
+                                            height: 50,
+                                            backgroundColor: '#667eea',
+                                            fontSize: '1.25rem',
                                             fontWeight: 'bold'
                                         }}
                                     >
-                                        {player.name}
-                                    </Typography>
-                                    <Typography
-                                        variant="body2"
-                                        sx={{
-                                            color: '#7f8c8d'
-                                        }}
-                                    >
-                                        Wine #{player.presentation_order}
-                                    </Typography>
-                                </Box>
+                                        {player.player_name.charAt(0).toUpperCase()}
+                                    </Avatar>
 
-                                <Box
-                                    sx={{
-                                        backgroundColor: '#667eea',
-                                        color: 'white',
-                                        borderRadius: '50%',
-                                        width: 40,
-                                        height: 40,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontWeight: 'bold',
-                                        fontSize: '1.1rem'
-                                    }}
-                                >
-                                    #{index + 1}
-                                </Box>
-                            </Paper>
-                        ))}
+                                    {/* Player Info */}
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography
+                                            variant="h6"
+                                            sx={{
+                                                color: '#2c3e50',
+                                                fontWeight: 'bold',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1
+                                            }}
+                                        >
+                                            {player.player_name}
+                                            {isWinner && <Star sx={{ color: '#ffd700', fontSize: '1.2rem' }} />}
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                color: '#7f8c8d'
+                                            }}
+                                        >
+                                            Wine #{player.presentation_order}
+                                        </Typography>
+                                    </Box>
+
+                                    {/* Score Info */}
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Typography
+                                            variant="h5"
+                                            sx={{
+                                                color: '#2c3e50',
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            {player.total_points} pts
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                color: '#7f8c8d'
+                                            }}
+                                        >
+                                            {player.correct_guesses}/{player.total_guesses} correct
+                                        </Typography>
+                                        <Chip
+                                            label={`${player.accuracy}% accuracy`}
+                                            size="small"
+                                            sx={{
+                                                mt: 0.5,
+                                                backgroundColor: parseFloat(player.accuracy) >= 70 ? '#e8f5e8' :
+                                                    parseFloat(player.accuracy) >= 40 ? '#fff3cd' : '#f8d7da',
+                                                color: parseFloat(player.accuracy) >= 70 ? '#155724' :
+                                                    parseFloat(player.accuracy) >= 40 ? '#856404' : '#721c24',
+                                                fontWeight: 'medium',
+                                                fontSize: '0.7rem'
+                                            }}
+                                        />
+                                    </Box>
+                                </Paper>
+                            );
+                        })}
                     </Box>
                 </Paper>
 
