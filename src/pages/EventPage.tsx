@@ -14,6 +14,8 @@ import WineCategoriesDisplay from '../components/WineCategoriesDisplay';
 
 export default function EventPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+    const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+    const [currentWineNumber, setCurrentWineNumber] = useState<number>(1);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
     const [isEventCreator, setIsEventCreator] = useState<boolean>(false);
@@ -40,9 +42,19 @@ export default function EventPage() {
                 // Load event data
                 const event = await apiService.getEvent(eventId);
 
-                // Find the first player in the sequence (lowest presentation_order)
+                // Store all players sorted by presentation order
                 const sortedPlayers = (event.players || []).sort((a, b) => a.presentation_order - b.presentation_order);
-                if (sortedPlayers.length > 0) {
+                setAllPlayers(sortedPlayers);
+                
+                // Get current wine number from the event
+                const eventCurrentWine = event.current_wine_number || 1;
+                setCurrentWineNumber(eventCurrentWine);
+                
+                // Set current player based on current wine number
+                const playerForCurrentWine = sortedPlayers.find(p => p.presentation_order === eventCurrentWine);
+                if (playerForCurrentWine) {
+                    setCurrentPlayer(playerForCurrentWine);
+                } else if (sortedPlayers.length > 0) {
                     setCurrentPlayer(sortedPlayers[0]);
                 }
 
@@ -62,6 +74,38 @@ export default function EventPage() {
 
         loadEventData();
     }, [eventId]);
+
+    // Poll for current wine number changes (for updating the title)
+    useEffect(() => {
+        if (!eventId || !isEventCreator) return;
+
+        const pollCurrentWine = async () => {
+            try {
+                const event = await apiService.getEvent(eventId);
+                const eventCurrentWine = event.current_wine_number || 1;
+                
+                if (eventCurrentWine !== currentWineNumber) {
+                    console.log('EventPage: Current wine changed from', currentWineNumber, 'to', eventCurrentWine);
+                    setCurrentWineNumber(eventCurrentWine);
+                    
+                    // Update current player to match the new wine number
+                    const playerForWine = allPlayers.find(p => p.presentation_order === eventCurrentWine);
+                    if (playerForWine) {
+                        setCurrentPlayer(playerForWine);
+                    }
+                }
+            } catch (error) {
+                console.error('Error polling for current wine:', error);
+            }
+        };
+
+        // Poll every 2 seconds
+        const pollInterval = setInterval(pollCurrentWine, 2000);
+
+        return () => {
+            clearInterval(pollInterval);
+        };
+    }, [eventId, currentWineNumber, allPlayers, isEventCreator]);
 
     const handleBack = () => {
         navigate(-1);
