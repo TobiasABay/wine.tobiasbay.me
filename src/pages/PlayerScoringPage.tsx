@@ -19,6 +19,8 @@ import type { Player, WineCategory } from '../services/api';
 
 export default function PlayerScoringPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+    const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+    const [currentWineIndex, setCurrentWineIndex] = useState<number>(0);
     const [score, setScore] = useState<string>('');
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [submitted, setSubmitted] = useState<boolean>(false);
@@ -69,18 +71,49 @@ export default function PlayerScoringPage() {
                     return;
                 }
 
-                // Find the first player in the sequence (lowest presentation_order)
+                // Store all players sorted by presentation order
                 const sortedPlayers = (event.players || []).sort((a, b) => a.presentation_order - b.presentation_order);
+                setAllPlayers(sortedPlayers);
+
+                // Set current player based on currentWineIndex
                 if (sortedPlayers.length > 0) {
-                    setCurrentPlayer(sortedPlayers[0]);
+                    setCurrentPlayer(sortedPlayers[currentWineIndex]);
                 }
+            } catch (error: any) {
+                console.error('Error loading event:', error);
+                if (error.message?.includes('Event not found')) {
+                    setError('Event not found. Please check if the event ID is correct.');
+                } else if (error.message?.includes('Player not found')) {
+                    setError('Player session expired. Please rejoin the event.');
+                } else {
+                    setError(`Failed to load event data: ${error.message || 'Unknown error'}`);
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadEventData();
+    }, [eventId, currentWineIndex]);
+
+    // Load score and guesses for the current wine
+    useEffect(() => {
+        const loadCurrentWineData = async () => {
+            if (!eventId || !currentPlayerId || !currentPlayer) return;
+
+            try {
+                // Reset states
+                setScore('');
+                setSubmitted(false);
+                setCategoryGuesses({});
+                setGuessesSubmitted(false);
 
                 // Check if player has already submitted a score for this wine
                 const response = await apiService.getWineScores(eventId);
-                const wineData = response.averages[sortedPlayers[0]?.presentation_order.toString()];
+                const wineData = response.averages[currentPlayer.presentation_order.toString()];
 
                 if (wineData && wineData.scores) {
-                    const playerScore = wineData.scores.find(s => s.player_id === playerId);
+                    const playerScore = wineData.scores.find(s => s.player_id === currentPlayerId);
                     if (playerScore) {
                         setScore(playerScore.score.toString());
                         setSubmitted(true);
@@ -89,7 +122,7 @@ export default function PlayerScoringPage() {
 
                 // Check if player has already submitted category guesses for this specific wine
                 try {
-                    const guessesResponse = await apiService.getPlayerWineGuesses(playerId, sortedPlayers[0]?.presentation_order);
+                    const guessesResponse = await apiService.getPlayerWineGuesses(currentPlayerId, currentPlayer.presentation_order);
                     console.log('Guesses response:', guessesResponse);
                     if (guessesResponse && guessesResponse.guesses && guessesResponse.guesses.length > 0) {
                         const guesses: Record<string, string> = {};
@@ -108,21 +141,12 @@ export default function PlayerScoringPage() {
                     setGuessesSubmitted(false);
                 }
             } catch (error: any) {
-                console.error('Error loading event:', error);
-                if (error.message?.includes('Event not found')) {
-                    setError('Event not found. Please check if the event ID is correct.');
-                } else if (error.message?.includes('Player not found')) {
-                    setError('Player session expired. Please rejoin the event.');
-                } else {
-                    setError(`Failed to load event data: ${error.message || 'Unknown error'}`);
-                }
-            } finally {
-                setLoading(false);
+                console.error('Error loading wine data:', error);
             }
         };
 
-        loadEventData();
-    }, [eventId]);
+        loadCurrentWineData();
+    }, [eventId, currentPlayerId, currentPlayer, currentWineIndex]);
 
     const handleScoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
@@ -238,6 +262,18 @@ export default function PlayerScoringPage() {
 
     const handleBack = () => {
         navigate(-1);
+    };
+
+    const handleNextWine = () => {
+        if (currentWineIndex < allPlayers.length - 1) {
+            setCurrentWineIndex(prev => prev + 1);
+        }
+    };
+
+    const handlePreviousWine = () => {
+        if (currentWineIndex > 0) {
+            setCurrentWineIndex(prev => prev - 1);
+        }
     };
 
     if (loading) {
@@ -590,6 +626,60 @@ export default function PlayerScoringPage() {
                             </Box>
                         )}
                     </Paper>
+                )}
+
+                {/* Wine Navigation */}
+                {allPlayers.length > 1 && (
+                    <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center', alignItems: 'center' }}>
+                        <Button
+                            onClick={handlePreviousWine}
+                            disabled={currentWineIndex === 0}
+                            variant="outlined"
+                            sx={{
+                                color: 'white',
+                                borderColor: 'rgba(255,255,255,0.3)',
+                                fontWeight: 'bold',
+                                px: 3,
+                                py: 1,
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    borderColor: 'rgba(255,255,255,0.5)',
+                                },
+                                '&:disabled': {
+                                    borderColor: 'rgba(255,255,255,0.1)',
+                                    color: 'rgba(255,255,255,0.3)',
+                                }
+                            }}
+                        >
+                            Previous Wine
+                        </Button>
+
+                        <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium', px: 2 }}>
+                            Wine {currentWineIndex + 1} of {allPlayers.length}
+                        </Typography>
+
+                        <Button
+                            onClick={handleNextWine}
+                            disabled={currentWineIndex === allPlayers.length - 1}
+                            variant="contained"
+                            sx={{
+                                backgroundColor: '#ffd700',
+                                color: '#333',
+                                fontWeight: 'bold',
+                                px: 3,
+                                py: 1,
+                                '&:hover': {
+                                    backgroundColor: '#ffc107',
+                                },
+                                '&:disabled': {
+                                    backgroundColor: 'rgba(255,255,255,0.3)',
+                                    color: 'rgba(255,255,255,0.5)',
+                                }
+                            }}
+                        >
+                            Next Wine
+                        </Button>
+                    </Box>
                 )}
             </Container>
         </Box>
