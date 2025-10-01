@@ -35,6 +35,8 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
     const [error, setError] = useState<string>('');
     const [currentWineNumber, setCurrentWineNumber] = useState<number>(1);
     const [totalWines, setTotalWines] = useState<number>(0);
+    const [averageScore, setAverageScore] = useState<number | null>(null);
+    const [scoreCount, setScoreCount] = useState<number>(0);
     const pollingInterval = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
@@ -44,8 +46,26 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
 
                 // Get event data to know current wine number and total wines
                 const event = await apiService.getEvent(eventId);
-                setCurrentWineNumber(event.current_wine_number || 1);
+                const wineNum = event.current_wine_number || 1;
+                setCurrentWineNumber(wineNum);
                 setTotalWines(event.players?.length || 0);
+
+                // Get average score for current wine
+                try {
+                    const scoresResponse = await apiService.getWineScores(eventId);
+                    const wineData = scoresResponse.averages[wineNum.toString()];
+                    if (wineData) {
+                        setAverageScore(wineData.average);
+                        setScoreCount(wineData.totalScores);
+                    } else {
+                        setAverageScore(null);
+                        setScoreCount(0);
+                    }
+                } catch (scoreError) {
+                    console.log('Error fetching scores:', scoreError);
+                    setAverageScore(null);
+                    setScoreCount(0);
+                }
 
                 // Try to get categories with guesses first
                 try {
@@ -130,8 +150,25 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
             try {
                 // Update current wine number and total wines
                 const event = await apiService.getEvent(eventId);
-                setCurrentWineNumber(event.current_wine_number || 1);
+                const wineNum = event.current_wine_number || 1;
+                setCurrentWineNumber(wineNum);
                 setTotalWines(event.players?.length || 0);
+
+                // Update average score for current wine
+                try {
+                    const scoresResponse = await apiService.getWineScores(eventId);
+                    const wineData = scoresResponse.averages[wineNum.toString()];
+                    if (wineData) {
+                        setAverageScore(wineData.average);
+                        setScoreCount(wineData.totalScores);
+                    } else {
+                        setAverageScore(null);
+                        setScoreCount(0);
+                    }
+                } catch (scoreError) {
+                    setAverageScore(null);
+                    setScoreCount(0);
+                }
 
                 const guessesResponse = await apiService.getEventWineGuesses(eventId);
                 if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
@@ -228,12 +265,27 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <WineBar sx={{ color: 'white', mr: 1 }} />
-                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-                        Wine Categories & Player Guesses
-                    </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <WineBar sx={{ color: 'white', mr: 1 }} />
+                        <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+                            Wine Categories & Player Guesses
+                        </Typography>
+                    </Box>
+
+                    {/* Average Score Display */}
+                    {averageScore !== null && (
+                        <Chip
+                            label={`★ ${averageScore.toFixed(1)} (${scoreCount} ${scoreCount === 1 ? 'score' : 'scores'})`}
+                            sx={{
+                                backgroundColor: 'rgba(255,215,0,0.9)',
+                                color: '#333',
+                                fontWeight: 'bold',
+                                fontSize: '0.9rem'
+                            }}
+                        />
+                    )}
                 </Box>
 
                 {/* Wine Navigation - Only for Event Creator */}
@@ -274,14 +326,14 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
                             variant="contained"
                             size="small"
                             sx={{
-                                backgroundColor: '#ffd700',
-                                color: '#333',
+                                backgroundColor: currentWineNumber === totalWines ? '#4caf50' : '#ffd700',
+                                color: currentWineNumber === totalWines ? 'white' : '#333',
                                 fontWeight: 'bold',
                                 px: 2,
                                 py: 0.75,
                                 fontSize: '0.875rem',
                                 '&:hover': {
-                                    backgroundColor: '#ffc107',
+                                    backgroundColor: currentWineNumber === totalWines ? '#45a049' : '#ffc107',
                                 },
                                 '&:disabled': {
                                     backgroundColor: 'rgba(255,255,255,0.3)',
@@ -289,7 +341,7 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
                                 }
                             }}
                         >
-                            Next
+                            {currentWineNumber === totalWines ? 'Finish' : 'Next'}
                         </Button>
                     </Box>
                 )}
@@ -298,6 +350,11 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
             <Box sx={{ display: 'grid', gap: 3 }}>
                 {categories.map((category) => {
                     if (!category || !category.id) return null;
+
+                    // Filter guesses to only show the current wine number
+                    const currentWineGuesses = category.guesses.filter(
+                        guess => guess.wine_number === currentWineNumber
+                    );
 
                     return (
                         <Paper
@@ -364,10 +421,10 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
                                         fontSize: '1rem'
                                     }}
                                 >
-                                    Player Guesses ({category.guesses.length})
+                                    Player Guesses ({currentWineGuesses.length})
                                 </Typography>
 
-                                {category.guesses.length === 0 ? (
+                                {currentWineGuesses.length === 0 ? (
                                     <Box
                                         sx={{
                                             p: 3,
@@ -400,8 +457,8 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
                                 ) : (
                                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                                         {(() => {
-                                            // Group guesses by guess value and wine number
-                                            const groupedGuesses = category.guesses.reduce((acc, guess) => {
+                                            // Group guesses by guess value
+                                            const groupedGuesses = currentWineGuesses.reduce((acc, guess) => {
                                                 if (!guess) return acc;
                                                 const key = `${guess.guess || 'No guess'}_${guess.wine_number}`;
                                                 if (!acc[key]) {
