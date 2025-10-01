@@ -231,33 +231,61 @@ export default function PlayerScoringPage() {
             ];
         } else if (element === 'Grape Variety') {
             return [
-                'Cabernet Sauvignon', 'Merlot', 'Pinot Noir', 'Syrah/Shiraz', 'Malbec',
-                'Sangiovese', 'Nebbiolo', 'Barbera', 'Dolcetto', 'Primitivo',
-                'Tempranillo', 'Garnacha/Grenache', 'Monastrell', 'Albariño',
-                'Chardonnay', 'Sauvignon Blanc', 'Riesling', 'Pinot Grigio/Pinot Gris',
-                'Chenin Blanc', 'Viognier', 'Gewürztraminer', 'Muscat', 'Semillon',
-                'Verdejo', 'Torrontés', 'Carménère', 'Petit Verdot', 'Cabernet Franc',
-                'Zinfandel', 'Pinotage', 'Other'
+                'Barbera', 'Cabernet Sauvignon', 'Carmenère', 'Chardonnay', 'Chenin Blanc',
+                'Dolcetto', 'Gewürztraminer', 'Grenache', 'Malbec', 'Merlot', 'Mourvèdre',
+                'Muscat', 'Nebbiolo', 'Petit Verdot', 'Pinot Grigio', 'Pinot Noir', 'Riesling',
+                'Sangiovese', 'Sauvignon Blanc', 'Semillon', 'Syrah', 'Tempranillo', 'Torrontés',
+                'Viognier', 'Zinfandel'
             ];
-        } else if (element === 'Vintage') {
+        } else if (element === 'Age/Vintage' || element === 'Vintage') {
             const currentYear = new Date().getFullYear();
             const years = [];
-            for (let year = currentYear; year >= currentYear - 30; year--) {
+            for (let year = currentYear; year >= 1950; year--) {
                 years.push(year.toString());
             }
             return years;
         } else if (element === 'Price Range') {
             return [
-                'Under $10', '$10-$20', '$20-$30', '$30-$50', '$50-$75',
-                '$75-$100', '$100-$150', '$150-$200', 'Over $200'
+                'Under $10', '$10-$20', '$20-$30', '$30-$50', '$50-$75', '$75-$100',
+                '$100-$150', '$150-$200', '$200-$300', 'Over $300'
+            ];
+        } else if (element === 'Producer/Winery') {
+            return [
+                'Beringer', 'Bollinger', 'Caymus', 'Château Margaux', 'Cloudy Bay', 'Dom Pérignon',
+                'Domaine de la Romanée-Conti', 'Far Niente', 'Gallo', 'Jordan Vineyard',
+                'Kendall-Jackson', 'Krug', 'Louis Roederer', 'Moët & Chandon', 'Opus One',
+                'Penfolds', 'Perrier-Jouët', 'Ridge Vineyards', 'Robert Mondavi', 'Silver Oak',
+                'Stag\'s Leap Wine Cellars', 'Taittinger', 'Veuve Clicquot', 'Yellow Tail'
+            ];
+        } else if (element === 'Wine Style') {
+            return [
+                'Bold', 'Complex', 'Crisp', 'Dessert', 'Dry', 'Earthy', 'Elegant',
+                'Fortified', 'Fruity', 'Full-Bodied', 'Light-Bodied', 'Medium-Bodied',
+                'Mineral', 'Off-Dry', 'Smooth', 'Sparkling', 'Sweet'
             ];
         } else if (element === 'Alcohol Content') {
             return [
-                'Under 12%', '12-13%', '13-14%', '14-15%', '15-16%', 'Over 16%'
+                'Under 12%', '12-13%', '13-14%', '14-15%', '15-16%', '16-17%', 'Over 17%'
+            ];
+        } else if (element === 'Tannin Level') {
+            return [
+                'High', 'Low', 'Medium', 'Medium-High', 'Medium-Low'
+            ];
+        } else if (element === 'Acidity Level') {
+            return [
+                'High', 'Low', 'Medium', 'Medium-High', 'Medium-Low'
+            ];
+        } else if (element === 'Body Type') {
+            return [
+                'Full', 'Light', 'Medium', 'Medium-Full', 'Medium-Light'
+            ];
+        } else if (element === 'Finish Length') {
+            return [
+                'Long', 'Medium', 'Medium-Long', 'Medium-Short', 'Short'
             ];
         }
 
-        return ['Option 1', 'Option 2', 'Option 3', 'Other'];
+        return ['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5'];
     };
 
     const handleSubmitGuesses = async () => {
