@@ -55,6 +55,7 @@ export interface Event {
     is_active: boolean;
     auto_shuffle: boolean;
     event_started: boolean;
+    current_wine_number?: number;
     created_at: string;
     updated_at: string;
     players: Player[];
@@ -273,6 +274,13 @@ class ApiService {
     async startEvent(eventId: string): Promise<{ success: boolean; message: string }> {
         return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}/start`, {
             method: 'POST'
+        });
+    }
+
+    async setCurrentWine(eventId: string, wineNumber: number): Promise<{ success: boolean; message: string }> {
+        return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}/current-wine`, {
+            method: 'PUT',
+            body: JSON.stringify({ wineNumber })
         });
     }
 

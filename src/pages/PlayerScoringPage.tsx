@@ -20,7 +20,7 @@ import type { Player, WineCategory } from '../services/api';
 export default function PlayerScoringPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
     const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-    const [currentWineIndex, setCurrentWineIndex] = useState<number>(0);
+    const [currentWineNumber, setCurrentWineNumber] = useState<number>(1);
     const [score, setScore] = useState<string>('');
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [submitted, setSubmitted] = useState<boolean>(false);
@@ -75,9 +75,14 @@ export default function PlayerScoringPage() {
                 const sortedPlayers = (event.players || []).sort((a, b) => a.presentation_order - b.presentation_order);
                 setAllPlayers(sortedPlayers);
 
-                // Set current player based on currentWineIndex
-                if (sortedPlayers.length > 0) {
-                    setCurrentPlayer(sortedPlayers[currentWineIndex]);
+                // Get current wine number from the event
+                const eventCurrentWine = event.current_wine_number || 1;
+                setCurrentWineNumber(eventCurrentWine);
+
+                // Set current player based on current wine number
+                const playerForCurrentWine = sortedPlayers.find(p => p.presentation_order === eventCurrentWine);
+                if (playerForCurrentWine) {
+                    setCurrentPlayer(playerForCurrentWine);
                 }
             } catch (error: any) {
                 console.error('Error loading event:', error);
@@ -94,7 +99,7 @@ export default function PlayerScoringPage() {
         };
 
         loadEventData();
-    }, [eventId, currentWineIndex]);
+    }, [eventId]);
 
     // Load score and guesses for the current wine
     useEffect(() => {
@@ -146,7 +151,39 @@ export default function PlayerScoringPage() {
         };
 
         loadCurrentWineData();
-    }, [eventId, currentPlayerId, currentPlayer, currentWineIndex]);
+    }, [eventId, currentPlayerId, currentPlayer]);
+
+    // Poll for current wine number changes (set by event creator)
+    useEffect(() => {
+        if (!eventId) return;
+
+        const pollCurrentWine = async () => {
+            try {
+                const event = await apiService.getEvent(eventId);
+                const eventCurrentWine = event.current_wine_number || 1;
+
+                if (eventCurrentWine !== currentWineNumber) {
+                    console.log('Current wine changed from', currentWineNumber, 'to', eventCurrentWine);
+                    setCurrentWineNumber(eventCurrentWine);
+
+                    // Update current player to match the new wine number
+                    const playerForWine = allPlayers.find(p => p.presentation_order === eventCurrentWine);
+                    if (playerForWine) {
+                        setCurrentPlayer(playerForWine);
+                    }
+                }
+            } catch (error) {
+                console.error('Error polling for current wine:', error);
+            }
+        };
+
+        // Poll every 2 seconds
+        const pollInterval = setInterval(pollCurrentWine, 2000);
+
+        return () => {
+            clearInterval(pollInterval);
+        };
+    }, [eventId, currentWineNumber, allPlayers]);
 
     const handleScoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
@@ -262,18 +299,6 @@ export default function PlayerScoringPage() {
 
     const handleBack = () => {
         navigate(-1);
-    };
-
-    const handleNextWine = () => {
-        if (currentWineIndex < allPlayers.length - 1) {
-            setCurrentWineIndex(prev => prev + 1);
-        }
-    };
-
-    const handlePreviousWine = () => {
-        if (currentWineIndex > 0) {
-            setCurrentWineIndex(prev => prev - 1);
-        }
     };
 
     if (loading) {
@@ -626,60 +651,6 @@ export default function PlayerScoringPage() {
                             </Box>
                         )}
                     </Paper>
-                )}
-
-                {/* Wine Navigation */}
-                {allPlayers.length > 1 && (
-                    <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center', alignItems: 'center' }}>
-                        <Button
-                            onClick={handlePreviousWine}
-                            disabled={currentWineIndex === 0}
-                            variant="outlined"
-                            sx={{
-                                color: 'white',
-                                borderColor: 'rgba(255,255,255,0.3)',
-                                fontWeight: 'bold',
-                                px: 3,
-                                py: 1,
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    borderColor: 'rgba(255,255,255,0.5)',
-                                },
-                                '&:disabled': {
-                                    borderColor: 'rgba(255,255,255,0.1)',
-                                    color: 'rgba(255,255,255,0.3)',
-                                }
-                            }}
-                        >
-                            Previous Wine
-                        </Button>
-
-                        <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium', px: 2 }}>
-                            Wine {currentWineIndex + 1} of {allPlayers.length}
-                        </Typography>
-
-                        <Button
-                            onClick={handleNextWine}
-                            disabled={currentWineIndex === allPlayers.length - 1}
-                            variant="contained"
-                            sx={{
-                                backgroundColor: '#ffd700',
-                                color: '#333',
-                                fontWeight: 'bold',
-                                px: 3,
-                                py: 1,
-                                '&:hover': {
-                                    backgroundColor: '#ffc107',
-                                },
-                                '&:disabled': {
-                                    backgroundColor: 'rgba(255,255,255,0.3)',
-                                    color: 'rgba(255,255,255,0.5)',
-                                }
-                            }}
-                        >
-                            Next Wine
-                        </Button>
-                    </Box>
                 )}
             </Container>
         </Box>

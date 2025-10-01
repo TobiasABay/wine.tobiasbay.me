@@ -37,6 +37,7 @@ db.serialize(() => {
             is_active BOOLEAN DEFAULT 1,
             auto_shuffle BOOLEAN DEFAULT 0,
             event_started BOOLEAN DEFAULT 0,
+            current_wine_number INTEGER DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )

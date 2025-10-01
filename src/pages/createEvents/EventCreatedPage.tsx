@@ -136,6 +136,7 @@ export default function EventCreatedPage() {
     const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
     const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
     const [isReady, setIsReady] = useState<boolean>(false);
+    const [currentWineNumber, setCurrentWineNumber] = useState<number>(1);
     const navigate = useNavigate();
     const { eventId: urlEventId } = useParams();
 
@@ -201,6 +202,7 @@ export default function EventCreatedPage() {
                 const event = await apiService.getEvent(urlEventId);
                 setEventData(event);
                 setJoinCode(event.join_code);
+                setCurrentWineNumber(event.current_wine_number || 1);
 
                 // Check if event has already started and redirect non-creator players immediately
                 if (event.event_started && !isCreator) {
@@ -400,6 +402,34 @@ export default function EventCreatedPage() {
                 navigate(`/event/${urlEventId}`);
             } catch (error) {
                 console.error('Error starting event:', error);
+            }
+        }
+    };
+
+    const handleNextWine = async () => {
+        if (!urlEventId || !players.length) return;
+
+        const nextWineNumber = currentWineNumber + 1;
+        if (nextWineNumber <= players.length) {
+            try {
+                await apiService.setCurrentWine(urlEventId, nextWineNumber);
+                setCurrentWineNumber(nextWineNumber);
+            } catch (error) {
+                console.error('Error setting current wine:', error);
+            }
+        }
+    };
+
+    const handlePreviousWine = async () => {
+        if (!urlEventId) return;
+
+        const prevWineNumber = currentWineNumber - 1;
+        if (prevWineNumber >= 1) {
+            try {
+                await apiService.setCurrentWine(urlEventId, prevWineNumber);
+                setCurrentWineNumber(prevWineNumber);
+            } catch (error) {
+                console.error('Error setting current wine:', error);
             }
         }
     };
@@ -716,37 +746,94 @@ export default function EventCreatedPage() {
                                 <Box sx={{
                                     display: 'flex',
                                     justifyContent: 'center',
-                                    alignItems: 'center'
+                                    alignItems: 'center',
+                                    flexDirection: 'column',
+                                    gap: 3
                                 }}>
                                     {isEventCreator ? (
-                                        <Button
-                                            onClick={handleStart}
-                                            variant="contained"
-                                            startIcon={<PlayArrow />}
-                                            sx={{
-                                                backgroundColor: 'rgba(255,255,255,0.2)',
-                                                color: 'white',
-                                                border: '2px solid white',
-                                                borderRadius: 3,
-                                                px: 4,
-                                                py: 1.5,
-                                                fontSize: '1.1rem',
-                                                fontWeight: 'bold',
-                                                textTransform: 'none',
-                                                minWidth: 200,
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(255,255,255,0.3)',
-                                                    transform: 'translateY(-2px)',
-                                                    boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
-                                                },
-                                                '&:active': {
-                                                    transform: 'translateY(0px)',
-                                                },
-                                                transition: 'all 0.2s ease-in-out'
-                                            }}
-                                        >
-                                            Start Event
-                                        </Button>
+                                        <>
+                                            {!eventData?.event_started ? (
+                                                <Button
+                                                    onClick={handleStart}
+                                                    variant="contained"
+                                                    startIcon={<PlayArrow />}
+                                                    sx={{
+                                                        backgroundColor: 'rgba(255,255,255,0.2)',
+                                                        color: 'white',
+                                                        border: '2px solid white',
+                                                        borderRadius: 3,
+                                                        px: 4,
+                                                        py: 1.5,
+                                                        fontSize: '1.1rem',
+                                                        fontWeight: 'bold',
+                                                        textTransform: 'none',
+                                                        minWidth: 200,
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(255,255,255,0.3)',
+                                                            transform: 'translateY(-2px)',
+                                                            boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                                                        },
+                                                        '&:active': {
+                                                            transform: 'translateY(0px)',
+                                                        },
+                                                        transition: 'all 0.2s ease-in-out'
+                                                    }}
+                                                >
+                                                    Start Event
+                                                </Button>
+                                            ) : (
+                                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                                    <Button
+                                                        onClick={handlePreviousWine}
+                                                        disabled={currentWineNumber === 1}
+                                                        variant="outlined"
+                                                        sx={{
+                                                            color: 'white',
+                                                            borderColor: 'rgba(255,255,255,0.5)',
+                                                            fontWeight: 'bold',
+                                                            px: 3,
+                                                            py: 1.5,
+                                                            '&:hover': {
+                                                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                                                borderColor: 'white',
+                                                            },
+                                                            '&:disabled': {
+                                                                borderColor: 'rgba(255,255,255,0.2)',
+                                                                color: 'rgba(255,255,255,0.3)',
+                                                            }
+                                                        }}
+                                                    >
+                                                        Previous Wine
+                                                    </Button>
+
+                                                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', px: 2 }}>
+                                                        Wine {currentWineNumber} of {players.length}
+                                                    </Typography>
+
+                                                    <Button
+                                                        onClick={handleNextWine}
+                                                        disabled={currentWineNumber === players.length}
+                                                        variant="contained"
+                                                        sx={{
+                                                            backgroundColor: '#ffd700',
+                                                            color: '#333',
+                                                            fontWeight: 'bold',
+                                                            px: 3,
+                                                            py: 1.5,
+                                                            '&:hover': {
+                                                                backgroundColor: '#ffc107',
+                                                            },
+                                                            '&:disabled': {
+                                                                backgroundColor: 'rgba(255,255,255,0.3)',
+                                                                color: 'rgba(255,255,255,0.5)',
+                                                            }
+                                                        }}
+                                                    >
+                                                        Next Wine
+                                                    </Button>
+                                                </Box>
+                                            )}
+                                        </>
                                     ) : (
                                         <Button
                                             onClick={handleReadyToggle}

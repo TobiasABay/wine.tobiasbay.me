@@ -101,6 +101,11 @@ export default {
                 return await getEventWineGuesses(eventId, env, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/current-wine') && method === 'PUT') {
+                const eventId = apiPath.split('/')[3];
+                return await setCurrentWine(eventId, request, env, corsHeaders);
+            }
+
             if (apiPath.startsWith('/api/events/') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
                 return await getEvent(eventId, env, corsHeaders);
@@ -789,7 +794,7 @@ async function getPlayerWineDetails(env, playerId, corsHeaders) {
 async function startEvent(eventId, env, corsHeaders) {
     try {
         await env.wine_events.prepare(`
-            UPDATE events SET event_started = 1, updated_at = CURRENT_TIMESTAMP 
+            UPDATE events SET event_started = 1, current_wine_number = 1, updated_at = CURRENT_TIMESTAMP 
             WHERE id = ?
         `).bind(eventId).run();
 
@@ -802,6 +807,39 @@ async function startEvent(eventId, env, corsHeaders) {
     } catch (error) {
         return new Response(JSON.stringify({
             error: 'Failed to start event',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function setCurrentWine(eventId, request, env, corsHeaders) {
+    try {
+        const { wineNumber } = await request.json();
+
+        if (!wineNumber || wineNumber < 1) {
+            return new Response(JSON.stringify({ error: 'Valid wine number is required' }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        await env.wine_events.prepare(`
+            UPDATE events SET current_wine_number = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        `).bind(wineNumber, eventId).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Current wine updated successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({
+            error: 'Failed to set current wine',
             details: error.message
         }), {
             status: 500,

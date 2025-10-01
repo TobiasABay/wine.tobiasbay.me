@@ -157,14 +157,14 @@ export default function EventDetailsPage() {
 
 
     const predefinedGuessingOptions = [
-        'Region',
         'Country',
+        'Region',
+        'Price Range',
         'Age/Vintage',
         'Grape Variety',
-        'Price Range',
+        'Alcohol Content',
         'Producer/Winery',
         'Wine Style',
-        'Alcohol Content',
         'Tannin Level',
         'Acidity Level',
         'Body Type',

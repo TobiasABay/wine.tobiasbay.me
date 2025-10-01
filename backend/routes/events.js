@@ -229,4 +229,23 @@ router.get('/:eventId/wine-guesses', async (req, res) => {
     }
 });
 
+// Set current wine for event
+router.put('/:eventId/current-wine', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const { wineNumber } = req.body;
+
+        if (!wineNumber || wineNumber < 1) {
+            return res.status(400).json({ error: 'Valid wine number is required' });
+        }
+
+        await db.setCurrentWine(eventId, wineNumber);
+
+        res.json({ success: true, message: 'Current wine updated successfully' });
+    } catch (error) {
+        console.error('Error setting current wine:', error);
+        res.status(500).json({ error: 'Failed to set current wine' });
+    }
+});
+
 module.exports = router;

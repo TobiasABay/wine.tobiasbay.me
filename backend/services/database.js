@@ -349,8 +349,21 @@ class Database {
 
     startEvent(eventId) {
         return new Promise((resolve, reject) => {
-            const sql = 'UPDATE events SET event_started = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+            const sql = 'UPDATE events SET event_started = 1, current_wine_number = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
             this.db.run(sql, [eventId], function (err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    setCurrentWine(eventId, wineNumber) {
+        return new Promise((resolve, reject) => {
+            const sql = 'UPDATE events SET current_wine_number = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+            this.db.run(sql, [wineNumber, eventId], function (err) {
                 if (err) {
                     reject(err);
                 } else {
