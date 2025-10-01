@@ -291,6 +291,9 @@ export default function EventDetailsPage() {
                                                             },
                                                             '& .MuiSelect-select': {
                                                                 color: 'white'
+                                                            },
+                                                            '& .MuiSvgIcon-root': {
+                                                                color: 'white'
                                                             }
                                                         }}
                                                     >
@@ -326,6 +329,9 @@ export default function EventDetailsPage() {
                                                                     borderColor: 'white',
                                                                 },
                                                                 '& .MuiSelect-select': {
+                                                                    color: 'white'
+                                                                },
+                                                                '& .MuiSvgIcon-root': {
                                                                     color: 'white'
                                                                 }
                                                             }}

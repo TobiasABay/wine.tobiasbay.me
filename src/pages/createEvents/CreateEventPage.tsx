@@ -220,13 +220,17 @@ export default function CreateEventPage() {
                                         },
                                     },
                                     '& .MuiInputBase-input': {
-                                        color: 'white'
+                                        color: 'white',
+                                        colorScheme: 'dark'
                                     },
                                     '& .MuiInputLabel-root': {
                                         color: 'white',
                                         '&.Mui-focused': {
                                             color: 'white'
                                         }
+                                    },
+                                    '& .MuiSvgIcon-root': {
+                                        color: 'white'
                                     }
                                 }}
                             />
@@ -289,6 +293,9 @@ export default function CreateEventPage() {
                                             borderColor: 'white',
                                         },
                                         '& .MuiSelect-select': {
+                                            color: 'white'
+                                        },
+                                        '& .MuiSvgIcon-root': {
                                             color: 'white'
                                         }
                                     }}

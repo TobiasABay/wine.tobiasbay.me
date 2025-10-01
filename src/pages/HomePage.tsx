@@ -74,11 +74,11 @@ export default function HomePage() {
                         }
                     }}
                 >
-                    <Add sx={{ fontSize: 60, mb: 2 }} />
-                    <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
+                    <Add sx={{ fontSize: 60, mb: 2, color: 'white' }} />
+                    <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" color="white">
                         Create Event
                     </Typography>
-                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
+                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3, color: 'white' }}>
                         Host your own wine tasting experience
                     </Typography>
                     <Button
@@ -141,11 +141,11 @@ export default function HomePage() {
                         }
                     }}
                 >
-                    <GroupAdd sx={{ fontSize: 60, mb: 2 }} />
-                    <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
+                    <GroupAdd sx={{ fontSize: 60, mb: 2, color: 'white' }} />
+                    <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" color="white">
                         Join Event
                     </Typography>
-                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
+                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3, color: 'white' }}>
                         Join an existing wine tasting event
                     </Typography>
                     <Button
