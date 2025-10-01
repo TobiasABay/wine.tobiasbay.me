@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -38,6 +39,7 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
     const [averageScore, setAverageScore] = useState<number | null>(null);
     const [scoreCount, setScoreCount] = useState<number>(0);
     const pollingInterval = useRef<NodeJS.Timeout | null>(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchWineCategoriesWithGuesses = async () => {
@@ -125,6 +127,9 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
             } catch (error) {
                 console.error('Error setting current wine:', error);
             }
+        } else if (currentWineNumber === totalWines) {
+            // If on last wine and clicking finish, navigate to finish page
+            navigate(`/finish/${eventId}`);
         }
     };
 
@@ -322,7 +327,6 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
 
                         <Button
                             onClick={handleNextWine}
-                            disabled={currentWineNumber === totalWines}
                             variant="contained"
                             size="small"
                             sx={{
@@ -334,10 +338,6 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
                                 fontSize: '0.875rem',
                                 '&:hover': {
                                     backgroundColor: currentWineNumber === totalWines ? '#45a049' : '#ffc107',
-                                },
-                                '&:disabled': {
-                                    backgroundColor: 'rgba(255,255,255,0.3)',
-                                    color: 'rgba(255,255,255,0.5)',
                                 }
                             }}
                         >
