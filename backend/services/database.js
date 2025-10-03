@@ -537,6 +537,15 @@ class Database {
                     let correctGuesses = 0;
                     let totalGuesses = 0;
 
+                    // Get all guesses for this player across all wines
+                    const allPlayerGuesses = await new Promise((resolve, reject) => {
+                        const sql = 'SELECT category_id, guess, wine_number FROM player_wine_guesses WHERE player_id = ?';
+                        this.db.all(sql, [player.id], (err, rows) => {
+                            if (err) reject(err);
+                            else resolve(rows);
+                        });
+                    });
+
                     // For each wine (including their own wine)
                     for (const wineOwner of players) {
                         // Get the actual wine details for this wine (what the wine owner submitted)
@@ -548,17 +557,13 @@ class Database {
                             });
                         });
 
-                        // Get this player's guesses for this wine
-                        const playerGuesses = await new Promise((resolve, reject) => {
-                            const sql = 'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?';
-                            this.db.all(sql, [player.id, wineOwner.presentation_order], (err, rows) => {
-                                if (err) reject(err);
-                                else resolve(rows);
-                            });
-                        });
+                        // Filter guesses for this specific wine
+                        const playerGuessesForThisWine = allPlayerGuesses.filter(guess =>
+                            guess.wine_number === wineOwner.presentation_order
+                        );
 
                         // Compare guesses with actual details
-                        for (const guess of playerGuesses) {
+                        for (const guess of playerGuessesForThisWine) {
                             totalGuesses++;
                             const actualDetail = actualWineDetails.find(d => d.category_id === guess.category_id);
 
