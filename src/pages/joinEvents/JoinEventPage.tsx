@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, PersonAdd, WineBar } from '@mui/icons-material';
 import { apiService, type Event, type WineCategory } from '../../services/api';
+import { getDeviceId } from '../../utils/deviceId';
 
 // Predefined lists for wine regions and countries
 const WINE_COUNTRIES = [
@@ -343,7 +344,8 @@ export default function JoinEventPage() {
                     // No wine categories, join directly
                     const result = await apiService.joinEvent({
                         playerName: playerName.trim(),
-                        joinCode: joinCode.trim()
+                        joinCode: joinCode.trim(),
+                        deviceId: getDeviceId()
                     });
                     navigate(`/event-created/${result.eventId}`);
                 } else {
@@ -381,7 +383,8 @@ export default function JoinEventPage() {
             // Join the event
             const result = await apiService.joinEvent({
                 playerName: playerName.trim(),
-                joinCode: joinCode.trim()
+                joinCode: joinCode.trim(),
+                deviceId: getDeviceId()
             });
 
             // Submit wine answers

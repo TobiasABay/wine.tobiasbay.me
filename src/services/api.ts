@@ -65,6 +65,7 @@ export interface Event {
 export interface JoinEventData {
     joinCode: string;
     playerName: string;
+    deviceId?: string;
 }
 
 export interface WineAnswerData {

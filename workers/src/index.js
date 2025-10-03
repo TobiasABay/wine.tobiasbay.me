@@ -373,7 +373,7 @@ async function updateAutoShuffle(eventId, request, env, corsHeaders) {
 }
 
 async function joinEvent(request, env, corsHeaders) {
-    const { joinCode, playerName } = await request.json();
+    const { joinCode, playerName, deviceId } = await request.json();
 
     if (!joinCode || !playerName) {
         return new Response(JSON.stringify({
@@ -395,6 +395,32 @@ async function joinEvent(request, env, corsHeaders) {
         });
     }
 
+    // If deviceId is provided, check if this device already joined this event
+    if (deviceId) {
+        const existingPlayer = await env.wine_events.prepare(`
+            SELECT * FROM players WHERE event_id = ? AND device_id = ? AND is_active = 1
+        `).bind(event.id, deviceId).first();
+
+        if (existingPlayer) {
+            // Update the player's name if it changed
+            if (existingPlayer.name !== playerName) {
+                await env.wine_events.prepare(`
+                    UPDATE players SET name = ? WHERE id = ?
+                `).bind(playerName, existingPlayer.id).run();
+            }
+
+            return new Response(JSON.stringify({
+                success: true,
+                eventId: event.id,
+                playerId: existingPlayer.id,
+                presentationOrder: existingPlayer.presentation_order,
+                message: `Welcome back ${playerName}! You're already in this event.`
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+    }
+
     const currentPlayers = await env.wine_events.prepare(`
     SELECT COUNT(*) as count FROM players WHERE event_id = ? AND is_active = 1
   `).bind(event.id).first();
@@ -409,10 +435,18 @@ async function joinEvent(request, env, corsHeaders) {
     const playerId = generateUUID();
     const presentationOrder = currentPlayers.count + 1;
 
-    await env.wine_events.prepare(`
-    INSERT INTO players (id, event_id, name, presentation_order)
-    VALUES (?, ?, ?, ?)
-  `).bind(playerId, event.id, playerName, presentationOrder).run();
+    // Insert with device_id if provided
+    if (deviceId) {
+        await env.wine_events.prepare(`
+            INSERT INTO players (id, event_id, name, presentation_order, device_id)
+            VALUES (?, ?, ?, ?, ?)
+        `).bind(playerId, event.id, playerName, presentationOrder, deviceId).run();
+    } else {
+        await env.wine_events.prepare(`
+            INSERT INTO players (id, event_id, name, presentation_order)
+            VALUES (?, ?, ?, ?)
+        `).bind(playerId, event.id, playerName, presentationOrder).run();
+    }
 
     return new Response(JSON.stringify({
         success: true,
