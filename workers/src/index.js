@@ -1227,12 +1227,40 @@ async function getLeaderboard(eventId, env, corsHeaders) {
             });
         }
 
+        // Get wine scores for average calculation
+        const wineScoresResult = await env.wine_events.prepare(
+            'SELECT wine_number, score FROM wine_scores WHERE event_id = ?'
+        ).bind(eventId).all();
+        const wineScores = wineScoresResult.results || [];
+
+        // Calculate wine averages
+        const wineAverages = {};
+        const wineScoreCounts = {};
+
+        wineScores.forEach(score => {
+            const wineNum = score.wine_number;
+            if (!wineAverages[wineNum]) {
+                wineAverages[wineNum] = 0;
+                wineScoreCounts[wineNum] = 0;
+            }
+            wineAverages[wineNum] += score.score;
+            wineScoreCounts[wineNum]++;
+        });
+
+        // Calculate final averages
+        if (wineAverages && Object.keys(wineAverages).length > 0) {
+            Object.keys(wineAverages).forEach(wineNum => {
+                wineAverages[wineNum] = Math.round((wineAverages[wineNum] / wineScoreCounts[wineNum]) * 10) / 10;
+            });
+        }
+
         // Sort by total points descending
         leaderboard.sort((a, b) => b.total_points - a.total_points);
 
         return new Response(JSON.stringify({
             success: true,
-            leaderboard: leaderboard
+            leaderboard: leaderboard,
+            wineAverages: wineAverages || {}
         }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
