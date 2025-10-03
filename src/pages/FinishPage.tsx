@@ -462,7 +462,7 @@ export default function FinishPage() {
                                                     gap: 1
                                                 }}
                                             >
-                                                🍷 Wine #{player.presentation_order} Details
+                                                🍷 Wine #{player.presentation_order} Details (by {player.player_name})
                                             </Typography>
 
                                             {wineGuesses && wineGuesses.categories ? (
