@@ -249,6 +249,44 @@ router.put('/:eventId/current-wine', async (req, res) => {
     }
 });
 
+// Get wine scores for event
+router.get('/:eventId/scores', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const scores = await db.getWineScores(eventId);
+        res.json(scores);
+    } catch (error) {
+        console.error('Error getting wine scores:', error);
+        res.status(500).json({ error: 'Failed to get wine scores' });
+    }
+});
+
+// Submit wine score
+router.post('/:eventId/scores', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const { playerId, wineNumber, score } = req.body;
+
+        if (!playerId || !wineNumber || !score) {
+            return res.status(400).json({
+                error: 'Missing required fields: playerId, wineNumber, score'
+            });
+        }
+
+        if (score < 1 || score > 5) {
+            return res.status(400).json({
+                error: 'Score must be between 1 and 5'
+            });
+        }
+
+        await db.submitWineScore(eventId, playerId, wineNumber, score);
+        res.json({ success: true, message: 'Wine score submitted successfully' });
+    } catch (error) {
+        console.error('Error submitting wine score:', error);
+        res.status(500).json({ error: 'Failed to submit wine score' });
+    }
+});
+
 // Get leaderboard for event
 router.get('/:eventId/leaderboard', async (req, res) => {
     try {

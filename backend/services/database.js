@@ -399,6 +399,72 @@ class Database {
         });
     }
 
+    // Wine scores methods
+    getWineScores(eventId) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT ws.*, p.name as player_name, p.presentation_order
+                FROM wine_scores ws
+                JOIN players p ON ws.player_id = p.id
+                WHERE ws.event_id = ?
+                ORDER BY ws.wine_number, p.presentation_order
+            `;
+            this.db.all(sql, [eventId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    // Calculate average scores by wine number
+                    const wineAverages = {};
+                    const wineCounts = {};
+
+                    (rows || []).forEach(score => {
+                        const wineNum = score.wine_number;
+                        if (!wineAverages[wineNum]) {
+                            wineAverages[wineNum] = 0;
+                            wineCounts[wineNum] = 0;
+                        }
+                        wineAverages[wineNum] += score.score;
+                        wineCounts[wineNum]++;
+                    });
+
+                    // Calculate final averages
+                    const averages = {};
+                    Object.keys(wineAverages).forEach(wineNum => {
+                        averages[wineNum] = {
+                            average: Math.round((wineAverages[wineNum] / wineCounts[wineNum]) * 10) / 10,
+                            totalScores: wineCounts[wineNum],
+                            scores: (rows || []).filter(s => s.wine_number == wineNum)
+                        };
+                    });
+
+                    resolve({
+                        success: true,
+                        averages: averages,
+                        allScores: rows || []
+                    });
+                }
+            });
+        });
+    }
+
+    submitWineScore(eventId, playerId, wineNumber, score) {
+        return new Promise((resolve, reject) => {
+            const scoreId = uuidv4();
+            const sql = `
+                INSERT OR REPLACE INTO wine_scores (
+                    id, event_id, player_id, wine_number, score, updated_at
+                ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            `;
+            this.db.run(sql, [scoreId, eventId, playerId, wineNumber, score], function (err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
     close() {
         this.db.close((err) => {
             if (err) {
