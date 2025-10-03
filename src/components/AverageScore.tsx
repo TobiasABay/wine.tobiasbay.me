@@ -31,7 +31,7 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
     const [error, setError] = useState<string>('');
 
     // Use SSE for real-time updates
-    const { lastUpdate } = useSSE({
+    useSSE({
         eventId,
         onUpdate: (data) => {
             if (data.data && data.data.current_wine_number === wineNumber) {

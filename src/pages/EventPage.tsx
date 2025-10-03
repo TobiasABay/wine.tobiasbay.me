@@ -77,8 +77,8 @@ export default function EventPage() {
     }, [eventId]);
 
     // Use SSE for real-time updates (only for event creators)
-    const { isConnected } = useSSE({
-        eventId,
+    useSSE({
+        eventId: eventId ?? null,
         onUpdate: (data) => {
             if (data.data && isEventCreator) {
                 const eventCurrentWine = data.data.current_wine_number;

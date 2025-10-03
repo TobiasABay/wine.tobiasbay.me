@@ -39,7 +39,6 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
     const [totalWines, setTotalWines] = useState<number>(0);
     const [averageScore, setAverageScore] = useState<number | null>(null);
     const [scoreCount, setScoreCount] = useState<number>(0);
-    const pollingInterval = useRef<NodeJS.Timeout | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -149,7 +148,7 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
     };
 
     // Use SSE for real-time updates
-    const { isConnected, lastUpdate } = useSSE({
+    useSSE({
         eventId,
         onUpdate: (data) => {
             if (data.data) {
@@ -180,7 +179,7 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
                     const existingCategory = categories.find(c => c.id === categoryId);
                     const category = existingCategory || {
                         id: categoryId,
-                        guessing_element: guesses[0]?.guessing_element || 'Unknown',
+                        guessing_element: 'Unknown',
                         difficulty_factor: '1',
                         guesses: []
                     };
