@@ -110,8 +110,12 @@ export default function FinishPage() {
     };
 
 
-    const getAllGuessesForPlayer = () => {
+    const getAllGuessesForPlayer = (currentPlayerId: string) => {
         if (!wineGuesses || !wineGuesses.categories || !leaderboard) return [];
+
+        // Find the current player
+        const currentPlayer = leaderboard.find(p => p.player_id === currentPlayerId);
+        if (!currentPlayer) return [];
 
         // Get all players for this event
         const allPlayers = leaderboard.map(player => ({
@@ -484,13 +488,13 @@ export default function FinishPage() {
                                                     gap: 1
                                                 }}
                                             >
-                                                👤 {player.player_name}'s Cross-Reference
+                                                👤 {player.player_name}'s View
                                             </Typography>
 
                                             {wineGuesses && wineGuesses.categories ? (
                                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                                    {getAllGuessesForPlayer().length > 0 ? (
-                                                        getAllGuessesForPlayer().map((wineData, wineIndex) => (
+                                                    {getAllGuessesForPlayer(player.player_id).length > 0 ? (
+                                                        getAllGuessesForPlayer(player.player_id).map((wineData, wineIndex) => (
                                                             <Box key={wineIndex}>
                                                                 <Typography
                                                                     variant="h6"
