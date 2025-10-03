@@ -349,12 +349,12 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
             </Box>
 
             <Box sx={{ display: 'grid', gap: 3 }}>
-                {categories.map((category) => {
+                {(categories || []).map((category) => {
                     if (!category || !category.id) return null;
 
                     // Filter guesses to only show the current wine number
-                    const currentWineGuesses = category.guesses.filter(
-                        guess => guess.wine_number === currentWineNumber
+                    const currentWineGuesses = (category.guesses || []).filter(
+                        guess => guess && guess.wine_number === currentWineNumber
                     );
 
                     return (

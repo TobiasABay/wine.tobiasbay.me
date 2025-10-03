@@ -613,16 +613,18 @@ class Database {
                 });
 
                 // Calculate final averages
-                Object.keys(wineAverages).forEach(wineNum => {
-                    wineAverages[wineNum] = Math.round((wineAverages[wineNum] / wineScoreCounts[wineNum]) * 10) / 10;
-                });
+                if (wineAverages && Object.keys(wineAverages).length > 0) {
+                    Object.keys(wineAverages).forEach(wineNum => {
+                        wineAverages[wineNum] = Math.round((wineAverages[wineNum] / wineScoreCounts[wineNum]) * 10) / 10;
+                    });
+                }
 
                 // Sort by total points descending
                 leaderboard.sort((a, b) => b.total_points - a.total_points);
 
                 resolve({
                     leaderboard,
-                    wineAverages
+                    wineAverages: wineAverages || {}
                 });
             } catch (error) {
                 reject(error);

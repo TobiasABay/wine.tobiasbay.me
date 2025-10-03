@@ -47,8 +47,8 @@ export default function FinishPage() {
 
                 // Get leaderboard data
                 const leaderboardData = await apiService.getLeaderboard(eventId);
-                setLeaderboard(leaderboardData.leaderboard);
-                setWineAverages(leaderboardData.wineAverages);
+                setLeaderboard(leaderboardData.leaderboard || []);
+                setWineAverages(leaderboardData.wineAverages || {});
             } catch (error: any) {
                 console.error('Error loading event:', error);
                 setError(error.message || 'Failed to load event data');
@@ -312,7 +312,7 @@ export default function FinishPage() {
                 </Paper>
 
                 {/* Wine Averages Section */}
-                {Object.keys(wineAverages).length > 0 && (
+                {wineAverages && Object.keys(wineAverages).length > 0 && (
                     <Paper sx={{
                         p: 4,
                         mt: 4,
@@ -339,7 +339,7 @@ export default function FinishPage() {
                             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
                             gap: 2
                         }}>
-                            {Object.entries(wineAverages)
+                            {wineAverages && Object.entries(wineAverages)
                                 .sort(([a], [b]) => parseInt(a) - parseInt(b))
                                 .map(([wineNumber, average]) => (
                                     <Paper
