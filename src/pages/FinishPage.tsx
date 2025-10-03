@@ -352,20 +352,6 @@ export default function FinishPage() {
                     </Box>
                 </Paper>
 
-                {/* Wine Averages Section */}
-                {wineAverages && Object.keys(wineAverages).length > 0 && (
-                    <Paper sx={{
-                        p: 4,
-                        mt: 4,
-                        background: 'rgba(255,255,255,0.95)',
-                        backdropFilter: 'blur(10px)',
-                        borderRadius: 3,
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
-                    }}>
-                    </Paper>
-                )}
-
                 {/* Thank You Message */}
                 <Box sx={{ textAlign: 'center', mt: 4 }}>
                     <Typography
