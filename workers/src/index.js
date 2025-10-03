@@ -7,44 +7,6 @@ function generateUUID() {
     });
 }
 
-// Generate ETag for data
-function generateETag(data) {
-    const str = JSON.stringify(data);
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
-    }
-    return `"${Math.abs(hash).toString(16)}"`;
-}
-
-// Handle conditional requests with ETag
-function handleConditionalRequest(request, data, corsHeaders) {
-    const ifNoneMatch = request.headers.get('If-None-Match');
-    const etag = generateETag(data);
-
-    if (ifNoneMatch && ifNoneMatch === etag) {
-        return new Response(null, {
-            status: 304,
-            headers: {
-                ...corsHeaders,
-                'ETag': etag,
-                'Cache-Control': 'no-cache'
-            }
-        });
-    }
-
-    return new Response(JSON.stringify(data), {
-        headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-            'ETag': etag,
-            'Cache-Control': 'no-cache'
-        }
-    });
-}
-
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
@@ -55,7 +17,7 @@ export default {
         const corsHeaders = {
             'Access-Control-Allow-Origin': env.FRONTEND_URL || 'https://wine.tobiasbay.me',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, If-None-Match',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
             'Access-Control-Allow-Credentials': 'true',
         };
 
@@ -121,7 +83,7 @@ export default {
 
             if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
-                return await getWineScores(env, eventId, corsHeaders, request);
+                return await getWineScores(env, eventId, corsHeaders);
             }
 
             if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'POST') {
@@ -149,21 +111,9 @@ export default {
                 return await getLeaderboard(eventId, env, corsHeaders);
             }
 
-            // Server-Sent Events endpoint
-            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/sse') && method === 'GET') {
-                const eventId = apiPath.split('/')[3];
-                return await handleSSE(eventId, env, corsHeaders);
-            }
-
-            // Batch API endpoint
-            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/batch') && method === 'GET') {
-                const eventId = apiPath.split('/')[3];
-                return await handleBatchRequest(eventId, env, corsHeaders, request);
-            }
-
             if (apiPath.startsWith('/api/events/') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
-                return await getEvent(eventId, env, corsHeaders, request);
+                return await getEvent(eventId, env, corsHeaders);
             }
 
             if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/shuffle') && method === 'PUT') {
@@ -309,7 +259,7 @@ async function createEvent(request, env, corsHeaders) {
     }
 }
 
-async function getEvent(eventId, env, corsHeaders, request = null) {
+async function getEvent(eventId, env, corsHeaders) {
     const event = await env.wine_events.prepare(`
     SELECT * FROM events WHERE id = ? AND is_active = 1
   `).bind(eventId).first();
@@ -334,19 +284,13 @@ async function getEvent(eventId, env, corsHeaders, request = null) {
         is_ready: Boolean(player.is_ready)
     }));
 
-    const responseData = {
+    return new Response(JSON.stringify({
         ...event,
         is_active: Boolean(event.is_active),
         auto_shuffle: Boolean(event.auto_shuffle),
         event_started: Boolean(event.event_started),
         players: processedPlayers
-    };
-
-    if (request) {
-        return handleConditionalRequest(request, responseData, corsHeaders);
-    }
-
-    return new Response(JSON.stringify(responseData), {
+    }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 }
@@ -514,114 +458,6 @@ async function getAllEvents(env, corsHeaders) {
     }
 }
 
-// Batch API handler - combines multiple data sources
-async function handleBatchRequest(eventId, env, corsHeaders, request) {
-    try {
-        // Verify event exists
-        const event = await env.wine_events.prepare(`
-            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
-        `).bind(eventId).first();
-
-        if (!event) {
-            return new Response(JSON.stringify({ error: 'Event not found' }), {
-                status: 404,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-        }
-
-        // Get current wine scores
-        const scores = await env.wine_events.prepare(`
-            SELECT ws.*, p.name as player_name, p.presentation_order
-            FROM wine_scores ws
-            JOIN players p ON ws.player_id = p.id
-            WHERE ws.event_id = ? AND ws.wine_number = ?
-            ORDER BY p.presentation_order
-        `).bind(eventId, event.current_wine_number || 1).all();
-
-        // Get current wine guesses
-        const guesses = await env.wine_events.prepare(`
-            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
-            FROM player_wine_guesses pwg
-            JOIN players p ON pwg.player_id = p.id
-            JOIN wine_categories wc ON pwg.category_id = wc.id
-            WHERE p.event_id = ? AND pwg.wine_number = ?
-            ORDER BY p.presentation_order
-        `).bind(eventId, event.current_wine_number || 1).all();
-
-        // Get event wine guesses (for categories display)
-        const eventGuesses = await env.wine_events.prepare(`
-            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
-                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
-            FROM wine_categories wc
-            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
-            LEFT JOIN players p ON pwg.player_id = p.id
-            WHERE wc.event_id = ?
-            ORDER BY wc.created_at, p.presentation_order
-        `).bind(event.current_wine_number || 1, eventId).all();
-
-        // Calculate average score for current wine
-        const wineScores = scores.results || [];
-        let averageScore = 0;
-        if (wineScores.length > 0) {
-            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
-            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
-        }
-
-        // Transform event guesses into categories format
-        const categoriesMap = new Map();
-        eventGuesses.results.forEach(row => {
-            if (!categoriesMap.has(row.id)) {
-                categoriesMap.set(row.id, {
-                    id: row.id,
-                    guessing_element: row.guessing_element,
-                    difficulty_factor: row.difficulty_factor,
-                    guesses: []
-                });
-            }
-
-            if (row.guess) {
-                categoriesMap.get(row.id).guesses.push({
-                    player_name: row.player_name,
-                    guess: row.guess,
-                    presentation_order: row.presentation_order,
-                    wine_number: row.wine_number
-                });
-            }
-        });
-
-        const responseData = {
-            success: true,
-            timestamp: Date.now(),
-            event: {
-                current_wine_number: event.current_wine_number || 1,
-                event_started: Boolean(event.event_started),
-                updated_at: event.updated_at
-            },
-            scores: {
-                average: averageScore,
-                count: wineScores.length,
-                scores: wineScores
-            },
-            guesses: {
-                current_wine: guesses.results || [],
-                categories: Array.from(categoriesMap.values())
-            }
-        };
-
-        return handleConditionalRequest(request, responseData, corsHeaders);
-
-    } catch (error) {
-        console.error('Batch request error:', error);
-        return new Response(JSON.stringify({
-            error: 'Failed to fetch batch data',
-            details: error.message
-        }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-    }
-}
-
 async function getWineCategories(eventId, env, corsHeaders) {
     try {
         const categories = await env.wine_events.prepare(`
@@ -640,24 +476,639 @@ async function getWineCategories(eventId, env, corsHeaders) {
     }
 }
 
-// Get leaderboard for event
-async function getLeaderboard(eventId, env, corsHeaders) {
+async function submitWineAnswers(request, env, corsHeaders) {
     try {
-        // Get all players for this event
-        const playersResult = await env.wine_events.prepare(`
-            SELECT id, name, presentation_order FROM players 
-            WHERE event_id = ? AND is_active = 1 
-            ORDER BY presentation_order ASC
-        `).bind(eventId).all();
-        const players = playersResult.results || [];
+        const { playerId, wineAnswers } = await request.json();
 
-        if (players.length === 0) {
-            return new Response(JSON.stringify({ success: true, leaderboard: [] }), {
+        if (!playerId || !wineAnswers || !Array.isArray(wineAnswers)) {
+            return new Response(JSON.stringify({
+                error: 'Player ID and wine answers array are required'
+            }), {
+                status: 400,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
 
-        // Get wine categories for this event
+        // Validate wine answers
+        for (const answer of wineAnswers) {
+            if (!answer.categoryId || !answer.wineAnswer) {
+                return new Response(JSON.stringify({
+                    error: 'Each wine answer must have categoryId and wineAnswer'
+                }), {
+                    status: 400,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+            }
+        }
+
+        // First, delete any existing answers for this player
+        await env.wine_events.prepare(`
+            DELETE FROM player_wine_details WHERE player_id = ?
+        `).bind(playerId).run();
+
+        // Insert new answers
+        for (const answer of wineAnswers) {
+            const answerId = generateUUID();
+            await env.wine_events.prepare(`
+                INSERT INTO player_wine_details (
+                    id, player_id, category_id, wine_answer
+                ) VALUES (?, ?, ?, ?)
+            `).bind(answerId, playerId, answer.categoryId, answer.wineAnswer).run();
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error submitting wine answers:', error);
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+        return new Response(JSON.stringify({
+            error: 'Failed to save wine answers',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function debugDatabase(env, corsHeaders) {
+    try {
+        const debug = {
+            timestamp: new Date().toISOString(),
+            database: 'connected',
+            tables: {}
+        };
+
+        // Check if tables exist and get row counts
+        const tables = ['events', 'players', 'wine_categories', 'player_wine_details'];
+
+        for (const table of tables) {
+            try {
+                const result = await env.wine_events.prepare(`SELECT COUNT(*) as count FROM ${table}`).first();
+                debug.tables[table] = {
+                    exists: true,
+                    rowCount: result.count
+                };
+            } catch (error) {
+                debug.tables[table] = {
+                    exists: false,
+                    error: error.message
+                };
+            }
+        }
+
+        // Get all events
+        try {
+            const events = await env.wine_events.prepare(`SELECT id, name, join_code, created_at FROM events ORDER BY created_at DESC`).all();
+            debug.events = events.results || [];
+        } catch (error) {
+            debug.events = { error: error.message };
+        }
+
+        return new Response(JSON.stringify(debug), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error in debugDatabase:', error);
+        return new Response(JSON.stringify({
+            error: 'Database debug failed',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function testWineAnswers(env, corsHeaders) {
+    try {
+        const testData = {
+            playerId: 'test-player-id',
+            wineAnswers: [
+                {
+                    categoryId: 'test-category-id',
+                    wineAnswer: 'Test Answer'
+                }
+            ]
+        };
+
+        // Testing wine answers functionality
+
+        // Test if we can insert into player_wine_details table
+        const answerId = generateUUID();
+        await env.wine_events.prepare(`
+            INSERT INTO player_wine_details (
+                id, player_id, category_id, wine_answer
+            ) VALUES (?, ?, ?, ?)
+        `).bind(answerId, testData.playerId, testData.wineAnswers[0].categoryId, testData.wineAnswers[0].wineAnswer).run();
+
+        // Clean up test data
+        await env.wine_events.prepare(`
+            DELETE FROM player_wine_details WHERE id = ?
+        `).bind(answerId).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Wine answers table is working correctly'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error in testWineAnswers:', error);
+        return new Response(JSON.stringify({
+            error: 'Wine answers test failed',
+            details: error.message,
+            stack: error.stack
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function updatePlayerReadyStatus(request, env, playerId, corsHeaders) {
+    try {
+        const data = await request.json();
+        const { isReady } = data;
+
+        if (typeof isReady !== 'boolean') {
+            return new Response(JSON.stringify({
+                error: 'Invalid ready status'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Update player ready status
+        await env.wine_events.prepare(`
+            UPDATE players 
+            SET is_ready = ? 
+            WHERE id = ?
+        `).bind(isReady, playerId).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Player ready status updated'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error updating player ready status:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to update ready status',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getWineScores(env, eventId, corsHeaders) {
+    try {
+        // Get all scores for the event
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ?
+            ORDER BY ws.wine_number, p.presentation_order
+        `).bind(eventId).all();
+
+        // Calculate average scores by wine number
+        const wineAverages = {};
+        const wineCounts = {};
+
+        scores.results.forEach(score => {
+            const wineNum = score.wine_number;
+            if (!wineAverages[wineNum]) {
+                wineAverages[wineNum] = 0;
+                wineCounts[wineNum] = 0;
+            }
+            wineAverages[wineNum] += score.score;
+            wineCounts[wineNum]++;
+        });
+
+        // Calculate final averages
+        const averages = {};
+        Object.keys(wineAverages).forEach(wineNum => {
+            averages[wineNum] = {
+                average: Math.round((wineAverages[wineNum] / wineCounts[wineNum]) * 10) / 10,
+                totalScores: wineCounts[wineNum],
+                scores: scores.results.filter(s => s.wine_number == wineNum)
+            };
+        });
+
+        return new Response(JSON.stringify({
+            success: true,
+            averages: averages,
+            allScores: scores.results
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error getting wine scores:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to get wine scores',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function submitWineScore(request, env, eventId, corsHeaders) {
+    try {
+        const data = await request.json();
+        const { playerId, wineNumber, score } = data;
+
+        if (!playerId || !wineNumber || !score) {
+            return new Response(JSON.stringify({
+                error: 'Missing required fields: playerId, wineNumber, score'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        if (score < 1 || score > 5) {
+            return new Response(JSON.stringify({
+                error: 'Score must be between 1 and 5'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        const scoreId = generateUUID();
+
+        // Insert or update the score
+        await env.wine_events.prepare(`
+            INSERT OR REPLACE INTO wine_scores (
+                id, event_id, player_id, wine_number, score, updated_at
+            ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `).bind(scoreId, eventId, playerId, wineNumber, score).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Wine score submitted successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error submitting wine score:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to submit wine score',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getPlayerWineDetails(env, playerId, corsHeaders) {
+    try {
+        const sql = `
+            SELECT pwd.*, wc.guessing_element 
+            FROM player_wine_details pwd
+            JOIN wine_categories wc ON pwd.category_id = wc.id
+            WHERE pwd.player_id = ?
+        `;
+
+        const result = await env.wine_events.prepare(sql).bind(playerId).all();
+
+        return new Response(JSON.stringify(result.results), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch player wine details',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function startEvent(eventId, env, corsHeaders) {
+    try {
+        await env.wine_events.prepare(`
+            UPDATE events SET event_started = 1, current_wine_number = 1, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        `).bind(eventId).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Event started successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({
+            error: 'Failed to start event',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function setCurrentWine(eventId, request, env, corsHeaders) {
+    try {
+        const { wineNumber } = await request.json();
+
+        if (!wineNumber || wineNumber < 1) {
+            return new Response(JSON.stringify({ error: 'Valid wine number is required' }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        await env.wine_events.prepare(`
+            UPDATE events SET current_wine_number = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        `).bind(wineNumber, eventId).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Current wine updated successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({
+            error: 'Failed to set current wine',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getEventWineAnswers(eventId, env, corsHeaders) {
+    try {
+        console.log('Getting wine answers for event:', eventId);
+
+        // First check if the event exists
+        const eventCheck = await env.wine_events.prepare(`
+            SELECT id, name FROM events WHERE id = ?
+        `).bind(eventId).first();
+
+        console.log('Event check result:', eventCheck);
+
+        if (!eventCheck) {
+            console.log('Event not found:', eventId);
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Event not found',
+                categories: []
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get all wine categories for this event
+        const categoriesResult = await env.wine_events.prepare(`
+            SELECT id, guessing_element, difficulty_factor
+            FROM wine_categories
+            WHERE event_id = ?
+            ORDER BY created_at
+        `).bind(eventId).all();
+
+        console.log('Categories result:', categoriesResult);
+
+        if (!categoriesResult.results || categoriesResult.results.length === 0) {
+            console.log('No categories found for event:', eventId);
+            return new Response(JSON.stringify({
+                success: true,
+                categories: []
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get all wine answers for this event grouped by category
+        const categoriesWithAnswers = await Promise.all(
+            categoriesResult.results.map(async (category) => {
+                console.log('Getting answers for category:', category.id, category.guessing_element);
+
+                const answersResult = await env.wine_events.prepare(`
+                    SELECT pwd.wine_answer, p.name as player_name, p.presentation_order
+                    FROM player_wine_details pwd
+                    JOIN players p ON pwd.player_id = p.id
+                    WHERE pwd.category_id = ? AND p.event_id = ?
+                    ORDER BY p.presentation_order
+                `).bind(category.id, eventId).all();
+
+                console.log('Answers for category', category.guessing_element, ':', answersResult);
+
+                return {
+                    id: category.id,
+                    guessing_element: category.guessing_element,
+                    difficulty_factor: category.difficulty_factor,
+                    answers: answersResult.results || []
+                };
+            })
+        );
+
+        return new Response(JSON.stringify({
+            success: true,
+            categories: categoriesWithAnswers
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error getting event wine answers:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to get wine answers',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function debugEventCategories(eventId, env, corsHeaders) {
+    try {
+        console.log('Debug: Getting categories for event:', eventId);
+
+        // Get all wine categories for this event
+        const categoriesResult = await env.wine_events.prepare(`
+            SELECT id, guessing_element, difficulty_factor, created_at
+            FROM wine_categories
+            WHERE event_id = ?
+            ORDER BY created_at
+        `).bind(eventId).all();
+
+        console.log('Debug: Categories result:', categoriesResult);
+
+        // Also check if the event exists
+        const eventResult = await env.wine_events.prepare(`
+            SELECT id, name, join_code
+            FROM events
+            WHERE id = ?
+        `).bind(eventId).first();
+
+        console.log('Debug: Event result:', eventResult);
+
+        return new Response(JSON.stringify({
+            success: true,
+            eventId: eventId,
+            event: eventResult,
+            categories: categoriesResult.results || [],
+            categoriesCount: categoriesResult.results ? categoriesResult.results.length : 0
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error in debugEventCategories:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to debug event categories',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Wine guesses functions
+async function submitPlayerWineGuesses(playerId, request, env, corsHeaders) {
+    try {
+        const { wineNumber, guesses } = await request.json();
+
+        if (!guesses || !Array.isArray(guesses)) {
+            return new Response(JSON.stringify({ error: 'Guesses must be an array' }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        if (!wineNumber) {
+            return new Response(JSON.stringify({ error: 'Wine number is required' }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Delete existing guesses for this player and wine
+        await env.wine_events.prepare('DELETE FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?')
+            .bind(playerId, wineNumber)
+            .run();
+
+        // Insert new guesses
+        for (const guess of guesses) {
+            const guessId = generateUUID();
+            await env.wine_events.prepare(`
+                INSERT INTO player_wine_guesses (id, player_id, category_id, guess, wine_number)
+                VALUES (?, ?, ?, ?, ?)
+            `).bind(guessId, playerId, guess.category_id, guess.guess, wineNumber).run();
+        }
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Wine guesses submitted successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error submitting wine guesses:', error);
+        return new Response(JSON.stringify({ error: 'Failed to submit wine guesses' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getPlayerWineGuesses(playerId, env, corsHeaders, wineNumber) {
+    try {
+        let result;
+        if (wineNumber) {
+            result = await env.wine_events.prepare(
+                'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?'
+            ).bind(playerId, wineNumber).all();
+        } else {
+            result = await env.wine_events.prepare(
+                'SELECT category_id, guess, wine_number FROM player_wine_guesses WHERE player_id = ?'
+            ).bind(playerId).all();
+        }
+
+        return new Response(JSON.stringify({
+            success: true,
+            guesses: result.results || []
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error fetching player wine guesses:', error);
+        return new Response(JSON.stringify({ error: 'Failed to fetch wine guesses' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getEventWineGuesses(eventId, env, corsHeaders) {
+    try {
+        // Get all wine categories for the event
+        const categoriesResult = await env.wine_events.prepare(
+            'SELECT * FROM wine_categories WHERE event_id = ? ORDER BY created_at ASC'
+        ).bind(eventId).all();
+
+        const categories = categoriesResult.results || [];
+        const categoriesWithGuesses = [];
+
+        // For each category, get all guesses
+        for (const category of categories) {
+            const guessesResult = await env.wine_events.prepare(`
+                SELECT pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+                FROM player_wine_guesses pwg
+                JOIN players p ON pwg.player_id = p.id
+                WHERE pwg.category_id = ? AND p.event_id = ?
+                ORDER BY p.presentation_order ASC, pwg.wine_number ASC
+            `).bind(category.id, eventId).all();
+
+            categoriesWithGuesses.push({
+                id: category.id,
+                guessing_element: category.guessing_element,
+                difficulty_factor: category.difficulty_factor,
+                guesses: guessesResult.results || []
+            });
+        }
+
+        return new Response(JSON.stringify({
+            success: true,
+            categories: categoriesWithGuesses
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error fetching event wine guesses:', error);
+        return new Response(JSON.stringify({ error: 'Failed to fetch wine guesses' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getLeaderboard(eventId, env, corsHeaders) {
+    try {
+        // Get all players for the event
+        const playersResult = await env.wine_events.prepare(
+            'SELECT * FROM players WHERE event_id = ? ORDER BY presentation_order ASC'
+        ).bind(eventId).all();
+        const players = playersResult.results || [];
+
+        // Get all wine categories for the event
         const categoriesResult = await env.wine_events.prepare(
             'SELECT * FROM wine_categories WHERE event_id = ? ORDER BY created_at ASC'
         ).bind(eventId).all();
@@ -670,27 +1121,24 @@ async function getLeaderboard(eventId, env, corsHeaders) {
             let correctGuesses = 0;
             let totalGuesses = 0;
 
-            // Get all guesses for this player across all wines
-            const allPlayerGuessesResult = await env.wine_events.prepare(
-                'SELECT category_id, guess, wine_number FROM player_wine_guesses WHERE player_id = ?'
-            ).bind(player.id).all();
-            const allPlayerGuesses = allPlayerGuessesResult.results || [];
-
-            // For each wine (including their own wine)
+            // For each wine (other players' wines)
             for (const wineOwner of players) {
-                // Get the actual wine details for this wine (what the wine owner submitted)
+                if (wineOwner.id === player.id) continue; // Skip their own wine
+
+                // Get the actual wine details for this wine
                 const actualWineDetailsResult = await env.wine_events.prepare(
                     'SELECT category_id, wine_answer FROM player_wine_details WHERE player_id = ?'
                 ).bind(wineOwner.id).all();
                 const actualWineDetails = actualWineDetailsResult.results || [];
 
-                // Filter guesses for this specific wine
-                const playerGuessesForThisWine = allPlayerGuesses.filter(guess =>
-                    guess.wine_number === wineOwner.presentation_order
-                );
+                // Get this player's guesses for this wine
+                const playerGuessesResult = await env.wine_events.prepare(
+                    'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?'
+                ).bind(player.id, wineOwner.presentation_order).all();
+                const playerGuesses = playerGuessesResult.results || [];
 
                 // Compare guesses with actual details
-                for (const guess of playerGuessesForThisWine) {
+                for (const guess of playerGuesses) {
                     totalGuesses++;
                     const actualDetail = actualWineDetails.find(d => d.category_id === guess.category_id);
 
@@ -705,8 +1153,6 @@ async function getLeaderboard(eventId, env, corsHeaders) {
                 }
             }
 
-            const accuracy = totalGuesses > 0 ? ((correctGuesses / totalGuesses) * 100).toFixed(1) : "0.0";
-
             leaderboard.push({
                 player_id: player.id,
                 player_name: player.name,
@@ -714,25 +1160,19 @@ async function getLeaderboard(eventId, env, corsHeaders) {
                 total_points: totalPoints,
                 correct_guesses: correctGuesses,
                 total_guesses: totalGuesses,
-                accuracy: accuracy
+                accuracy: totalGuesses > 0 ? (correctGuesses / totalGuesses * 100).toFixed(1) : '0.0'
             });
         }
 
-        // Sort by total points (descending), then by accuracy (descending)
-        leaderboard.sort((a, b) => {
-            if (b.total_points !== a.total_points) {
-                return b.total_points - a.total_points;
-            }
-            return parseFloat(b.accuracy) - parseFloat(a.accuracy);
-        });
+        // Sort by total points descending
+        leaderboard.sort((a, b) => b.total_points - a.total_points);
 
         return new Response(JSON.stringify({
             success: true,
-            leaderboard
+            leaderboard: leaderboard
         }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
-
     } catch (error) {
         console.error('Error calculating leaderboard:', error);
         return new Response(JSON.stringify({
@@ -744,5 +1184,3 @@ async function getLeaderboard(eventId, env, corsHeaders) {
         });
     }
 }
-
-// Batch API handler - combines multiple data sources
