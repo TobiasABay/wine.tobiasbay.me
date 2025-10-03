@@ -9,7 +9,7 @@ import {
 import { ArrowBack } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Player } from '../services/api';
-import { useSSE } from '../hooks/useSSE';
+import { useSmartPolling } from '../hooks/useSmartPolling';
 import AverageScore from '../components/AverageScore';
 import WineCategoriesDisplay from '../components/WineCategoriesDisplay';
 
@@ -76,26 +76,30 @@ export default function EventPage() {
         loadEventData();
     }, [eventId]);
 
-    // Use SSE for real-time updates (only for event creators)
-    useSSE({
-        eventId: eventId ?? null,
-        onUpdate: (data) => {
-            if (data.data && isEventCreator) {
-                const eventCurrentWine = data.data.current_wine_number;
+    // Use polling for real-time updates (only for event creators)
+    useSmartPolling(async () => {
+        if (!eventId || !isEventCreator) return;
 
-                if (eventCurrentWine !== currentWineNumber) {
-                    console.log('EventPage: Current wine changed from', currentWineNumber, 'to', eventCurrentWine);
-                    setCurrentWineNumber(eventCurrentWine);
+        try {
+            const event = await apiService.getEvent(eventId);
+            const eventCurrentWine = event.current_wine_number || 1;
 
-                    // Update current player to match the new wine number
-                    const playerForWine = allPlayers.find(p => p.presentation_order === eventCurrentWine);
-                    if (playerForWine) {
-                        setCurrentPlayer(playerForWine);
-                    }
+            if (eventCurrentWine !== currentWineNumber) {
+                console.log('EventPage: Current wine changed from', currentWineNumber, 'to', eventCurrentWine);
+                setCurrentWineNumber(eventCurrentWine);
+
+                // Update current player to match the new wine number
+                const playerForWine = allPlayers.find(p => p.presentation_order === eventCurrentWine);
+                if (playerForWine) {
+                    setCurrentPlayer(playerForWine);
                 }
             }
-        },
-        enabled: !!eventId && isEventCreator
+        } catch (error) {
+            console.error('Error polling for event updates:', error);
+        }
+    }, {
+        enabled: !!eventId && isEventCreator,
+        interval: 3000
     });
 
     const handleBack = () => {

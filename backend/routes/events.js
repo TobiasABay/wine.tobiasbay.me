@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../services/database');
 
+
 // Create a new event
 router.post('/', async (req, res) => {
     try {
@@ -260,5 +261,6 @@ router.get('/:eventId/leaderboard', async (req, res) => {
         res.status(500).json({ error: 'Failed to calculate leaderboard' });
     }
 });
+
 
 module.exports = router;

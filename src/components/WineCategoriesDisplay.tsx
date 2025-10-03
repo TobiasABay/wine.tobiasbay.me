@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import { WineBar } from '@mui/icons-material';
 import { apiService } from '../services/api';
-import { useSSE } from '../hooks/useSSE';
+import { useSmartPolling } from '../hooks/useSmartPolling';
 
 interface WineCategoriesDisplayProps {
     eventId: string;
@@ -147,53 +147,47 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         }
     };
 
-    // Use SSE for real-time updates
-    useSSE({
-        eventId,
-        onUpdate: (data) => {
-            if (data.data) {
-                setCurrentWineNumber(data.data.current_wine_number);
-                setAverageScore(data.data.average_score);
-                setScoreCount(data.data.score_count);
+    // Use polling for real-time updates
+    useSmartPolling(async () => {
+        try {
+            // Get updated event data
+            const event = await apiService.getEvent(eventId);
+            const wineNum = event.current_wine_number || 1;
+            setCurrentWineNumber(wineNum);
+            setTotalWines(event.players?.length || 0);
 
-                // Transform SSE guesses data to match component format
-                const transformedCategories: WineCategoryWithGuesses[] = [];
-                const guessesByCategory = new Map<string, WineGuess[]>();
-
-                // Group guesses by category
-                data.data.guesses.forEach(guess => {
-                    if (!guessesByCategory.has(guess.category_id)) {
-                        guessesByCategory.set(guess.category_id, []);
-                    }
-                    guessesByCategory.get(guess.category_id)!.push({
-                        player_name: guess.player_name,
-                        guess: guess.guess,
-                        presentation_order: guess.presentation_order,
-                        wine_number: guess.wine_number
-                    });
-                });
-
-                // Create categories with guesses
-                guessesByCategory.forEach((guesses, categoryId) => {
-                    // Find category info from existing categories or create placeholder
-                    const existingCategory = categories.find(c => c.id === categoryId);
-                    const category = existingCategory || {
-                        id: categoryId,
-                        guessing_element: 'Unknown',
-                        difficulty_factor: '1',
-                        guesses: []
-                    };
-
-                    transformedCategories.push({
-                        ...category,
-                        guesses
-                    });
-                });
-
-                setCategories(transformedCategories);
+            // Get updated average score for current wine
+            try {
+                const scoresResponse = await apiService.getWineScores(eventId);
+                const wineData = scoresResponse.averages[wineNum.toString()];
+                if (wineData) {
+                    setAverageScore(wineData.average);
+                    setScoreCount(wineData.totalScores);
+                } else {
+                    setAverageScore(null);
+                    setScoreCount(0);
+                }
+            } catch (scoreError) {
+                console.log('Error fetching scores:', scoreError);
+                setAverageScore(null);
+                setScoreCount(0);
             }
-        },
-        enabled: true
+
+            // Get updated wine guesses
+            try {
+                const guessesResponse = await apiService.getEventWineGuesses(eventId);
+                if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
+                    setCategories(guessesResponse.categories);
+                }
+            } catch (guessesError) {
+                console.log('Error fetching guesses:', guessesError);
+            }
+        } catch (error) {
+            console.error('Error polling for updates:', error);
+        }
+    }, {
+        enabled: true,
+        interval: 3000
     });
 
     // Fetch initial data and total wines count
