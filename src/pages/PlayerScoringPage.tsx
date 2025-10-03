@@ -670,34 +670,7 @@ export default function PlayerScoringPage() {
                                 fullWidth
                             />
 
-                            {error && (
-                                <Alert severity="error" sx={{ mb: 2, backgroundColor: 'rgba(244, 67, 54, 0.1)' }}>
-                                    {error}
-                                </Alert>
-                            )}
 
-                            <Button
-                                onClick={handleSubmitAll}
-                                disabled={submitting || !score || parseInt(score) < 1 || parseInt(score) > 5 || (wineCategories.length > 0 && Object.keys(categoryGuesses).length !== wineCategories.length)}
-                                variant="contained"
-                                sx={{
-                                    backgroundColor: '#ffd700',
-                                    color: '#333',
-                                    fontWeight: 'bold',
-                                    px: 4,
-                                    py: 1.5,
-                                    fontSize: '1.1rem',
-                                    '&:hover': {
-                                        backgroundColor: '#ffc107',
-                                    },
-                                    '&:disabled': {
-                                        backgroundColor: 'rgba(255,255,255,0.3)',
-                                        color: 'rgba(255,255,255,0.7)',
-                                    }
-                                }}
-                            >
-                                {submitting ? 'Submitting...' : 'Submit Score & Guesses'}
-                            </Button>
                         </Box>
                     )}
                 </Paper>
@@ -796,6 +769,40 @@ export default function PlayerScoringPage() {
                             </Box>
                         )}
                     </Paper>
+                )}
+
+                {/* Submit Button */}
+                {!submitted && (
+                    <Box sx={{ mt: 4, textAlign: 'center' }}>
+                        {error && (
+                            <Alert severity="error" sx={{ mb: 2, backgroundColor: 'rgba(244, 67, 54, 0.1)' }}>
+                                {error}
+                            </Alert>
+                        )}
+
+                        <Button
+                            onClick={handleSubmitAll}
+                            disabled={submitting || !score || parseInt(score) < 1 || parseInt(score) > 5 || (wineCategories.length > 0 && Object.keys(categoryGuesses).length !== wineCategories.length)}
+                            variant="contained"
+                            sx={{
+                                backgroundColor: '#ffd700',
+                                color: '#333',
+                                fontWeight: 'bold',
+                                px: 4,
+                                py: 1.5,
+                                fontSize: '1.1rem',
+                                '&:hover': {
+                                    backgroundColor: '#ffc107',
+                                },
+                                '&:disabled': {
+                                    backgroundColor: 'rgba(255,255,255,0.3)',
+                                    color: 'rgba(255,255,255,0.7)',
+                                }
+                            }}
+                        >
+                            {submitting ? 'Submitting...' : 'Submit Score & Guesses'}
+                        </Button>
+                    </Box>
                 )}
             </Container>
         </Box>
