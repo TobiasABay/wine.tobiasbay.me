@@ -410,48 +410,50 @@ export default function PlayerScoringPage() {
         return ['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5'];
     };
 
-    const handleSubmitGuesses = async () => {
-        if (submitting || !currentPlayerId || !currentPlayer) return;
-
-        setSubmitting(true);
-        setError('');
-
-        try {
-            const guesses = Object.entries(categoryGuesses).map(([categoryId, guess]) => ({
-                category_id: categoryId,
-                guess: guess
-            }));
-
-            await apiService.submitPlayerWineGuesses(currentPlayerId, currentPlayer.presentation_order, guesses);
-            setGuessesSubmitted(true);
-            // Immediately refresh to show updated guesses
-            await refreshNow();
-        } catch (error: any) {
-            setError(error.message || 'Failed to submit guesses');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleSubmit = async () => {
+    const handleSubmitAll = async () => {
         if (submitting || !currentPlayer || !currentPlayerId) return;
 
+        // Validate score
         const scoreNum = parseInt(score);
         if (isNaN(scoreNum) || scoreNum < 1 || scoreNum > 5) {
             setError('Please enter a score between 1 and 5');
             return;
         }
 
+        // Validate categories (if there are categories)
+        if (wineCategories.length > 0) {
+            const missingCategories = wineCategories.filter(category =>
+                !categoryGuesses[category.id] || categoryGuesses[category.id].trim() === ''
+            );
+
+            if (missingCategories.length > 0) {
+                setError(`Please fill in all categories: ${missingCategories.map(c => c.guessing_element).join(', ')}`);
+                return;
+            }
+        }
+
         setSubmitting(true);
         setError('');
 
         try {
+            // Submit score
             await apiService.submitWineScore(eventId!, currentPlayerId, currentPlayer.presentation_order, scoreNum);
+
+            // Submit guesses if there are categories
+            if (wineCategories.length > 0) {
+                const guesses = Object.entries(categoryGuesses).map(([categoryId, guess]) => ({
+                    category_id: categoryId,
+                    guess: guess
+                }));
+                await apiService.submitPlayerWineGuesses(currentPlayerId, currentPlayer.presentation_order, guesses);
+            }
+
             setSubmitted(true);
-            // Immediately refresh to show updated scores
+            setGuessesSubmitted(true);
+            // Immediately refresh to show updated scores and guesses
             await refreshNow();
         } catch (error: any) {
-            setError(error.message || 'Failed to submit score');
+            setError(error.message || 'Failed to submit score and guesses');
         } finally {
             setSubmitting(false);
         }
@@ -617,13 +619,18 @@ export default function PlayerScoringPage() {
                     {submitted ? (
                         <Box>
                             <Typography variant="h5" sx={{ color: 'white', fontWeight: 'bold', mb: 2 }}>
-                                Score Submitted!
+                                {wineCategories.length > 0 ? 'Score & Guesses Submitted!' : 'Score Submitted!'}
                             </Typography>
                             <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
                                 Your Score: {score}/5
                             </Typography>
+                            {wineCategories.length > 0 && (
+                                <Typography variant="body2" sx={{ color: 'white', opacity: 0.8, mb: 2 }}>
+                                    Your category guesses have been submitted successfully!
+                                </Typography>
+                            )}
                             <Typography variant="body1" sx={{ color: 'white', opacity: 0.8 }}>
-                                Thank you for rating this wine! The results will be shown to the event creator.
+                                Thank you for participating! The results will be shown to the event creator.
                             </Typography>
                         </Box>
                     ) : (
@@ -670,8 +677,8 @@ export default function PlayerScoringPage() {
                             )}
 
                             <Button
-                                onClick={handleSubmit}
-                                disabled={submitting || !score || parseInt(score) < 1 || parseInt(score) > 5}
+                                onClick={handleSubmitAll}
+                                disabled={submitting || !score || parseInt(score) < 1 || parseInt(score) > 5 || (wineCategories.length > 0 && Object.keys(categoryGuesses).length !== wineCategories.length)}
                                 variant="contained"
                                 sx={{
                                     backgroundColor: '#ffd700',
@@ -689,7 +696,7 @@ export default function PlayerScoringPage() {
                                     }
                                 }}
                             >
-                                {submitting ? 'Submitting...' : 'Submit Score'}
+                                {submitting ? 'Submitting...' : 'Submit Score & Guesses'}
                             </Button>
                         </Box>
                     )}
@@ -786,28 +793,6 @@ export default function PlayerScoringPage() {
                                     );
                                 })}
 
-                                <Button
-                                    onClick={handleSubmitGuesses}
-                                    disabled={submitting || Object.keys(categoryGuesses).length === 0}
-                                    variant="contained"
-                                    sx={{
-                                        backgroundColor: '#ffd700',
-                                        color: '#333',
-                                        fontWeight: 'bold',
-                                        px: 4,
-                                        py: 1.5,
-                                        fontSize: '1.1rem',
-                                        '&:hover': {
-                                            backgroundColor: '#ffc107',
-                                        },
-                                        '&:disabled': {
-                                            backgroundColor: 'rgba(255,255,255,0.3)',
-                                            color: 'rgba(255,255,255,0.7)',
-                                        }
-                                    }}
-                                >
-                                    {submitting ? 'Submitting...' : 'Submit Guesses'}
-                                </Button>
                             </Box>
                         )}
                     </Paper>
