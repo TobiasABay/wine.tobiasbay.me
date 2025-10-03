@@ -496,6 +496,16 @@ export default function FinishPage() {
                                                                         <Typography
                                                                             variant="body2"
                                                                             sx={{
+                                                                                fontWeight: 'bold',
+                                                                                color: '#2c3e50',
+                                                                                minWidth: '60px'
+                                                                            }}
+                                                                        >
+                                                                            {playerData.playerName}:
+                                                                        </Typography>
+                                                                        <Typography
+                                                                            variant="body2"
+                                                                            sx={{
                                                                                 fontWeight: 'medium',
                                                                                 color: '#2c3e50',
                                                                                 minWidth: '80px'
