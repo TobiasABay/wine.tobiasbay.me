@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { WineBar } from '@mui/icons-material';
 import { apiService } from '../services/api';
+import { useSSE } from '../hooks/useSSE';
 
 interface WineCategoriesDisplayProps {
     eventId: string;
@@ -147,67 +148,74 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         }
     };
 
-    // Add polling for real-time updates
-    useEffect(() => {
-        if (!eventId) return;
+    // Use SSE for real-time updates
+    const { isConnected, lastUpdate } = useSSE({
+        eventId,
+        onUpdate: (data) => {
+            if (data.data) {
+                setCurrentWineNumber(data.data.current_wine_number);
+                setAverageScore(data.data.average_score);
+                setScoreCount(data.data.score_count);
 
-        const fetchWineCategoriesWithGuesses = async () => {
-            try {
-                // Update current wine number and total wines
-                const event = await apiService.getEvent(eventId);
-                const wineNum = event.current_wine_number || 1;
-                setCurrentWineNumber(wineNum);
-                setTotalWines(event.players?.length || 0);
+                // Transform SSE guesses data to match component format
+                const transformedCategories: WineCategoryWithGuesses[] = [];
+                const guessesByCategory = new Map<string, WineGuess[]>();
 
-                // Update average score for current wine
-                try {
-                    const scoresResponse = await apiService.getWineScores(eventId);
-                    const wineData = scoresResponse.averages[wineNum.toString()];
-                    if (wineData) {
-                        setAverageScore(wineData.average);
-                        setScoreCount(wineData.totalScores);
-                    } else {
-                        setAverageScore(null);
-                        setScoreCount(0);
+                // Group guesses by category
+                data.data.guesses.forEach(guess => {
+                    if (!guessesByCategory.has(guess.category_id)) {
+                        guessesByCategory.set(guess.category_id, []);
                     }
-                } catch (scoreError) {
-                    setAverageScore(null);
-                    setScoreCount(0);
-                }
+                    guessesByCategory.get(guess.category_id)!.push({
+                        player_name: guess.player_name,
+                        guess: guess.guess,
+                        presentation_order: guess.presentation_order,
+                        wine_number: guess.wine_number
+                    });
+                });
+
+                // Create categories with guesses
+                guessesByCategory.forEach((guesses, categoryId) => {
+                    // Find category info from existing categories or create placeholder
+                    const existingCategory = categories.find(c => c.id === categoryId);
+                    const category = existingCategory || {
+                        id: categoryId,
+                        guessing_element: guesses[0]?.guessing_element || 'Unknown',
+                        difficulty_factor: '1',
+                        guesses: []
+                    };
+
+                    transformedCategories.push({
+                        ...category,
+                        guesses
+                    });
+                });
+
+                setCategories(transformedCategories);
+            }
+        },
+        enabled: true
+    });
+
+    // Fetch initial data and total wines count
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            try {
+                const event = await apiService.getEvent(eventId);
+                setTotalWines(event.players?.length || 0);
 
                 const guessesResponse = await apiService.getEventWineGuesses(eventId);
                 if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
                     setCategories(guessesResponse.categories);
                 }
             } catch (error) {
-                console.error('Error refreshing wine guesses:', error);
+                console.error('Error fetching initial data:', error);
             }
         };
 
-        // Start polling every 5 seconds
-        const pollInterval = setInterval(fetchWineCategoriesWithGuesses, 5000);
-        pollingInterval.current = pollInterval;
-
-        // Handle visibility change to pause/resume polling
-        const handleVisibilityChange = () => {
-            if (document.hidden && pollingInterval.current) {
-                clearInterval(pollingInterval.current);
-                pollingInterval.current = null;
-            } else if (!document.hidden && !pollingInterval.current) {
-                const newPollInterval = setInterval(fetchWineCategoriesWithGuesses, 5000);
-                pollingInterval.current = newPollInterval;
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        // Cleanup
-        return () => {
-            if (pollingInterval.current) {
-                clearInterval(pollingInterval.current);
-            }
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
+        if (eventId) {
+            fetchInitialData();
+        }
     }, [eventId]);
 
     if (loading) {

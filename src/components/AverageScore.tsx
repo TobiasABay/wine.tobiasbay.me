@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { Star, StarBorder } from '@mui/icons-material';
 import { apiService } from '../services/api';
+import { useSSE } from '../hooks/useSSE';
 
 interface AverageScoreProps {
     eventId: string;
@@ -29,8 +30,32 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
 
+    // Use SSE for real-time updates
+    const { lastUpdate } = useSSE({
+        eventId,
+        onUpdate: (data) => {
+            if (data.data && data.data.current_wine_number === wineNumber) {
+                const wineScores = data.data.scores || [];
+                setScoreData({
+                    average: data.data.average_score,
+                    totalScores: data.data.score_count,
+                    scores: wineScores.map(score => ({
+                        id: score.id,
+                        player_id: score.player_id,
+                        player_name: score.player_name,
+                        score: score.score,
+                        created_at: new Date().toISOString()
+                    }))
+                });
+                setLoading(false);
+            }
+        },
+        enabled: true
+    });
+
+    // Fetch initial data
     useEffect(() => {
-        const fetchScores = async () => {
+        const fetchInitialScores = async () => {
             try {
                 const response = await apiService.getWineScores(eventId);
 
@@ -63,12 +88,7 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
             }
         };
 
-        fetchScores();
-
-        // Poll for updates every 5 seconds
-        const interval = setInterval(fetchScores, 5000);
-
-        return () => clearInterval(interval);
+        fetchInitialScores();
     }, [eventId, wineNumber]);
 
     const renderStars = (score: number) => {

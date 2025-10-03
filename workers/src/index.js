@@ -7,6 +7,44 @@ function generateUUID() {
     });
 }
 
+// Generate ETag for data
+function generateETag(data) {
+    const str = JSON.stringify(data);
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return `"${Math.abs(hash).toString(16)}"`;
+}
+
+// Handle conditional requests with ETag
+function handleConditionalRequest(request, data, corsHeaders) {
+    const ifNoneMatch = request.headers.get('If-None-Match');
+    const etag = generateETag(data);
+
+    if (ifNoneMatch && ifNoneMatch === etag) {
+        return new Response(null, {
+            status: 304,
+            headers: {
+                ...corsHeaders,
+                'ETag': etag,
+                'Cache-Control': 'no-cache'
+            }
+        });
+    }
+
+    return new Response(JSON.stringify(data), {
+        headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'ETag': etag,
+            'Cache-Control': 'no-cache'
+        }
+    });
+}
+
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
@@ -17,7 +55,7 @@ export default {
         const corsHeaders = {
             'Access-Control-Allow-Origin': env.FRONTEND_URL || 'https://wine.tobiasbay.me',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, If-None-Match',
             'Access-Control-Allow-Credentials': 'true',
         };
 
@@ -83,7 +121,7 @@ export default {
 
             if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
-                return await getWineScores(env, eventId, corsHeaders);
+                return await getWineScores(env, eventId, corsHeaders, request);
             }
 
             if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/scores') && method === 'POST') {
@@ -111,9 +149,21 @@ export default {
                 return await getLeaderboard(eventId, env, corsHeaders);
             }
 
+            // Server-Sent Events endpoint
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/sse') && method === 'GET') {
+                const eventId = apiPath.split('/')[3];
+                return await handleSSE(eventId, env, corsHeaders);
+            }
+
+            // Batch API endpoint
+            if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/batch') && method === 'GET') {
+                const eventId = apiPath.split('/')[3];
+                return await handleBatchRequest(eventId, env, corsHeaders, request);
+            }
+
             if (apiPath.startsWith('/api/events/') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
-                return await getEvent(eventId, env, corsHeaders);
+                return await getEvent(eventId, env, corsHeaders, request);
             }
 
             if (apiPath.startsWith('/api/events/') && apiPath.endsWith('/shuffle') && method === 'PUT') {
@@ -259,7 +309,7 @@ async function createEvent(request, env, corsHeaders) {
     }
 }
 
-async function getEvent(eventId, env, corsHeaders) {
+async function getEvent(eventId, env, corsHeaders, request = null) {
     const event = await env.wine_events.prepare(`
     SELECT * FROM events WHERE id = ? AND is_active = 1
   `).bind(eventId).first();
@@ -284,13 +334,19 @@ async function getEvent(eventId, env, corsHeaders) {
         is_ready: Boolean(player.is_ready)
     }));
 
-    return new Response(JSON.stringify({
+    const responseData = {
         ...event,
         is_active: Boolean(event.is_active),
         auto_shuffle: Boolean(event.auto_shuffle),
         event_started: Boolean(event.event_started),
         players: processedPlayers
-    }), {
+    };
+
+    if (request) {
+        return handleConditionalRequest(request, responseData, corsHeaders);
+    }
+
+    return new Response(JSON.stringify(responseData), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 }
@@ -458,6 +514,114 @@ async function getAllEvents(env, corsHeaders) {
     }
 }
 
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
 async function getWineCategories(eventId, env, corsHeaders) {
     try {
         const categories = await env.wine_events.prepare(`
@@ -470,6 +634,114 @@ async function getWineCategories(eventId, env, corsHeaders) {
     } catch (error) {
         console.error('Error getting wine categories:', error);
         return new Response(JSON.stringify({ error: 'Failed to get wine categories' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -533,6 +805,114 @@ async function submitWineAnswers(request, env, corsHeaders) {
     }
 }
 
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
 async function debugDatabase(env, corsHeaders) {
     try {
         const debug = {
@@ -574,6 +954,114 @@ async function debugDatabase(env, corsHeaders) {
         console.error('Error in debugDatabase:', error);
         return new Response(JSON.stringify({
             error: 'Database debug failed',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
             details: error.message
         }), {
             status: 500,
@@ -628,6 +1116,114 @@ async function testWineAnswers(env, corsHeaders) {
     }
 }
 
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
 async function updatePlayerReadyStatus(request, env, playerId, corsHeaders) {
     try {
         const data = await request.json();
@@ -667,7 +1263,115 @@ async function updatePlayerReadyStatus(request, env, playerId, corsHeaders) {
     }
 }
 
-async function getWineScores(env, eventId, corsHeaders) {
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getWineScores(env, eventId, corsHeaders, request = null) {
     try {
         // Get all scores for the event
         const scores = await env.wine_events.prepare(`
@@ -702,17 +1406,131 @@ async function getWineScores(env, eventId, corsHeaders) {
             };
         });
 
-        return new Response(JSON.stringify({
+        const responseData = {
             success: true,
             averages: averages,
             allScores: scores.results
-        }), {
+        };
+
+        if (request) {
+            return handleConditionalRequest(request, responseData, corsHeaders);
+        }
+
+        return new Response(JSON.stringify(responseData), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
     } catch (error) {
         console.error('Error getting wine scores:', error);
         return new Response(JSON.stringify({
             error: 'Failed to get wine scores',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
             details: error.message
         }), {
             status: 500,
@@ -771,6 +1589,114 @@ async function submitWineScore(request, env, eventId, corsHeaders) {
     }
 }
 
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
 async function getPlayerWineDetails(env, playerId, corsHeaders) {
     try {
         const sql = `
@@ -796,6 +1722,114 @@ async function getPlayerWineDetails(env, playerId, corsHeaders) {
     }
 }
 
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
 async function startEvent(eventId, env, corsHeaders) {
     try {
         await env.wine_events.prepare(`
@@ -812,6 +1846,114 @@ async function startEvent(eventId, env, corsHeaders) {
     } catch (error) {
         return new Response(JSON.stringify({
             error: 'Failed to start event',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
             details: error.message
         }), {
             status: 500,
@@ -845,6 +1987,114 @@ async function setCurrentWine(eventId, request, env, corsHeaders) {
     } catch (error) {
         return new Response(JSON.stringify({
             error: 'Failed to set current wine',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
             details: error.message
         }), {
             status: 500,
@@ -937,6 +2187,114 @@ async function getEventWineAnswers(eventId, env, corsHeaders) {
     }
 }
 
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
 async function debugEventCategories(eventId, env, corsHeaders) {
     try {
         console.log('Debug: Getting categories for event:', eventId);
@@ -973,6 +2331,114 @@ async function debugEventCategories(eventId, env, corsHeaders) {
         console.error('Error in debugEventCategories:', error);
         return new Response(JSON.stringify({
             error: 'Failed to debug event categories',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
             details: error.message
         }), {
             status: 500,
@@ -1029,6 +2495,114 @@ async function submitPlayerWineGuesses(playerId, request, env, corsHeaders) {
     }
 }
 
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
 async function getPlayerWineGuesses(playerId, env, corsHeaders, wineNumber) {
     try {
         let result;
@@ -1051,6 +2625,114 @@ async function getPlayerWineGuesses(playerId, env, corsHeaders, wineNumber) {
     } catch (error) {
         console.error('Error fetching player wine guesses:', error);
         return new Response(JSON.stringify({ error: 'Failed to fetch wine guesses' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -1094,6 +2776,114 @@ async function getEventWineGuesses(eventId, env, corsHeaders) {
     } catch (error) {
         console.error('Error fetching event wine guesses:', error);
         return new Response(JSON.stringify({ error: 'Failed to fetch wine guesses' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -1177,6 +2967,355 @@ async function getLeaderboard(eventId, env, corsHeaders) {
         console.error('Error calculating leaderboard:', error);
         return new Response(JSON.stringify({
             error: 'Failed to calculate leaderboard',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Server-Sent Events handler
+async function handleSSE(eventId, env, corsHeaders) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT id FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // SSE headers
+        const sseHeaders = {
+            ...corsHeaders,
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': corsHeaders['Access-Control-Allow-Origin'],
+            'Access-Control-Allow-Credentials': 'true'
+        };
+
+        // Create a readable stream for SSE
+        const encoder = new TextEncoder();
+        let connectionClosed = false;
+
+        const stream = new ReadableStream({
+            start(controller) {
+                // Send initial connection message
+                const initialMessage = `data: ${JSON.stringify({ type: 'connected', timestamp: Date.now() })}\n\n`;
+                controller.enqueue(encoder.encode(initialMessage));
+
+                // Poll for changes every 3 seconds
+                const pollInterval = setInterval(async () => {
+                    if (connectionClosed) {
+                        clearInterval(pollInterval);
+                        return;
+                    }
+
+                    try {
+                        // Get current event state
+                        const event = await env.wine_events.prepare(`
+                            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ?
+                        `).bind(eventId).first();
+
+                        // Get current wine scores
+                        const scores = await env.wine_events.prepare(`
+                            SELECT ws.*, p.name as player_name, p.presentation_order
+                            FROM wine_scores ws
+                            JOIN players p ON ws.player_id = p.id
+                            WHERE ws.event_id = ? AND ws.wine_number = ?
+                            ORDER BY p.presentation_order
+                        `).bind(eventId, event.current_wine_number || 1).all();
+
+                        // Get current wine guesses
+                        const guesses = await env.wine_events.prepare(`
+                            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+                            FROM player_wine_guesses pwg
+                            JOIN players p ON pwg.player_id = p.id
+                            JOIN wine_categories wc ON pwg.category_id = wc.id
+                            WHERE p.event_id = ? AND pwg.wine_number = ?
+                            ORDER BY p.presentation_order
+                        `).bind(eventId, event.current_wine_number || 1).all();
+
+                        // Calculate average score for current wine
+                        const wineScores = scores.results || [];
+                        let averageScore = 0;
+                        if (wineScores.length > 0) {
+                            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+                            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+                        }
+
+                        // Prepare update data
+                        const updateData = {
+                            type: 'event_update',
+                            timestamp: Date.now(),
+                            data: {
+                                current_wine_number: event.current_wine_number || 1,
+                                event_started: Boolean(event.event_started),
+                                average_score: averageScore,
+                                score_count: wineScores.length,
+                                scores: wineScores,
+                                guesses: guesses.results || []
+                            }
+                        };
+
+                        // Send update
+                        const message = `data: ${JSON.stringify(updateData)}\n\n`;
+                        controller.enqueue(encoder.encode(message));
+
+                    } catch (error) {
+                        console.error('SSE polling error:', error);
+                        const errorMessage = `data: ${JSON.stringify({ type: 'error', message: 'Failed to fetch update' })}\n\n`;
+                        controller.enqueue(encoder.encode(errorMessage));
+                    }
+                }, 3000); // Poll every 3 seconds
+
+                // Handle client disconnect
+                const cleanup = () => {
+                    connectionClosed = true;
+                    clearInterval(pollInterval);
+                    try {
+                        controller.close();
+                    } catch (e) {
+                        // Controller might already be closed
+                    }
+                };
+
+                // Return cleanup function
+                return cleanup;
+            },
+            cancel() {
+                connectionClosed = true;
+            }
+        });
+
+        return new Response(stream, { headers: sseHeaders });
+
+    } catch (error) {
+        console.error('SSE error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to establish SSE connection',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Batch API handler - combines multiple data sources
+async function handleBatchRequest(eventId, env, corsHeaders, request) {
+    try {
+        // Verify event exists
+        const event = await env.wine_events.prepare(`
+            SELECT current_wine_number, event_started, updated_at FROM events WHERE id = ? AND is_active = 1
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Get current wine scores
+        const scores = await env.wine_events.prepare(`
+            SELECT ws.*, p.name as player_name, p.presentation_order
+            FROM wine_scores ws
+            JOIN players p ON ws.player_id = p.id
+            WHERE ws.event_id = ? AND ws.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get current wine guesses
+        const guesses = await env.wine_events.prepare(`
+            SELECT pwg.*, p.name as player_name, p.presentation_order, wc.guessing_element
+            FROM player_wine_guesses pwg
+            JOIN players p ON pwg.player_id = p.id
+            JOIN wine_categories wc ON pwg.category_id = wc.id
+            WHERE p.event_id = ? AND pwg.wine_number = ?
+            ORDER BY p.presentation_order
+        `).bind(eventId, event.current_wine_number || 1).all();
+
+        // Get event wine guesses (for categories display)
+        const eventGuesses = await env.wine_events.prepare(`
+            SELECT wc.id, wc.guessing_element, wc.difficulty_factor,
+                   pwg.guess, p.name as player_name, p.presentation_order, pwg.wine_number
+            FROM wine_categories wc
+            LEFT JOIN player_wine_guesses pwg ON wc.id = pwg.category_id AND pwg.wine_number = ?
+            LEFT JOIN players p ON pwg.player_id = p.id
+            WHERE wc.event_id = ?
+            ORDER BY wc.created_at, p.presentation_order
+        `).bind(event.current_wine_number || 1, eventId).all();
+
+        // Calculate average score for current wine
+        const wineScores = scores.results || [];
+        let averageScore = 0;
+        if (wineScores.length > 0) {
+            const totalScore = wineScores.reduce((sum, score) => sum + score.score, 0);
+            averageScore = Math.round((totalScore / wineScores.length) * 10) / 10;
+        }
+
+        // Transform event guesses into categories format
+        const categoriesMap = new Map();
+        eventGuesses.results.forEach(row => {
+            if (!categoriesMap.has(row.id)) {
+                categoriesMap.set(row.id, {
+                    id: row.id,
+                    guessing_element: row.guessing_element,
+                    difficulty_factor: row.difficulty_factor,
+                    guesses: []
+                });
+            }
+
+            if (row.guess) {
+                categoriesMap.get(row.id).guesses.push({
+                    player_name: row.player_name,
+                    guess: row.guess,
+                    presentation_order: row.presentation_order,
+                    wine_number: row.wine_number
+                });
+            }
+        });
+
+        const responseData = {
+            success: true,
+            timestamp: Date.now(),
+            event: {
+                current_wine_number: event.current_wine_number || 1,
+                event_started: Boolean(event.event_started),
+                updated_at: event.updated_at
+            },
+            scores: {
+                average: averageScore,
+                count: wineScores.length,
+                scores: wineScores
+            },
+            guesses: {
+                current_wine: guesses.results || [],
+                categories: Array.from(categoriesMap.values())
+            }
+        };
+
+        return handleConditionalRequest(request, responseData, corsHeaders);
+
+    } catch (error) {
+        console.error('Batch request error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch batch data',
             details: error.message
         }), {
             status: 500,

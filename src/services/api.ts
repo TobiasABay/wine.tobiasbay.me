@@ -78,8 +78,20 @@ export interface SubmitWineAnswersData {
 }
 
 class ApiService {
+    private cache = new Map<string, { data: any; etag: string; timestamp: number }>();
+    private readonly CACHE_DURATION = 5000; // 5 seconds cache
+
     private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
         const url = `${API_BASE_URL}${endpoint}`;
+        const cacheKey = `${options.method || 'GET'}:${endpoint}`;
+        const cached = this.cache.get(cacheKey);
+        const now = Date.now();
+
+        // Check if we have a valid cached response
+        if (cached && (now - cached.timestamp) < this.CACHE_DURATION && options.method === 'GET') {
+            return cached.data;
+        }
+
         const config: RequestInit = {
             headers: {
                 'Content-Type': 'application/json',
@@ -88,15 +100,42 @@ class ApiService {
             ...options,
         };
 
+        // Add conditional headers for GET requests
+        if (options.method === 'GET' && cached?.etag) {
+            config.headers = {
+                ...config.headers,
+                'If-None-Match': cached.etag,
+            };
+        }
+
         try {
             const response = await fetch(url, config);
+
+            // Handle 304 Not Modified
+            if (response.status === 304 && cached) {
+                // Update timestamp for cache
+                this.cache.set(cacheKey, { ...cached, timestamp: now });
+                return cached.data;
+            }
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
             }
 
-            return await response.json();
+            const data = await response.json();
+            const etag = response.headers.get('ETag');
+
+            // Cache GET responses
+            if (options.method === 'GET' && etag) {
+                this.cache.set(cacheKey, {
+                    data,
+                    etag,
+                    timestamp: now
+                });
+            }
+
+            return data;
         } catch (error) {
             console.error('API request failed:', error);
             throw error;
@@ -308,6 +347,97 @@ class ApiService {
                 accuracy: string;
             }>
         }>(`/api/events/${eventId}/leaderboard`);
+    }
+
+    // Batch API - combines multiple data sources
+    async getBatchData(eventId: string): Promise<{
+        success: boolean;
+        timestamp: number;
+        event: {
+            current_wine_number: number;
+            event_started: boolean;
+            updated_at: string;
+        };
+        scores: {
+            average: number;
+            count: number;
+            scores: Array<{
+                id: string;
+                player_id: string;
+                wine_number: number;
+                score: number;
+                player_name: string;
+                presentation_order: number;
+            }>;
+        };
+        guesses: {
+            current_wine: Array<{
+                id: string;
+                player_id: string;
+                category_id: string;
+                guess: string;
+                wine_number: number;
+                player_name: string;
+                presentation_order: number;
+                guessing_element: string;
+            }>;
+            categories: Array<{
+                id: string;
+                guessing_element: string;
+                difficulty_factor: string;
+                guesses: Array<{
+                    player_name: string;
+                    guess: string;
+                    presentation_order: number;
+                    wine_number: number;
+                }>;
+            }>;
+        };
+    }> {
+        return this.request<{
+            success: boolean;
+            timestamp: number;
+            event: {
+                current_wine_number: number;
+                event_started: boolean;
+                updated_at: string;
+            };
+            scores: {
+                average: number;
+                count: number;
+                scores: Array<{
+                    id: string;
+                    player_id: string;
+                    wine_number: number;
+                    score: number;
+                    player_name: string;
+                    presentation_order: number;
+                }>;
+            };
+            guesses: {
+                current_wine: Array<{
+                    id: string;
+                    player_id: string;
+                    category_id: string;
+                    guess: string;
+                    wine_number: number;
+                    player_name: string;
+                    presentation_order: number;
+                    guessing_element: string;
+                }>;
+                categories: Array<{
+                    id: string;
+                    guessing_element: string;
+                    difficulty_factor: string;
+                    guesses: Array<{
+                        player_name: string;
+                        guess: string;
+                        presentation_order: number;
+                        wine_number: number;
+                    }>;
+                }>;
+            };
+        }>(`/api/events/${eventId}/batch`);
     }
 
     // Health check

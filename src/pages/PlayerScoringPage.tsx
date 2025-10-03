@@ -16,6 +16,7 @@ import {
 import { ArrowBack, WineBar } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Player, WineCategory } from '../services/api';
+import { useSSE } from '../hooks/useSSE';
 
 export default function PlayerScoringPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
@@ -159,14 +160,12 @@ export default function PlayerScoringPage() {
         loadCurrentWineData();
     }, [eventId, currentPlayerId, currentPlayer, currentWineNumber]);
 
-    // Poll for current wine number changes (set by event creator)
-    useEffect(() => {
-        if (!eventId) return;
-
-        const pollCurrentWine = async () => {
-            try {
-                const event = await apiService.getEvent(eventId);
-                const eventCurrentWine = event.current_wine_number || 1;
+    // Use SSE for real-time updates
+    useSSE({
+        eventId: eventId ?? null,
+        onUpdate: (data) => {
+            if (data.data) {
+                const eventCurrentWine = data.data.current_wine_number;
 
                 if (eventCurrentWine !== currentWineNumber) {
                     console.log('Current wine changed from', currentWineNumber, 'to', eventCurrentWine);
@@ -178,18 +177,10 @@ export default function PlayerScoringPage() {
                         setCurrentPlayer(playerForWine);
                     }
                 }
-            } catch (error) {
-                console.error('Error polling for current wine:', error);
             }
-        };
-
-        // Poll every 2 seconds
-        const pollInterval = setInterval(pollCurrentWine, 2000);
-
-        return () => {
-            clearInterval(pollInterval);
-        };
-    }, [eventId, currentWineNumber, allPlayers]);
+        },
+        enabled: true
+    });
 
     const handleScoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
