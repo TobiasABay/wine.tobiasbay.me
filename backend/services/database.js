@@ -537,11 +537,9 @@ class Database {
                     let correctGuesses = 0;
                     let totalGuesses = 0;
 
-                    // For each wine (other players' wines)
+                    // For each wine (including their own wine)
                     for (const wineOwner of players) {
-                        if (wineOwner.id === player.id) continue; // Skip their own wine
-
-                        // Get the actual wine details for this wine
+                        // Get the actual wine details for this wine (what the wine owner submitted)
                         const actualWineDetails = await new Promise((resolve, reject) => {
                             const sql = 'SELECT category_id, wine_answer FROM player_wine_details WHERE player_id = ?';
                             this.db.all(sql, [wineOwner.id], (err, rows) => {

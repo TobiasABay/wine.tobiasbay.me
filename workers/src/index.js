@@ -2911,11 +2911,9 @@ async function getLeaderboard(eventId, env, corsHeaders) {
             let correctGuesses = 0;
             let totalGuesses = 0;
 
-            // For each wine (other players' wines)
+            // For each wine (including their own wine)
             for (const wineOwner of players) {
-                if (wineOwner.id === player.id) continue; // Skip their own wine
-
-                // Get the actual wine details for this wine
+                // Get the actual wine details for this wine (what the wine owner submitted)
                 const actualWineDetailsResult = await env.wine_events.prepare(
                     'SELECT category_id, wine_answer FROM player_wine_details WHERE player_id = ?'
                 ).bind(wineOwner.id).all();
