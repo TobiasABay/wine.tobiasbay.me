@@ -133,7 +133,7 @@ export default function FinishPage() {
 
                 for (const category of wineGuesses.categories) {
                     const playerGuess = category.guesses.find((g: any) =>
-                        g.player_id === player.id && g.wine_number === wineNumber
+                        g.player_name === player.name && g.wine_number === wineNumber
                     );
 
                     if (playerGuess) {
