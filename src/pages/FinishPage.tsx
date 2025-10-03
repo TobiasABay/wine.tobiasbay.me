@@ -109,37 +109,36 @@ export default function FinishPage() {
         return answer.wine_answer.toLowerCase() === guess.toLowerCase();
     };
 
-    const getActualAnswer = (categoryId: string, wineNumber: number) => {
-        if (!wineAnswers || !wineAnswers.categories) return '';
-
-        const category = wineAnswers.categories.find((cat: any) => cat.id === categoryId);
-        if (!category) return '';
-
-        const answer = category.answers.find((ans: any) => ans.presentation_order === wineNumber);
-        return answer ? answer.wine_answer : '';
-    };
 
     const getAllGuessesForWine = (wineNumber: number) => {
         if (!wineGuesses || !wineGuesses.categories) return [];
 
-        const allGuesses = [];
+        // Get all players who guessed this wine
+        const playersWithGuesses = new Map();
+
         for (const category of wineGuesses.categories) {
             const guessesForThisWine = category.guesses.filter((g: any) => g.wine_number === wineNumber);
-            if (guessesForThisWine.length > 0) {
-                allGuesses.push({
-                    categoryId: category.id,
-                    categoryName: category.guessing_element,
-                    actualAnswer: getActualAnswer(category.id, wineNumber),
-                    guesses: guessesForThisWine.map((guess: any) => ({
+
+            for (const guess of guessesForThisWine) {
+                if (!playersWithGuesses.has(guess.player_id)) {
+                    playersWithGuesses.set(guess.player_id, {
                         playerName: guess.player_name,
                         playerId: guess.player_id,
-                        guess: guess.guess,
-                        isCorrect: isGuessCorrect(guess.guess, category.id, wineNumber)
-                    }))
+                        categories: []
+                    });
+                }
+
+                const player = playersWithGuesses.get(guess.player_id);
+                player.categories.push({
+                    categoryName: category.guessing_element,
+                    categoryId: category.id,
+                    guess: guess.guess,
+                    isCorrect: isGuessCorrect(guess.guess, category.id, wineNumber)
                 });
             }
         }
-        return allGuesses;
+
+        return Array.from(playersWithGuesses.values());
     };
 
 
@@ -469,88 +468,51 @@ export default function FinishPage() {
                                             {wineGuesses && wineGuesses.categories ? (
                                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                                     {getAllGuessesForWine(player.presentation_order).length > 0 ? (
-                                                        getAllGuessesForWine(player.presentation_order).map((categoryData, index) => (
+                                                        getAllGuessesForWine(player.presentation_order).map((playerData, index) => (
                                                             <Box key={index}>
-                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                                                    <Typography
-                                                                        variant="body2"
-                                                                        sx={{
-                                                                            fontWeight: 'bold',
-                                                                            color: '#2c3e50'
-                                                                        }}
-                                                                    >
-                                                                        {categoryData.categoryName}
-                                                                    </Typography>
-                                                                    <Chip
-                                                                        label="Correct Answer"
-                                                                        size="small"
-                                                                        sx={{
-                                                                            height: 20,
-                                                                            fontSize: '0.7rem',
-                                                                            backgroundColor: '#667eea',
-                                                                            color: 'white'
-                                                                        }}
-                                                                    />
-                                                                </Box>
-                                                                <Box sx={{
-                                                                    p: 2,
-                                                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                                                    borderRadius: 1,
-                                                                    border: '1px solid rgba(102, 126, 234, 0.2)',
-                                                                    mb: 2
-                                                                }}>
-                                                                    <Typography
-                                                                        variant="body1"
-                                                                        sx={{
-                                                                            fontWeight: 'bold',
-                                                                            color: '#2c3e50',
-                                                                            fontStyle: 'italic'
-                                                                        }}
-                                                                    >
-                                                                        "{categoryData.actualAnswer}"
-                                                                    </Typography>
-                                                                </Box>
-
-                                                                {/* All Player Guesses */}
                                                                 <Typography
                                                                     variant="body2"
                                                                     sx={{
                                                                         fontWeight: 'bold',
                                                                         color: '#2c3e50',
-                                                                        mb: 1
+                                                                        mb: 1,
+                                                                        fontSize: '1rem'
                                                                     }}
                                                                 >
-                                                                    Player Guesses:
+                                                                    {playerData.playerName}:
                                                                 </Typography>
-                                                                {categoryData.guesses.map((guess: any, guessIndex: number) => (
-                                                                    <Box key={guessIndex} sx={{
-                                                                        p: 1.5,
+                                                                {playerData.categories.map((category: any, categoryIndex: number) => (
+                                                                    <Box key={categoryIndex} sx={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: 1,
                                                                         mb: 1,
-                                                                        backgroundColor: guess.isCorrect ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
+                                                                        ml: 2,
+                                                                        p: 1,
+                                                                        backgroundColor: category.isCorrect ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
                                                                         borderRadius: 1,
-                                                                        border: `1px solid ${guess.isCorrect ? 'rgba(40, 167, 69, 0.3)' : 'rgba(220, 53, 69, 0.3)'}`
+                                                                        border: `1px solid ${category.isCorrect ? 'rgba(40, 167, 69, 0.3)' : 'rgba(220, 53, 69, 0.3)'}`
                                                                     }}>
-                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                                                            <Typography
-                                                                                variant="body2"
-                                                                                sx={{
-                                                                                    fontWeight: 'bold',
-                                                                                    color: '#2c3e50'
-                                                                                }}
-                                                                            >
-                                                                                {guess.playerName}:
-                                                                            </Typography>
-                                                                            <Chip
-                                                                                label={guess.isCorrect ? "Correct" : "Incorrect"}
-                                                                                size="small"
-                                                                                sx={{
-                                                                                    height: 18,
-                                                                                    fontSize: '0.65rem',
-                                                                                    backgroundColor: guess.isCorrect ? '#e8f5e8' : '#f8d7da',
-                                                                                    color: guess.isCorrect ? '#155724' : '#721c24'
-                                                                                }}
-                                                                            />
-                                                                        </Box>
+                                                                        <Typography
+                                                                            variant="body2"
+                                                                            sx={{
+                                                                                fontWeight: 'medium',
+                                                                                color: '#2c3e50',
+                                                                                minWidth: '80px'
+                                                                            }}
+                                                                        >
+                                                                            {category.categoryName}:
+                                                                        </Typography>
+                                                                        <Chip
+                                                                            label={category.isCorrect ? "Correct" : "Incorrect"}
+                                                                            size="small"
+                                                                            sx={{
+                                                                                height: 18,
+                                                                                fontSize: '0.65rem',
+                                                                                backgroundColor: category.isCorrect ? '#e8f5e8' : '#f8d7da',
+                                                                                color: category.isCorrect ? '#155724' : '#721c24'
+                                                                            }}
+                                                                        />
                                                                         <Typography
                                                                             variant="body2"
                                                                             sx={{
@@ -559,7 +521,7 @@ export default function FinishPage() {
                                                                                 fontStyle: 'italic'
                                                                             }}
                                                                         >
-                                                                            "{guess.guess}"
+                                                                            "{category.guess}"
                                                                         </Typography>
                                                                     </Box>
                                                                 ))}
