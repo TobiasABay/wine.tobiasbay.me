@@ -15,6 +15,7 @@ export interface UseSmartPollingReturn {
     stopPolling: () => void;
     isPolling: boolean;
     currentInterval: number;
+    refreshNow: () => Promise<void>;
 }
 
 export function useSmartPolling(
@@ -23,8 +24,8 @@ export function useSmartPolling(
 ): UseSmartPollingReturn {
     const {
         enabled = true,
-        interval = 3000, // Start with 3 seconds
-        maxInterval = 30000, // Max 30 seconds
+        interval = 12000, // Start with 12 seconds (reduced from 3s)
+        maxInterval = 60000, // Max 60 seconds (increased for better backoff)
         backoffMultiplier = 1.5,
         onError,
         onSuccess,
@@ -88,6 +89,10 @@ export function useSmartPolling(
         }
     }, []);
 
+    const refreshNow = useCallback(async () => {
+        await executeCallback();
+    }, [executeCallback]);
+
     // Handle visibility changes
     useEffect(() => {
         const handleVisibilityChange = () => {
@@ -98,12 +103,14 @@ export function useSmartPolling(
                 onVisibilityChange?.(isVisible);
 
                 if (isVisible && enabled) {
-                    // Resume polling when visible
+                    // Resume polling when visible with normal interval
                     currentIntervalRef.current = interval; // Reset interval
                     startPolling();
                 } else {
-                    // Pause polling when hidden
-                    stopPolling();
+                    // Continue polling when hidden but with longer interval (30s)
+                    if (isPollingRef.current) {
+                        currentIntervalRef.current = Math.max(interval * 2.5, 30000); // At least 30s when hidden
+                    }
                 }
             }
         };
@@ -130,6 +137,7 @@ export function useSmartPolling(
         startPolling,
         stopPolling,
         isPolling: isPollingRef.current,
-        currentInterval: currentIntervalRef.current
+        currentInterval: currentIntervalRef.current,
+        refreshNow
     };
 }

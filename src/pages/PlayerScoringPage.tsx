@@ -31,6 +31,7 @@ export default function PlayerScoringPage() {
     const [wineCategories, setWineCategories] = useState<WineCategory[]>([]);
     const [categoryGuesses, setCategoryGuesses] = useState<Record<string, string>>({});
     const [guessesSubmitted, setGuessesSubmitted] = useState<boolean>(false);
+    const [eventStarted, setEventStarted] = useState<boolean>(false);
     const { eventId } = useParams();
     const navigate = useNavigate();
 
@@ -66,6 +67,7 @@ export default function PlayerScoringPage() {
                 setWineCategories(categories);
 
                 // Check if event has started
+                setEventStarted(event.event_started || false);
                 if (!event.event_started) {
                     setError('Event has not started yet. Please wait for the event creator to start the event.');
                     setLoading(false);
@@ -160,18 +162,21 @@ export default function PlayerScoringPage() {
         loadCurrentWineData();
     }, [eventId, currentPlayerId, currentPlayer, currentWineNumber]);
 
-    // Use polling for real-time updates
-    useSmartPolling(async () => {
-        if (!eventId) return;
-
+    // Use polling for real-time updates (only when event is started)
+    const { refreshNow } = useSmartPolling(async () => {
+        if (!eventId || !eventStarted) return;
+        
         try {
             const event = await apiService.getEvent(eventId);
             const eventCurrentWine = event.current_wine_number || 1;
-
+            
+            // Update event started state
+            setEventStarted(event.event_started || false);
+            
             if (eventCurrentWine !== currentWineNumber) {
                 console.log('Current wine changed from', currentWineNumber, 'to', eventCurrentWine);
                 setCurrentWineNumber(eventCurrentWine);
-
+                
                 // Update current player to match the new wine number
                 const playerForWine = allPlayers.find(p => p.presentation_order === eventCurrentWine);
                 if (playerForWine) {
@@ -182,8 +187,8 @@ export default function PlayerScoringPage() {
             console.error('Error polling for event updates:', error);
         }
     }, {
-        enabled: !!eventId,
-        interval: 3000
+        enabled: !!eventId && eventStarted,
+        interval: 15000 // Poll every 15 seconds when event is active
     });
 
     const handleScoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -297,6 +302,8 @@ export default function PlayerScoringPage() {
 
             await apiService.submitPlayerWineGuesses(currentPlayerId, currentPlayer.presentation_order, guesses);
             setGuessesSubmitted(true);
+            // Immediately refresh to show updated guesses
+            await refreshNow();
         } catch (error: any) {
             setError(error.message || 'Failed to submit guesses');
         } finally {
@@ -319,6 +326,8 @@ export default function PlayerScoringPage() {
         try {
             await apiService.submitWineScore(eventId!, currentPlayerId, currentPlayer.presentation_order, scoreNum);
             setSubmitted(true);
+            // Immediately refresh to show updated scores
+            await refreshNow();
         } catch (error: any) {
             setError(error.message || 'Failed to submit score');
         } finally {

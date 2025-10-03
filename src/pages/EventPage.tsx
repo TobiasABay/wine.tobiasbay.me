@@ -99,7 +99,7 @@ export default function EventPage() {
         }
     }, {
         enabled: !!eventId && isEventCreator,
-        interval: 3000
+        interval: 15000 // Poll every 15 seconds
     });
 
     const handleBack = () => {

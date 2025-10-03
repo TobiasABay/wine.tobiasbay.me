@@ -187,7 +187,7 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         }
     }, {
         enabled: true,
-        interval: 3000
+        interval: 15000 // Poll every 15 seconds
     });
 
     // Fetch initial data and total wines count

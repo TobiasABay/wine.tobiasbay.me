@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import {
     Box,
     Typography,
-    CircularProgress
+    CircularProgress,
+    IconButton
 } from '@mui/material';
-import { Star, StarBorder } from '@mui/icons-material';
+import { Star, StarBorder, Refresh } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import { useSmartPolling } from '../hooks/useSmartPolling';
 
@@ -31,13 +32,13 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
     const [error, setError] = useState<string>('');
 
     // Use polling for real-time updates
-    useSmartPolling(async () => {
+    const { refreshNow } = useSmartPolling(async () => {
         try {
             const response = await apiService.getWineScores(eventId);
-
+            
             if (response && response.averages) {
                 const wineData = response.averages[wineNumber.toString()];
-
+                
                 if (wineData) {
                     setScoreData(wineData);
                 } else {
@@ -53,7 +54,7 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
         }
     }, {
         enabled: true,
-        interval: 3000
+        interval: 15000 // Poll every 15 seconds
     });
 
     // Fetch initial data
@@ -240,9 +241,23 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
             right: 20,
             zIndex: 1000
         }}>
-            <Typography variant="caption" sx={{ color: 'white', opacity: 0.8, fontSize: '0.7rem', mb: 0.5 }}>
-                Average
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                <Typography variant="caption" sx={{ color: 'white', opacity: 0.8, fontSize: '0.7rem' }}>
+                    Average
+                </Typography>
+                <IconButton
+                    onClick={refreshNow}
+                    size="small"
+                    sx={{
+                        color: 'white',
+                        opacity: 0.6,
+                        '&:hover': { opacity: 1 },
+                        p: 0.25
+                    }}
+                >
+                    <Refresh sx={{ fontSize: '0.8rem' }} />
+                </IconButton>
+            </Box>
             <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>
                 {scoreData.average.toFixed(1)}
             </Typography>
