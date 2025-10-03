@@ -475,19 +475,6 @@ export default function FinishPage() {
                                             border: '1px solid rgba(102, 126, 234, 0.1)',
                                             borderRadius: 2
                                         }}>
-                                            <Typography
-                                                variant="subtitle2"
-                                                sx={{
-                                                    color: '#2c3e50',
-                                                    fontWeight: 'bold',
-                                                    mb: 2,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 1
-                                                }}
-                                            >
-                                                👤 {player.player_name}'s View
-                                            </Typography>
 
                                             {wineGuesses && wineGuesses.categories ? (
                                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
