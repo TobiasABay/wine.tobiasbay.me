@@ -7,6 +7,18 @@ function generateUUID() {
     });
 }
 
+// Input validation functions
+function validateScore(score) {
+    const num = parseInt(score);
+    const scoreStr = String(score);
+    return !isNaN(num) && num >= 1 && num <= 5 && !scoreStr.includes('.') && !scoreStr.includes(',');
+}
+
+function validateUUID(uuid) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+}
+
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
@@ -735,9 +747,20 @@ async function submitWineScore(request, env, eventId, corsHeaders) {
             });
         }
 
-        if (score < 1 || score > 5) {
+        // Validate UUID format
+        if (!validateUUID(eventId) || !validateUUID(playerId)) {
             return new Response(JSON.stringify({
-                error: 'Score must be between 1 and 5'
+                error: 'Invalid ID format'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Validate score
+        if (!validateScore(score)) {
+            return new Response(JSON.stringify({
+                error: 'Score must be an integer between 1 and 5'
             }), {
                 status: 400,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
