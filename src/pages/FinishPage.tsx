@@ -262,14 +262,55 @@ export default function FinishPage() {
                                             {player.player_name}
                                             {isWinner && <Star sx={{ color: '#ffd700', fontSize: '1.2rem' }} />}
                                         </Typography>
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                color: '#7f8c8d'
-                                            }}
-                                        >
-                                            Wine #{player.presentation_order}
-                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: '#7f8c8d'
+                                                }}
+                                            >
+                                                Wine #{player.presentation_order}
+                                            </Typography>
+                                            {wineAverages && wineAverages[player.presentation_order.toString()] && (
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            color: '#667eea',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '0.85rem'
+                                                        }}
+                                                    >
+                                                        {wineAverages[player.presentation_order.toString()]}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            color: '#95a5a6',
+                                                            fontSize: '0.7rem'
+                                                        }}
+                                                    >
+                                                        /5.0
+                                                    </Typography>
+                                                    <Box sx={{
+                                                        width: 20,
+                                                        height: 4,
+                                                        backgroundColor: '#ecf0f1',
+                                                        borderRadius: 2,
+                                                        overflow: 'hidden',
+                                                        ml: 0.5
+                                                    }}>
+                                                        <Box sx={{
+                                                            width: `${(wineAverages[player.presentation_order.toString()] / 5) * 100}%`,
+                                                            height: '100%',
+                                                            backgroundColor: wineAverages[player.presentation_order.toString()] >= 4 ? '#27ae60' :
+                                                                wineAverages[player.presentation_order.toString()] >= 3 ? '#f39c12' : '#e74c3c',
+                                                            borderRadius: 2
+                                                        }} />
+                                                    </Box>
+                                                </Box>
+                                            )}
+                                        </Box>
                                     </Box>
 
                                     {/* Score Info */}
