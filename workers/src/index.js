@@ -1121,21 +1121,27 @@ async function getLeaderboard(eventId, env, corsHeaders) {
             let correctGuesses = 0;
             let totalGuesses = 0;
 
-            // For each wine (other players' wines)
-            for (const wineOwner of players) {
-                if (wineOwner.id === player.id) continue; // Skip their own wine
+            // Get all guesses for this player across all wines
+            const allPlayerGuessesResult = await env.wine_events.prepare(
+                'SELECT category_id, guess, wine_number FROM player_wine_guesses WHERE player_id = ?'
+            ).bind(player.id).all();
+            const allPlayerGuesses = allPlayerGuessesResult.results || [];
 
-                // Get the actual wine details for this wine
+            // For each wine (including their own wine)
+            for (const wineOwner of players) {
+                // Get the actual wine details for this wine (what the wine owner submitted)
                 const actualWineDetailsResult = await env.wine_events.prepare(
                     'SELECT category_id, wine_answer FROM player_wine_details WHERE player_id = ?'
                 ).bind(wineOwner.id).all();
                 const actualWineDetails = actualWineDetailsResult.results || [];
 
-                // Get this player's guesses for this wine
-                const playerGuessesResult = await env.wine_events.prepare(
-                    'SELECT category_id, guess FROM player_wine_guesses WHERE player_id = ? AND wine_number = ?'
-                ).bind(player.id, wineOwner.presentation_order).all();
-                const playerGuesses = playerGuessesResult.results || [];
+                // Filter guesses for this specific wine
+                const playerGuessesForThisWine = allPlayerGuesses.filter(guess =>
+                    guess.wine_number === wineOwner.presentation_order
+                );
+
+                // Get this player's guesses for this wine (using filtered results)
+                const playerGuesses = playerGuessesForThisWine;
 
                 // Compare guesses with actual details
                 for (const guess of playerGuesses) {
