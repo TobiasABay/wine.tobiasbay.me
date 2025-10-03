@@ -165,18 +165,18 @@ export default function PlayerScoringPage() {
     // Use polling for real-time updates (only when event is started)
     const { refreshNow } = useSmartPolling(async () => {
         if (!eventId || !eventStarted) return;
-        
+
         try {
             const event = await apiService.getEvent(eventId);
             const eventCurrentWine = event.current_wine_number || 1;
-            
+
             // Update event started state
             setEventStarted(event.event_started || false);
-            
+
             if (eventCurrentWine !== currentWineNumber) {
                 console.log('Current wine changed from', currentWineNumber, 'to', eventCurrentWine);
                 setCurrentWineNumber(eventCurrentWine);
-                
+
                 // Update current player to match the new wine number
                 const playerForWine = allPlayers.find(p => p.presentation_order === eventCurrentWine);
                 if (playerForWine) {
@@ -211,23 +211,145 @@ export default function PlayerScoringPage() {
 
         if (element === 'Country') {
             return [
-                'France', 'Italy', 'Spain', 'Germany', 'Portugal', 'Austria',
-                'United States', 'Australia', 'Chile', 'Argentina', 'South Africa',
-                'New Zealand', 'Canada', 'Greece', 'Hungary', 'Romania', 'Bulgaria',
-                'Croatia', 'Slovenia', 'Georgia', 'Turkey', 'Lebanon', 'Israel',
-                'Brazil', 'Uruguay', 'Mexico', 'Peru', 'Other'
+                'Algeria',
+                'Argentina',
+                'Armenia',
+                'Australia',
+                'Austria',
+                'Belgium',
+                'Brazil',
+                'Bulgaria',
+                'Canada',
+                'Chile',
+                'China',
+                'Colombia',
+                'Croatia',
+                'Czech Republic',
+                'Egypt',
+                'England',
+                'Estonia',
+                'Ethiopia',
+                'France',
+                'Georgia',
+                'Germany',
+                'Greece',
+                'Hungary',
+                'India',
+                'Ireland',
+                'Israel',
+                'Italy',
+                'Japan',
+                'Kenya',
+                'Latvia',
+                'Lebanon',
+                'Lithuania',
+                'Mexico',
+                'Moldova',
+                'Montenegro',
+                'Morocco',
+                'Netherlands',
+                'New Zealand',
+                'Other',
+                'Peru',
+                'Poland',
+                'Portugal',
+                'Romania',
+                'Russia',
+                'Scotland',
+                'Serbia',
+                'Slovakia',
+                'Slovenia',
+                'South Africa',
+                'Spain',
+                'Switzerland',
+                'Tanzania',
+                'Turkey',
+                'Ukraine',
+                'United States',
+                'Uruguay',
+                'Wales'
             ];
         } else if (element === 'Region') {
             return [
-                'Bordeaux', 'Burgundy', 'Champagne', 'Loire Valley', 'Rhône Valley',
-                'Alsace', 'Languedoc-Roussillon', 'Provence', 'Tuscany', 'Piedmont',
-                'Veneto', 'Sicily', 'Puglia', 'Rioja', 'Ribera del Duero', 'Priorat',
-                'Catalonia', 'Andalusia', 'Mosel', 'Rheingau', 'Pfalz', 'Baden',
-                'Douro', 'Alentejo', 'Vinho Verde', 'Napa Valley', 'Sonoma',
-                'Central Coast', 'Willamette Valley', 'Columbia Valley', 'Barossa Valley',
-                'Hunter Valley', 'Margaret River', 'Marlborough', 'Central Otago',
-                'Mendoza', 'Colchagua Valley', 'Casablanca Valley', 'Stellenbosch',
-                'Paarl', 'Other'
+                'Abruzzo',
+                'Ahr',
+                'Alentejo',
+                'Alsace',
+                'Andalusia',
+                'Baden',
+                'Barossa Valley',
+                'Beaujolais',
+                'Bordeaux',
+                'Burgenland',
+                'Burgundy',
+                'Campania',
+                'Casablanca Valley',
+                'Castilla y León',
+                'Catalonia',
+                'Cava',
+                'Central Coast',
+                'Central Otago',
+                'Champagne',
+                'Colchagua Valley',
+                'Columbia Valley',
+                'Constantia',
+                'Corsica',
+                'Douro Valley',
+                'Emilia-Romagna',
+                'Finger Lakes',
+                'Franken',
+                'Friuli-Venezia Giulia',
+                'Galicia',
+                'Hessische Bergstraße',
+                'Hunter Valley',
+                'Jerez',
+                'Jura',
+                'La Mancha',
+                'Languedoc-Roussillon',
+                'Liguria',
+                'Loire Valley',
+                'Lombardy',
+                'Long Island',
+                'Maipo Valley',
+                'Marche',
+                'Margaret River',
+                'Marlborough',
+                'Mendoza',
+                'Mosel',
+                'Nahe',
+                'Napa Valley',
+                'Navarra',
+                'Niagara Peninsula',
+                'Okanagan Valley',
+                'Other',
+                'Paarl',
+                'Paso Robles',
+                'Pfalz',
+                'Piedmont',
+                'Priorat',
+                'Provence',
+                'Puglia',
+                'Rheingau',
+                'Rheinhessen',
+                'Rhône Valley',
+                'Rías Baixas',
+                'Ribera del Duero',
+                'Rioja',
+                'Saale-Unstrut',
+                'Sardinia',
+                'Savoie',
+                'Saxony',
+                'Sicily',
+                'Sonoma County',
+                'Stellenbosch',
+                'Tuscany',
+                'Umbria',
+                'Valencia',
+                'Veneto',
+                'Vinho Verde',
+                'Wachau',
+                'Willamette Valley',
+                'Württemberg'
             ];
         } else if (element === 'Grape Variety') {
             return [
@@ -246,8 +368,8 @@ export default function PlayerScoringPage() {
             return years;
         } else if (element === 'Price Range') {
             return [
-                'Under $10', '$10-$20', '$20-$30', '$30-$50', '$50-$75', '$75-$100',
-                '$100-$150', '$150-$200', '$200-$300', 'Over $300'
+                '0-39 kr', '40-59 kr', '60-79 kr', '80-99 kr', '100-119 kr', '120-139 kr',
+                '140-159 kr', '160-179 kr', '180-199 kr', 'Over 200 kr'
             ];
         } else if (element === 'Producer/Winery') {
             return [
@@ -269,19 +391,19 @@ export default function PlayerScoringPage() {
             ];
         } else if (element === 'Tannin Level') {
             return [
-                'High', 'Low', 'Medium', 'Medium-High', 'Medium-Low'
+                'High', 'Medium-High', 'Medium', 'Medium-Low', 'Low'
             ];
         } else if (element === 'Acidity Level') {
             return [
-                'High', 'Low', 'Medium', 'Medium-High', 'Medium-Low'
+                'High', 'Medium-High', 'Medium', 'Medium-Low', 'Low'
             ];
         } else if (element === 'Body Type') {
             return [
-                'Full', 'Light', 'Medium', 'Medium-Full', 'Medium-Light'
+                'Full', 'Medium-Full', 'Medium', 'Medium-Light', 'Light'
             ];
         } else if (element === 'Finish Length') {
             return [
-                'Long', 'Medium', 'Medium-Long', 'Medium-Short', 'Short'
+                'Long', 'Medium-Long', 'Medium', 'Medium-Short', 'Short'
             ];
         }
 

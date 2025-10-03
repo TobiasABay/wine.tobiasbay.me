@@ -21,14 +21,63 @@ import { apiService, type Event, type WineCategory } from '../../services/api';
 
 // Predefined lists for wine regions and countries
 const WINE_COUNTRIES = [
-    'Algeria', 'Argentina', 'Armenia', 'Australia', 'Austria', 'Belgium', 'Brazil', 'Bulgaria',
-    'Canada', 'Chile', 'China', 'Colombia', 'Croatia', 'Czech Republic', 'Egypt', 'England',
-    'Estonia', 'Ethiopia', 'France', 'Georgia', 'Germany', 'Greece', 'Hungary', 'India',
-    'Ireland', 'Israel', 'Italy', 'Japan', 'Kenya', 'Latvia', 'Lebanon', 'Lithuania',
-    'Mexico', 'Moldova', 'Montenegro', 'Morocco', 'Netherlands', 'New Zealand', 'Peru',
-    'Poland', 'Portugal', 'Romania', 'Russia', 'Scotland', 'Serbia', 'Slovakia', 'Slovenia',
-    'South Africa', 'Spain', 'Switzerland', 'Tanzania', 'Turkey', 'Ukraine', 'United States',
-    'Uruguay', 'Wales'
+    'Algeria',
+    'Argentina',
+    'Armenia',
+    'Australia',
+    'Austria',
+    'Belgium',
+    'Brazil',
+    'Bulgaria',
+    'Canada',
+    'Chile',
+    'China',
+    'Colombia',
+    'Croatia',
+    'Czech Republic',
+    'Egypt',
+    'England',
+    'Estonia',
+    'Ethiopia',
+    'France',
+    'Georgia',
+    'Germany',
+    'Greece',
+    'Hungary',
+    'India',
+    'Ireland',
+    'Israel',
+    'Italy',
+    'Japan',
+    'Kenya',
+    'Latvia',
+    'Lebanon',
+    'Lithuania',
+    'Mexico',
+    'Moldova',
+    'Montenegro',
+    'Morocco',
+    'Netherlands',
+    'New Zealand',
+    'Other',
+    'Peru',
+    'Poland',
+    'Portugal',
+    'Romania',
+    'Russia',
+    'Scotland',
+    'Serbia',
+    'Slovakia',
+    'Slovenia',
+    'South Africa',
+    'Spain',
+    'Switzerland',
+    'Tanzania',
+    'Turkey',
+    'Ukraine',
+    'United States',
+    'Uruguay',
+    'Wales'
 ];
 
 // Country to regions mapping for smart filtering
@@ -51,7 +100,7 @@ const COUNTRY_REGIONS_MAP: { [key: string]: string[] } = {
     ],
     'United States': [
         'Central Coast', 'Columbia Valley', 'Finger Lakes', 'Long Island', 'Napa Valley',
-        'Paso Robles', 'Santa Barbara', 'Sonoma County', 'Texas Hill Country', 'Willamette Valley'
+        'Paso Robles', 'Sonoma County', 'Willamette Valley'
     ],
     'Portugal': [
         'Alentejo', 'Douro Valley', 'Vinho Verde'
@@ -60,16 +109,16 @@ const COUNTRY_REGIONS_MAP: { [key: string]: string[] } = {
         'Burgenland', 'Wachau'
     ],
     'Chile': [
-        'Colchagua Valley', 'Maipo Valley'
+        'Casablanca Valley', 'Colchagua Valley', 'Maipo Valley'
     ],
     'Argentina': [
         'Mendoza'
     ],
     'Australia': [
-        'Barossa Valley', 'Hunter Valley'
+        'Barossa Valley', 'Hunter Valley', 'Margaret River'
     ],
     'New Zealand': [
-        'Marlborough'
+        'Central Otago', 'Marlborough'
     ],
     'South Africa': [
         'Constantia', 'Paarl', 'Stellenbosch'
@@ -81,19 +130,85 @@ const COUNTRY_REGIONS_MAP: { [key: string]: string[] } = {
 
 // All regions for fallback
 const ALL_WINE_REGIONS = [
-    'Abruzzo', 'Ahr', 'Alentejo', 'Alsace', 'Andalusia', 'Baden', 'Barossa Valley',
-    'Beaujolais', 'Bordeaux', 'Burgundy', 'Burgenland', 'Campania', 'Castilla y León',
-    'Catalonia', 'Cava', 'Central Coast', 'Champagne', 'Colchagua Valley',
-    'Columbia Valley', 'Constantia', 'Corsica', 'Douro Valley', 'Emilia-Romagna',
-    'Finger Lakes', 'Franken', 'Friuli-Venezia Giulia', 'Galicia', 'Hessische Bergstraße',
-    'Hunter Valley', 'Jerez', 'Jura', 'La Mancha', 'Languedoc-Roussillon', 'Liguria',
-    'Loire Valley', 'Lombardy', 'Long Island', 'Maipo Valley', 'Marche', 'Marlborough',
-    'Mendoza', 'Mosel', 'Nahe', 'Napa Valley', 'Navarra', 'Niagara Peninsula',
-    'Okanagan Valley', 'Paarl', 'Paso Robles', 'Pfalz', 'Piedmont', 'Priorat',
-    'Provence', 'Puglia', 'Rheingau', 'Rheinhessen', 'Rhône Valley', 'Rías Baixas',
-    'Ribera del Duero', 'Rioja', 'Saale-Unstrut', 'Sardinia', 'Savoie', 'Saxony',
-    'Sicily', 'Sonoma County', 'Stellenbosch', 'Tuscany', 'Umbria',
-    'Valencia', 'Veneto', 'Vinho Verde', 'Wachau', 'Württemberg'
+    'Abruzzo',
+    'Ahr',
+    'Alentejo',
+    'Alsace',
+    'Andalusia',
+    'Baden',
+    'Barossa Valley',
+    'Beaujolais',
+    'Bordeaux',
+    'Burgenland',
+    'Burgundy',
+    'Campania',
+    'Casablanca Valley',
+    'Castilla y León',
+    'Catalonia',
+    'Cava',
+    'Central Coast',
+    'Central Otago',
+    'Champagne',
+    'Colchagua Valley',
+    'Columbia Valley',
+    'Constantia',
+    'Corsica',
+    'Douro Valley',
+    'Emilia-Romagna',
+    'Finger Lakes',
+    'Franken',
+    'Friuli-Venezia Giulia',
+    'Galicia',
+    'Hessische Bergstraße',
+    'Hunter Valley',
+    'Jerez',
+    'Jura',
+    'La Mancha',
+    'Languedoc-Roussillon',
+    'Liguria',
+    'Loire Valley',
+    'Lombardy',
+    'Long Island',
+    'Maipo Valley',
+    'Marche',
+    'Margaret River',
+    'Marlborough',
+    'Mendoza',
+    'Mosel',
+    'Nahe',
+    'Napa Valley',
+    'Navarra',
+    'Niagara Peninsula',
+    'Okanagan Valley',
+    'Other',
+    'Paarl',
+    'Paso Robles',
+    'Pfalz',
+    'Piedmont',
+    'Priorat',
+    'Provence',
+    'Puglia',
+    'Rheingau',
+    'Rheinhessen',
+    'Rhône Valley',
+    'Rías Baixas',
+    'Ribera del Duero',
+    'Rioja',
+    'Saale-Unstrut',
+    'Sardinia',
+    'Savoie',
+    'Saxony',
+    'Sicily',
+    'Sonoma County',
+    'Stellenbosch',
+    'Tuscany',
+    'Umbria',
+    'Valencia',
+    'Veneto',
+    'Vinho Verde',
+    'Wachau',
+    'Willamette Valley',
+    'Württemberg'
 ];
 
 // Helper function to get options based on guessing element
@@ -117,7 +232,7 @@ const getOptionsForCategory = (guessingElement: string, selectedCountry?: string
             'Sangiovese', 'Sauvignon Blanc', 'Semillon', 'Syrah', 'Tempranillo', 'Torrontés',
             'Viognier', 'Zinfandel'
         ];
-    } else if (element === 'Age/Vintage') {
+    } else if (element === 'Age/Vintage' || element === 'Vintage') {
         const currentYear = new Date().getFullYear();
         const years = [];
         for (let year = currentYear; year >= 1950; year--) {
@@ -126,8 +241,8 @@ const getOptionsForCategory = (guessingElement: string, selectedCountry?: string
         return years;
     } else if (element === 'Price Range') {
         return [
-            'Under $10', '$10-$20', '$20-$30', '$30-$50', '$50-$75', '$75-$100',
-            '$100-$150', '$150-$200', '$200-$300', 'Over $300'
+            '0-39 kr', '40-59 kr', '60-79 kr', '80-99 kr', '100-119 kr', '120-139 kr',
+            '140-159 kr', '160-179 kr', '180-199 kr', 'Over 200 kr'
         ];
     } else if (element === 'Producer/Winery') {
         return [
@@ -149,19 +264,19 @@ const getOptionsForCategory = (guessingElement: string, selectedCountry?: string
         ];
     } else if (element === 'Tannin Level') {
         return [
-            'High', 'Low', 'Medium', 'Medium-High', 'Medium-Low'
+            'High', 'Medium-High', 'Medium', 'Medium-Low', 'Low'
         ];
     } else if (element === 'Acidity Level') {
         return [
-            'High', 'Low', 'Medium', 'Medium-High', 'Medium-Low'
+            'High', 'Medium-High', 'Medium', 'Medium-Low', 'Low'
         ];
     } else if (element === 'Body Type') {
         return [
-            'Full', 'Light', 'Medium', 'Medium-Full', 'Medium-Light'
+            'Full', 'Medium-Full', 'Medium', 'Medium-Light', 'Light'
         ];
     } else if (element === 'Finish Length') {
         return [
-            'Long', 'Medium', 'Medium-Long', 'Medium-Short', 'Short'
+            'Long', 'Medium-Long', 'Medium', 'Medium-Short', 'Short'
         ];
     } else {
         // Fallback for unknown categories
