@@ -96,6 +96,21 @@ db.serialize(() => {
         )
     `);
 
+    // Wine scores table
+    db.run(`
+        CREATE TABLE IF NOT EXISTS wine_scores (
+            id TEXT PRIMARY KEY,
+            event_id TEXT NOT NULL,
+            player_id TEXT NOT NULL,
+            wine_number INTEGER NOT NULL,
+            score INTEGER NOT NULL CHECK (score >= 1 AND score <= 5),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
+            FOREIGN KEY (player_id) REFERENCES players (id) ON DELETE CASCADE
+        )
+    `);
+
     // Create indexes for better performance
     db.run(`CREATE INDEX IF NOT EXISTS idx_events_join_code ON events(join_code)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_players_event_id ON players(event_id)`);
@@ -105,6 +120,9 @@ db.serialize(() => {
     db.run(`CREATE INDEX IF NOT EXISTS idx_player_wine_details_category_id ON player_wine_details(category_id)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_player_wine_guesses_player_id ON player_wine_guesses(player_id)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_player_wine_guesses_category_id ON player_wine_guesses(category_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_wine_scores_event_id ON wine_scores(event_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_wine_scores_player_id ON wine_scores(player_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_wine_scores_wine_number ON wine_scores(event_id, wine_number)`);
 
     console.log('Database tables created successfully');
 });

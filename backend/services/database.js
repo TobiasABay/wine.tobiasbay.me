@@ -589,10 +589,41 @@ class Database {
                     });
                 }
 
+                // Get wine scores for average calculation
+                const wineScores = await new Promise((resolve, reject) => {
+                    const sql = 'SELECT wine_number, score FROM wine_scores WHERE event_id = ?';
+                    this.db.all(sql, [eventId], (err, rows) => {
+                        if (err) reject(err);
+                        else resolve(rows || []);
+                    });
+                });
+
+                // Calculate wine averages
+                const wineAverages = {};
+                const wineScoreCounts = {};
+
+                wineScores.forEach(score => {
+                    const wineNum = score.wine_number;
+                    if (!wineAverages[wineNum]) {
+                        wineAverages[wineNum] = 0;
+                        wineScoreCounts[wineNum] = 0;
+                    }
+                    wineAverages[wineNum] += score.score;
+                    wineScoreCounts[wineNum]++;
+                });
+
+                // Calculate final averages
+                Object.keys(wineAverages).forEach(wineNum => {
+                    wineAverages[wineNum] = Math.round((wineAverages[wineNum] / wineScoreCounts[wineNum]) * 10) / 10;
+                });
+
                 // Sort by total points descending
                 leaderboard.sort((a, b) => b.total_points - a.total_points);
 
-                resolve(leaderboard);
+                resolve({
+                    leaderboard,
+                    wineAverages
+                });
             } catch (error) {
                 reject(error);
             }

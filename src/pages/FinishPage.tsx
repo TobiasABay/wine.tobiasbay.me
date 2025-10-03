@@ -27,6 +27,7 @@ interface LeaderboardPlayer {
 export default function FinishPage() {
     const [event, setEvent] = useState<Event | null>(null);
     const [leaderboard, setLeaderboard] = useState<LeaderboardPlayer[]>([]);
+    const [wineAverages, setWineAverages] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
     const { eventId } = useParams();
@@ -47,6 +48,7 @@ export default function FinishPage() {
                 // Get leaderboard data
                 const leaderboardData = await apiService.getLeaderboard(eventId);
                 setLeaderboard(leaderboardData.leaderboard);
+                setWineAverages(leaderboardData.wineAverages);
             } catch (error: any) {
                 console.error('Error loading event:', error);
                 setError(error.message || 'Failed to load event data');
@@ -308,6 +310,105 @@ export default function FinishPage() {
                         })}
                     </Box>
                 </Paper>
+
+                {/* Wine Averages Section */}
+                {Object.keys(wineAverages).length > 0 && (
+                    <Paper sx={{
+                        p: 4,
+                        mt: 4,
+                        background: 'rgba(255,255,255,0.95)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: 3,
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+                    }}>
+                        <Typography
+                            variant="h5"
+                            sx={{
+                                color: '#2c3e50',
+                                fontWeight: 'bold',
+                                mb: 3,
+                                textAlign: 'center'
+                            }}
+                        >
+                            🍷 Wine Average Scores
+                        </Typography>
+
+                        <Box sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+                            gap: 2
+                        }}>
+                            {Object.entries(wineAverages)
+                                .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                                .map(([wineNumber, average]) => (
+                                    <Paper
+                                        key={wineNumber}
+                                        sx={{
+                                            p: 2,
+                                            backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                                            border: '1px solid rgba(102, 126, 234, 0.2)',
+                                            borderRadius: 2,
+                                            textAlign: 'center',
+                                            transition: 'all 0.2s',
+                                            '&:hover': {
+                                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                            }
+                                        }}
+                                    >
+                                        <Typography
+                                            variant="h6"
+                                            sx={{
+                                                color: '#2c3e50',
+                                                fontWeight: 'bold',
+                                                mb: 1
+                                            }}
+                                        >
+                                            Wine #{wineNumber}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                            <Typography
+                                                variant="h4"
+                                                sx={{
+                                                    color: '#667eea',
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                {average}
+                                            </Typography>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: '#7f8c8d'
+                                                }}
+                                            >
+                                                / 5.0
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{
+                                            width: '100%',
+                                            height: 6,
+                                            backgroundColor: '#ecf0f1',
+                                            borderRadius: 3,
+                                            mt: 1,
+                                            overflow: 'hidden'
+                                        }}>
+                                            <Box sx={{
+                                                width: `${(average / 5) * 100}%`,
+                                                height: '100%',
+                                                backgroundColor: average >= 4 ? '#27ae60' :
+                                                    average >= 3 ? '#f39c12' : '#e74c3c',
+                                                borderRadius: 3,
+                                                transition: 'width 0.3s ease'
+                                            }} />
+                                        </Box>
+                                    </Paper>
+                                ))}
+                        </Box>
+                    </Paper>
+                )}
 
                 {/* Thank You Message */}
                 <Box sx={{ textAlign: 'center', mt: 4 }}>

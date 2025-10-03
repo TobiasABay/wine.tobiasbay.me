@@ -334,7 +334,8 @@ class ApiService {
             correct_guesses: number;
             total_guesses: number;
             accuracy: string;
-        }>
+        }>;
+        wineAverages: Record<string, number>;
     }> {
         return this.request<{
             success: boolean;
@@ -346,7 +347,8 @@ class ApiService {
                 correct_guesses: number;
                 total_guesses: number;
                 accuracy: string;
-            }>
+            }>;
+            wineAverages: Record<string, number>;
         }>(`/api/events/${eventId}/leaderboard`);
     }
 
