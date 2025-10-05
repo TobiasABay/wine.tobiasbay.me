@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiService } from '../services/api';
 import {
@@ -232,52 +232,51 @@ export default function AdminPage() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {wineData.wine_guesses.map(guessingPlayer => (
-                                <TableRow key={guessingPlayer.player_id}>
-                                    <TableCell rowSpan={wineData.players.length}>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                            {guessingPlayer.player_name}
-                                        </Typography>
-                                    </TableCell>
-                                    {wineData.players.map((targetPlayer, index) => (
-                                        <React.Fragment key={targetPlayer.id}>
-                                            {index > 0 && <TableRow />}
-                                            <TableCell>
-                                                <Typography variant="body2">
-                                                    {targetPlayer.name} (Order: {targetPlayer.presentation_order})
+                            {wineData.wine_guesses.map(guessingPlayer =>
+                                wineData.players.map((targetPlayer, targetIndex) => (
+                                    <TableRow key={`${guessingPlayer.player_id}-${targetPlayer.id}`}>
+                                        {targetIndex === 0 && (
+                                            <TableCell rowSpan={wineData.players.length}>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                                    {guessingPlayer.player_name}
                                                 </Typography>
                                             </TableCell>
-                                            {wineData.categories.map(category => {
-                                                const guess = guessingPlayer.guesses.find(
-                                                    g => g.category_id === category.id && g.wine_number === targetPlayer.presentation_order
-                                                );
-                                                const correctAnswer = wineData.wine_answers
-                                                    .find(p => p.player_id === targetPlayer.id)
-                                                    ?.answers.find(a => a.category_id === category.id);
-                                                const isCorrect = guess && correctAnswer &&
-                                                    guess.guess.toLowerCase() === correctAnswer.wine_answer.toLowerCase();
+                                        )}
+                                        <TableCell>
+                                            <Typography variant="body2">
+                                                {targetPlayer.name} (Order: {targetPlayer.presentation_order})
+                                            </Typography>
+                                        </TableCell>
+                                        {wineData.categories.map(category => {
+                                            const guess = guessingPlayer.guesses.find(
+                                                g => g.category_id === category.id && g.wine_number === targetPlayer.presentation_order
+                                            );
+                                            const correctAnswer = wineData.wine_answers
+                                                .find(p => p.player_id === targetPlayer.id)
+                                                ?.answers.find(a => a.category_id === category.id);
+                                            const isCorrect = guess && correctAnswer &&
+                                                guess.guess.toLowerCase() === correctAnswer.wine_answer.toLowerCase();
 
-                                                return (
-                                                    <TableCell key={category.id}>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <Typography variant="body2">
-                                                                {guess?.guess || 'No guess'}
-                                                            </Typography>
-                                                            {guess && (
-                                                                <Chip
-                                                                    label={isCorrect ? 'Correct' : 'Incorrect'}
-                                                                    size="small"
-                                                                    color={isCorrect ? 'success' : 'error'}
-                                                                />
-                                                            )}
-                                                        </Box>
-                                                    </TableCell>
-                                                );
-                                            })}
-                                        </React.Fragment>
-                                    ))}
-                                </TableRow>
-                            ))}
+                                            return (
+                                                <TableCell key={category.id}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Typography variant="body2">
+                                                            {guess?.guess || 'No guess'}
+                                                        </Typography>
+                                                        {guess && (
+                                                            <Chip
+                                                                label={isCorrect ? 'Correct' : 'Incorrect'}
+                                                                size="small"
+                                                                color={isCorrect ? 'success' : 'error'}
+                                                            />
+                                                        )}
+                                                    </Box>
+                                                </TableCell>
+                                            );
+                                        })}
+                                    </TableRow>
+                                ))
+                            )}
                         </TableBody>
                     </Table>
                 </TableContainer>
