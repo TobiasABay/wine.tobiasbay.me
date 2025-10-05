@@ -18,6 +18,72 @@ import { apiService } from '../services/api';
 import type { Player, WineCategory } from '../services/api';
 import { useSmartPolling } from '../hooks/useSmartPolling';
 
+// Country to regions mapping for smart filtering
+const COUNTRY_REGIONS_MAP: { [key: string]: string[] } = {
+    'France': [
+        'Alsace', 'Beaujolais', 'Bordeaux', 'Burgundy', 'Champagne', 'Corsica',
+        'Jura', 'Languedoc-Roussillon', 'Loire Valley', 'Provence', 'Rhône Valley', 'Savoie'
+    ],
+    'Italy': [
+        'Abruzzo', 'Campania', 'Emilia-Romagna', 'Friuli-Venezia Giulia', 'Liguria',
+        'Lombardy', 'Marche', 'Piedmont', 'Puglia', 'Sardinia', 'Sicily', 'Tuscany', 'Umbria', 'Veneto'
+    ],
+    'Spain': [
+        'Andalusia', 'Castilla y León', 'Catalonia', 'Cava', 'Galicia', 'Jerez',
+        'La Mancha', 'Navarra', 'Priorat', 'Rías Baixas', 'Ribera del Duero', 'Rioja', 'Valencia'
+    ],
+    'Germany': [
+        'Ahr', 'Baden', 'Franken', 'Hessische Bergstraße', 'Mosel', 'Nahe', 'Pfalz',
+        'Rheingau', 'Rheinhessen', 'Saale-Unstrut', 'Saxony', 'Württemberg'
+    ],
+    'United States': [
+        'Central Coast', 'Columbia Valley', 'Finger Lakes', 'Long Island', 'Napa Valley',
+        'Paso Robles', 'Sonoma County', 'Willamette Valley'
+    ],
+    'Portugal': [
+        'Alentejo', 'Douro Valley', 'Vinho Verde'
+    ],
+    'Austria': [
+        'Burgenland', 'Wachau'
+    ],
+    'Chile': [
+        'Casablanca Valley', 'Colchagua Valley', 'Maipo Valley'
+    ],
+    'Argentina': [
+        'Mendoza'
+    ],
+    'Australia': [
+        'Barossa Valley', 'Hunter Valley', 'Margaret River'
+    ],
+    'New Zealand': [
+        'Central Otago', 'Marlborough'
+    ],
+    'South Africa': [
+        'Constantia', 'Paarl', 'Stellenbosch'
+    ],
+    'Canada': [
+        'Niagara Peninsula', 'Okanagan Valley'
+    ]
+};
+
+// All regions for fallback
+const ALL_WINE_REGIONS = [
+    'Abruzzo', 'Ahr', 'Alentejo', 'Alsace', 'Andalusia', 'Baden', 'Barossa Valley',
+    'Beaujolais', 'Bordeaux', 'Burgenland', 'Burgundy', 'Campania', 'Casablanca Valley',
+    'Castilla y León', 'Catalonia', 'Cava', 'Central Coast', 'Central Otago', 'Champagne',
+    'Colchagua Valley', 'Columbia Valley', 'Constantia', 'Corsica', 'Douro Valley',
+    'Emilia-Romagna', 'Finger Lakes', 'Franken', 'Friuli-Venezia Giulia', 'Galicia',
+    'Hessische Bergstraße', 'Hunter Valley', 'Jerez', 'Jura', 'La Mancha',
+    'Languedoc-Roussillon', 'Liguria', 'Loire Valley', 'Lombardy', 'Long Island',
+    'Maipo Valley', 'Marche', 'Margaret River', 'Marlborough', 'Mendoza', 'Mosel',
+    'Nahe', 'Napa Valley', 'Navarra', 'Niagara Peninsula', 'Okanagan Valley', 'Other',
+    'Paarl', 'Paso Robles', 'Pfalz', 'Piedmont', 'Priorat', 'Provence', 'Puglia',
+    'Rheingau', 'Rheinhessen', 'Rhône Valley', 'Rías Baixas', 'Ribera del Duero',
+    'Rioja', 'Saale-Unstrut', 'Sardinia', 'Savoie', 'Saxony', 'Sicily', 'Sonoma County',
+    'Stellenbosch', 'Tuscany', 'Umbria', 'Valencia', 'Veneto', 'Vinho Verde',
+    'Wachau', 'Willamette Valley', 'Württemberg'
+];
+
 export default function PlayerScoringPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
     const [allPlayers, setAllPlayers] = useState<Player[]>([]);
@@ -32,8 +98,22 @@ export default function PlayerScoringPage() {
     const [categoryGuesses, setCategoryGuesses] = useState<Record<string, string>>({});
     const [guessesSubmitted, setGuessesSubmitted] = useState<boolean>(false);
     const [eventStarted, setEventStarted] = useState<boolean>(false);
+    const [selectedCountry, setSelectedCountry] = useState<string>('');
     const { eventId } = useParams();
     const navigate = useNavigate();
+
+    // Initialize selectedCountry when wine categories are loaded
+    useEffect(() => {
+        if (wineCategories.length > 0) {
+            const countryCategory = wineCategories.find(cat => {
+                const element = cat.guessing_element;
+                return element === 'Country';
+            });
+            if (countryCategory && categoryGuesses[countryCategory.id]) {
+                setSelectedCountry(categoryGuesses[countryCategory.id]);
+            }
+        }
+    }, [wineCategories, categoryGuesses]);
 
     useEffect(() => {
         const loadEventData = async () => {
@@ -204,9 +284,30 @@ export default function PlayerScoringPage() {
             ...prev,
             [categoryId]: guess
         }));
+
+        // Check if this is a country selection and update selectedCountry
+        const category = wineCategories.find(cat => cat.id === categoryId);
+        if (category) {
+            const guessingElement = category.guessing_element;
+            if (guessingElement === 'Country') {
+                setSelectedCountry(guess);
+                // Clear region selection when country changes
+                const regionCategory = wineCategories.find(cat => {
+                    const element = cat.guessing_element;
+                    return element === 'Region';
+                });
+                if (regionCategory) {
+                    setCategoryGuesses(prev => ({
+                        ...prev,
+                        [regionCategory.id]: ''
+                    }));
+                }
+            }
+        }
     };
 
-    const getOptionsForCategory = (guessingElement: string): string[] => {
+    // Helper function to get options based on guessing element and selected country
+    const getOptionsForCategory = (guessingElement: string, selectedCountry?: string): string[] => {
         const element = guessingElement || '';
 
         if (element === 'Country') {
@@ -270,87 +371,12 @@ export default function PlayerScoringPage() {
                 'Wales'
             ];
         } else if (element === 'Region') {
-            return [
-                'Abruzzo',
-                'Ahr',
-                'Alentejo',
-                'Alsace',
-                'Andalusia',
-                'Baden',
-                'Barossa Valley',
-                'Beaujolais',
-                'Bordeaux',
-                'Burgenland',
-                'Burgundy',
-                'Campania',
-                'Casablanca Valley',
-                'Castilla y León',
-                'Catalonia',
-                'Cava',
-                'Central Coast',
-                'Central Otago',
-                'Champagne',
-                'Colchagua Valley',
-                'Columbia Valley',
-                'Constantia',
-                'Corsica',
-                'Douro Valley',
-                'Emilia-Romagna',
-                'Finger Lakes',
-                'Franken',
-                'Friuli-Venezia Giulia',
-                'Galicia',
-                'Hessische Bergstraße',
-                'Hunter Valley',
-                'Jerez',
-                'Jura',
-                'La Mancha',
-                'Languedoc-Roussillon',
-                'Liguria',
-                'Loire Valley',
-                'Lombardy',
-                'Long Island',
-                'Maipo Valley',
-                'Marche',
-                'Margaret River',
-                'Marlborough',
-                'Mendoza',
-                'Mosel',
-                'Nahe',
-                'Napa Valley',
-                'Navarra',
-                'Niagara Peninsula',
-                'Okanagan Valley',
-                'Other',
-                'Paarl',
-                'Paso Robles',
-                'Pfalz',
-                'Piedmont',
-                'Priorat',
-                'Provence',
-                'Puglia',
-                'Rheingau',
-                'Rheinhessen',
-                'Rhône Valley',
-                'Rías Baixas',
-                'Ribera del Duero',
-                'Rioja',
-                'Saale-Unstrut',
-                'Sardinia',
-                'Savoie',
-                'Saxony',
-                'Sicily',
-                'Sonoma County',
-                'Stellenbosch',
-                'Tuscany',
-                'Umbria',
-                'Valencia',
-                'Veneto',
-                'Vinho Verde',
-                'Wachau',
-                'Willamette Valley',
-                'Württemberg'
-            ];
+            // If a country is selected, show only regions from that country
+            if (selectedCountry && COUNTRY_REGIONS_MAP[selectedCountry]) {
+                return COUNTRY_REGIONS_MAP[selectedCountry];
+            }
+            // Otherwise show all regions
+            return ALL_WINE_REGIONS;
         } else if (element === 'Grape Variety') {
             return [
                 'Barbera', 'Cabernet Sauvignon', 'Carmenère', 'Chardonnay', 'Chenin Blanc',
@@ -715,7 +741,7 @@ export default function PlayerScoringPage() {
                                 </Typography>
 
                                 {wineCategories.map((category) => {
-                                    const options = getOptionsForCategory(category.guessing_element);
+                                    const options = getOptionsForCategory(category.guessing_element, selectedCountry);
                                     return (
                                         <Box key={category.id} sx={{ mb: 3 }}>
                                             <FormControl fullWidth>
