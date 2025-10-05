@@ -858,6 +858,7 @@ export default function PlayerScoringPage() {
                             <TextField
                                 label="Score (1-5)"
                                 type="number"
+                                inputMode="numeric"
                                 value={score}
                                 onChange={handleScoreChange}
                                 inputProps={{ min: 1, max: 5 }}

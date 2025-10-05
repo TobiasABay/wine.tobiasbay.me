@@ -240,6 +240,7 @@ export default function CreateEventPage() {
                             <TextField
                                 fullWidth
                                 type="number"
+                                inputMode="numeric"
                                 label="Max Participants"
                                 placeholder="e.g., 12"
                                 value={maxParticipants}
