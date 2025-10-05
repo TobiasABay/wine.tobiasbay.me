@@ -129,7 +129,7 @@ export default function EventCreatedPage() {
     const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
 
     useEffect(() => {
-        document.title = 'Wine Tasting - Event Created';
+        document.title = '🍷 Wine Tasting - Event Created';
     }, []);
     const [joinCode, setJoinCode] = useState<string>('');
     const [players, setPlayers] = useState<Player[]>([]);

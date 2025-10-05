@@ -8,7 +8,7 @@ export default function HomePage() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        document.title = 'Wine Tasting - Home';
+        document.title = '🍷 Wine Tasting - Home';
     }, []);
 
     const handleCreateEvent = () => {
