@@ -230,6 +230,19 @@ router.get('/:eventId/wine-guesses', async (req, res) => {
     }
 });
 
+// Get event wine answers
+router.get('/:eventId/wine-answers', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const categories = await db.getEventWineAnswers(eventId);
+
+        res.json({ success: true, categories });
+    } catch (error) {
+        console.error('Error fetching event wine answers:', error);
+        res.status(500).json({ error: 'Failed to fetch wine answers' });
+    }
+});
+
 // Set current wine for event
 router.put('/:eventId/current-wine', async (req, res) => {
     try {

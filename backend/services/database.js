@@ -575,6 +575,50 @@ class Database {
         });
     }
 
+    getEventWineAnswers(eventId) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Get all wine categories for the event
+                const categories = await new Promise((resolve, reject) => {
+                    const sql = 'SELECT * FROM wine_categories WHERE event_id = ? ORDER BY created_at ASC';
+                    this.db.all(sql, [eventId], (err, rows) => {
+                        if (err) reject(err);
+                        else resolve(rows);
+                    });
+                });
+
+                // For each category, get all answers
+                const categoriesWithAnswers = [];
+                for (const category of categories) {
+                    const answers = await new Promise((resolve, reject) => {
+                        const sql = `
+                            SELECT pwd.wine_answer, p.name as player_name, p.presentation_order
+                            FROM player_wine_details pwd
+                            JOIN players p ON pwd.player_id = p.id
+                            WHERE pwd.category_id = ? AND p.event_id = ?
+                            ORDER BY p.presentation_order ASC
+                        `;
+                        this.db.all(sql, [category.id, eventId], (err, rows) => {
+                            if (err) reject(err);
+                            else resolve(rows);
+                        });
+                    });
+
+                    categoriesWithAnswers.push({
+                        id: category.id,
+                        guessing_element: category.guessing_element,
+                        difficulty_factor: category.difficulty_factor,
+                        answers: answers
+                    });
+                }
+
+                resolve(categoriesWithAnswers);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
     calculateLeaderboard(eventId) {
         return new Promise(async (resolve, reject) => {
             try {

@@ -78,7 +78,8 @@ db.serialize(() => {
             wine_answer TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (player_id) REFERENCES players (id) ON DELETE CASCADE,
-            FOREIGN KEY (category_id) REFERENCES wine_categories (id) ON DELETE CASCADE
+            FOREIGN KEY (category_id) REFERENCES wine_categories (id) ON DELETE CASCADE,
+            UNIQUE(player_id, category_id)
         )
     `);
 

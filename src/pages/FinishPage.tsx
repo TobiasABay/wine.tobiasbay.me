@@ -140,10 +140,17 @@ export default function FinishPage() {
                 );
 
                 if (playerGuess) {
+                    // Find the correct answer for this category and wine
+                    const correctAnswer = wineAnswers?.categories
+                        ?.find((cat: any) => cat.id === category.id)
+                        ?.answers?.find((ans: any) => ans.presentation_order === currentPlayerWineNumber)
+                        ?.wine_answer || 'Unknown';
+
                     playerCategories.push({
                         categoryName: category.guessing_element,
                         categoryId: category.id,
                         guess: playerGuess.guess,
+                        correctAnswer: correctAnswer,
                         isCorrect: isGuessCorrect(playerGuess.guess, category.id, currentPlayerWineNumber)
                     });
                 }
@@ -551,6 +558,17 @@ export default function FinishPage() {
                                                                                     }}
                                                                                 >
                                                                                     "{category.guess}"
+                                                                                </Typography>
+                                                                                <Typography
+                                                                                    variant="body2"
+                                                                                    sx={{
+                                                                                        fontWeight: 'normal',
+                                                                                        color: '#7f8c8d',
+                                                                                        fontSize: '0.75rem',
+                                                                                        ml: 1
+                                                                                    }}
+                                                                                >
+                                                                                    (Correct: "{category.correctAnswer}")
                                                                                 </Typography>
                                                                             </Box>
                                                                         ))}
