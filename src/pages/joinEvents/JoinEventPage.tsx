@@ -85,131 +85,232 @@ const WINE_COUNTRIES = [
 const COUNTRY_REGIONS_MAP: { [key: string]: string[] } = {
     'France': [
         'Alsace', 'Beaujolais', 'Bordeaux', 'Burgundy', 'Champagne', 'Corsica',
-        'Jura', 'Languedoc-Roussillon', 'Loire Valley', 'Provence', 'Rhône Valley', 'Savoie'
+        'Jura', 'Languedoc-Roussillon', 'Loire Valley', 'Provence', 'Rhône Valley', 'Savoie',
+        'Côtes du Rhône', 'Côte de Nuits', 'Côte de Beaune', 'Châteauneuf-du-Pape',
+        'Sancerre', 'Pouilly-Fumé', 'Vouvray', 'Muscadet', 'Cahors', 'Madiran'
     ],
     'Italy': [
         'Abruzzo', 'Campania', 'Emilia-Romagna', 'Friuli-Venezia Giulia', 'Liguria',
-        'Lombardy', 'Marche', 'Piedmont', 'Puglia', 'Sardinia', 'Sicily', 'Tuscany', 'Umbria', 'Veneto'
+        'Lombardy', 'Marche', 'Piedmont', 'Puglia', 'Sardinia', 'Sicily', 'Tuscany', 'Umbria', 'Veneto',
+        'Amarone della Valpolicella', 'Barolo', 'Barbaresco', 'Chianti', 'Brunello di Montalcino',
+        'Soave', 'Prosecco', 'Valpolicella', 'Montepulciano d\'Abruzzo', 'Nebbiolo d\'Alba',
+        'Barbera d\'Asti', 'Dolcetto d\'Alba', 'Gavi', 'Verdicchio', 'Falanghina'
     ],
     'Spain': [
         'Andalusia', 'Castilla y León', 'Catalonia', 'Cava', 'Galicia', 'Jerez',
-        'La Mancha', 'Navarra', 'Priorat', 'Rías Baixas', 'Ribera del Duero', 'Rioja', 'Valencia'
+        'La Mancha', 'Navarra', 'Priorat', 'Rías Baixas', 'Ribera del Duero', 'Rioja', 'Valencia',
+        'Toro', 'Rueda', 'Albarino', 'Tempranillo', 'Garnacha', 'Monastrell', 'Bobal'
     ],
     'Germany': [
         'Ahr', 'Baden', 'Franken', 'Hessische Bergstraße', 'Mosel', 'Nahe', 'Pfalz',
-        'Rheingau', 'Rheinhessen', 'Saale-Unstrut', 'Saxony', 'Württemberg'
+        'Rheingau', 'Rheinhessen', 'Saale-Unstrut', 'Saxony', 'Württemberg',
+        'Riesling', 'Gewürztraminer', 'Müller-Thurgau', 'Silvaner', 'Grauburgunder',
+        'Spätburgunder', 'Dornfelder', 'Lemberger'
     ],
     'United States': [
         'Central Coast', 'Columbia Valley', 'Finger Lakes', 'Long Island', 'Napa Valley',
-        'Paso Robles', 'Sonoma County', 'Willamette Valley'
+        'Paso Robles', 'Sonoma County', 'Willamette Valley', 'Russian River Valley',
+        'Carneros', 'Stags Leap District', 'Rutherford', 'Oakville', 'St. Helena',
+        'Santa Barbara', 'Monterey', 'Livermore Valley', 'Lodi', 'Sierra Foothills'
     ],
     'Portugal': [
-        'Alentejo', 'Douro Valley', 'Vinho Verde'
+        'Alentejo', 'Douro Valley', 'Vinho Verde', 'Porto', 'Madeira', 'Dão',
+        'Bairrada', 'Setúbal', 'Lisboa', 'Tejo', 'Beiras'
     ],
     'Austria': [
-        'Burgenland', 'Wachau'
+        'Burgenland', 'Wachau', 'Kamptal', 'Kremstal', 'Traisental', 'Wagram',
+        'Weinviertel', 'Thermenregion', 'Neusiedlersee', 'Mittelburgenland', 'Südburgenland'
     ],
     'Chile': [
-        'Casablanca Valley', 'Colchagua Valley', 'Maipo Valley'
+        'Casablanca Valley', 'Colchagua Valley', 'Maipo Valley', 'Rapel Valley',
+        'Maule Valley', 'Curicó Valley', 'Aconcagua Valley', 'Leyda Valley',
+        'Bio Bio Valley', 'Itata Valley', 'Cachapoal Valley'
     ],
     'Argentina': [
-        'Mendoza'
+        'Mendoza', 'Salta', 'Catamarca', 'La Rioja', 'San Juan', 'Neuquén',
+        'Río Negro', 'Patagonia', 'Uco Valley', 'Luján de Cuyo', 'Maipú'
     ],
     'Australia': [
-        'Barossa Valley', 'Hunter Valley', 'Margaret River'
+        'Barossa Valley', 'Hunter Valley', 'Margaret River', 'McLaren Vale', 'Clare Valley',
+        'Adelaide Hills', 'Coonawarra', 'Yarra Valley', 'Mornington Peninsula',
+        'Eden Valley', 'Langhorne Creek', 'Heathcote', 'Grampians'
     ],
     'New Zealand': [
-        'Central Otago', 'Marlborough'
+        'Central Otago', 'Marlborough', 'Hawke\'s Bay', 'Wairarapa', 'Canterbury',
+        'Waipara', 'Nelson', 'Auckland', 'Gisborne', 'North Canterbury'
     ],
     'South Africa': [
-        'Constantia', 'Paarl', 'Stellenbosch'
+        'Constantia', 'Paarl', 'Stellenbosch', 'Franschhoek', 'Walker Bay',
+        'Elgin', 'Hemel-en-Aarde', 'Robertson', 'Swartland', 'Tulbagh'
     ],
     'Canada': [
-        'Niagara Peninsula', 'Okanagan Valley'
+        'Niagara Peninsula', 'Okanagan Valley', 'Similkameen Valley', 'Fraser Valley',
+        'Cowichan Valley', 'Annapolis Valley', 'Prince Edward County'
+    ],
+    'Greece': [
+        'Santorini', 'Naoussa', 'Nemea', 'Mantinia', 'Patras', 'Samos',
+        'Crete', 'Rhodes', 'Cephalonia', 'Paros'
+    ],
+    'Hungary': [
+        'Tokaj', 'Eger', 'Villány', 'Szekszárd', 'Somló', 'Balaton',
+        'Badacsony', 'Csopak', 'Kunság', 'Mátra'
+    ],
+    'Croatia': [
+        'Istria', 'Dalmatia', 'Slavonia', 'Primorje', 'Hrvatsko Zagorje',
+        'Plešivica', 'Međimurje', 'Podunavlje'
+    ],
+    'Georgia': [
+        'Kakheti', 'Imereti', 'Racha', 'Lechkhumi', 'Kartli', 'Adjara',
+        'Guria', 'Samegrelo', 'Svaneti', 'Meskheti'
+    ],
+    'Turkey': [
+        'Thrace', 'Aegean', 'Central Anatolia', 'Eastern Anatolia', 'Southeastern Anatolia',
+        'Marmara', 'Black Sea', 'Mediterranean'
+    ],
+    'Lebanon': [
+        'Bekaa Valley', 'Mount Lebanon', 'South Lebanon', 'North Lebanon'
+    ],
+    'Israel': [
+        'Galilee', 'Golan Heights', 'Judean Hills', 'Negev', 'Shomron',
+        'Samaria', 'Coastal Plain'
+    ],
+    'Bulgaria': [
+        'Northern Region', 'Southern Region', 'Eastern Region', 'Southwestern Region',
+        'Danube Plain', 'Thracian Valley', 'Black Sea Coast'
+    ],
+    'Romania': [
+        'Transylvania', 'Moldova', 'Muntenia', 'Oltenia', 'Banat', 'Crișana',
+        'Maramureș', 'Dobrogea'
+    ],
+    'Slovenia': [
+        'Primorska', 'Posavje', 'Podravje', 'Bela Krajina', 'Dolenjska',
+        'Gorenjska', 'Štajerska'
+    ],
+    'Czech Republic': [
+        'Moravia', 'Bohemia', 'Mikulov', 'Znojmo', 'Velké Pavlovice',
+        'Slovácko', 'Mělník'
+    ],
+    'Slovakia': [
+        'Malokarpatská', 'Južnoslovenská', 'Východoslovenská', 'Nitrianska',
+        'Stredoslovenská', 'Severoslovenská'
     ]
 };
 
 // All regions for fallback
 const ALL_WINE_REGIONS = [
-    'Abruzzo',
-    'Ahr',
-    'Alentejo',
-    'Alsace',
-    'Andalusia',
-    'Baden',
-    'Barossa Valley',
-    'Beaujolais',
-    'Bordeaux',
-    'Burgenland',
-    'Burgundy',
-    'Campania',
-    'Casablanca Valley',
-    'Castilla y León',
-    'Catalonia',
-    'Cava',
-    'Central Coast',
-    'Central Otago',
-    'Champagne',
-    'Colchagua Valley',
-    'Columbia Valley',
-    'Constantia',
-    'Corsica',
-    'Douro Valley',
-    'Emilia-Romagna',
-    'Finger Lakes',
-    'Franken',
-    'Friuli-Venezia Giulia',
-    'Galicia',
-    'Hessische Bergstraße',
-    'Hunter Valley',
-    'Jerez',
-    'Jura',
-    'La Mancha',
-    'Languedoc-Roussillon',
-    'Liguria',
-    'Loire Valley',
-    'Lombardy',
-    'Long Island',
-    'Maipo Valley',
-    'Marche',
-    'Margaret River',
-    'Marlborough',
-    'Mendoza',
-    'Mosel',
-    'Nahe',
-    'Napa Valley',
-    'Navarra',
-    'Niagara Peninsula',
-    'Okanagan Valley',
-    'Other',
-    'Paarl',
-    'Paso Robles',
-    'Pfalz',
-    'Piedmont',
-    'Priorat',
-    'Provence',
-    'Puglia',
-    'Rheingau',
-    'Rheinhessen',
-    'Rhône Valley',
-    'Rías Baixas',
-    'Ribera del Duero',
-    'Rioja',
-    'Saale-Unstrut',
-    'Sardinia',
-    'Savoie',
-    'Saxony',
-    'Sicily',
-    'Sonoma County',
-    'Stellenbosch',
-    'Tuscany',
-    'Umbria',
-    'Valencia',
-    'Veneto',
-    'Vinho Verde',
-    'Wachau',
-    'Willamette Valley',
-    'Württemberg'
+    // Italy
+    'Abruzzo', 'Campania', 'Emilia-Romagna', 'Friuli-Venezia Giulia', 'Liguria',
+    'Lombardy', 'Marche', 'Piedmont', 'Puglia', 'Sardinia', 'Sicily', 'Tuscany', 'Umbria', 'Veneto',
+    'Amarone della Valpolicella', 'Barolo', 'Barbaresco', 'Chianti', 'Brunello di Montalcino',
+    'Soave', 'Prosecco', 'Valpolicella', 'Montepulciano d\'Abruzzo', 'Nebbiolo d\'Alba',
+    'Barbera d\'Asti', 'Dolcetto d\'Alba', 'Gavi', 'Verdicchio', 'Falanghina',
+
+    // France
+    'Alsace', 'Beaujolais', 'Bordeaux', 'Burgundy', 'Champagne', 'Corsica',
+    'Jura', 'Languedoc-Roussillon', 'Loire Valley', 'Provence', 'Rhône Valley', 'Savoie',
+    'Côtes du Rhône', 'Côte de Nuits', 'Côte de Beaune', 'Châteauneuf-du-Pape',
+    'Sancerre', 'Pouilly-Fumé', 'Vouvray', 'Muscadet', 'Cahors', 'Madiran',
+
+    // Spain
+    'Andalusia', 'Castilla y León', 'Catalonia', 'Cava', 'Galicia', 'Jerez',
+    'La Mancha', 'Navarra', 'Priorat', 'Rías Baixas', 'Ribera del Duero', 'Rioja', 'Valencia',
+    'Toro', 'Rueda', 'Albarino', 'Tempranillo', 'Garnacha', 'Monastrell', 'Bobal',
+
+    // Germany
+    'Ahr', 'Baden', 'Franken', 'Hessische Bergstraße', 'Mosel', 'Nahe', 'Pfalz',
+    'Rheingau', 'Rheinhessen', 'Saale-Unstrut', 'Saxony', 'Württemberg',
+    'Riesling', 'Gewürztraminer', 'Müller-Thurgau', 'Silvaner', 'Grauburgunder',
+    'Spätburgunder', 'Dornfelder', 'Lemberger',
+
+    // United States
+    'Central Coast', 'Columbia Valley', 'Finger Lakes', 'Long Island', 'Napa Valley',
+    'Paso Robles', 'Sonoma County', 'Willamette Valley', 'Russian River Valley',
+    'Carneros', 'Stags Leap District', 'Rutherford', 'Oakville', 'St. Helena',
+    'Santa Barbara', 'Monterey', 'Livermore Valley', 'Lodi', 'Sierra Foothills',
+
+    // Portugal
+    'Alentejo', 'Douro Valley', 'Vinho Verde', 'Porto', 'Madeira', 'Dão',
+    'Bairrada', 'Setúbal', 'Lisboa', 'Tejo', 'Beiras',
+
+    // Austria
+    'Burgenland', 'Wachau', 'Kamptal', 'Kremstal', 'Traisental', 'Wagram',
+    'Weinviertel', 'Thermenregion', 'Neusiedlersee', 'Mittelburgenland', 'Südburgenland',
+
+    // Chile
+    'Casablanca Valley', 'Colchagua Valley', 'Maipo Valley', 'Rapel Valley',
+    'Maule Valley', 'Curicó Valley', 'Aconcagua Valley', 'Leyda Valley',
+    'Bio Bio Valley', 'Itata Valley', 'Cachapoal Valley',
+
+    // Argentina
+    'Mendoza', 'Salta', 'Catamarca', 'La Rioja', 'San Juan', 'Neuquén',
+    'Río Negro', 'Patagonia', 'Uco Valley', 'Luján de Cuyo', 'Maipú',
+
+    // Australia
+    'Barossa Valley', 'Hunter Valley', 'Margaret River', 'McLaren Vale', 'Clare Valley',
+    'Adelaide Hills', 'Coonawarra', 'Yarra Valley', 'Mornington Peninsula',
+    'Eden Valley', 'Langhorne Creek', 'Heathcote', 'Grampians',
+
+    // New Zealand
+    'Central Otago', 'Marlborough', 'Hawke\'s Bay', 'Wairarapa', 'Canterbury',
+    'Waipara', 'Nelson', 'Auckland', 'Gisborne', 'North Canterbury',
+
+    // South Africa
+    'Constantia', 'Paarl', 'Stellenbosch', 'Franschhoek', 'Walker Bay',
+    'Elgin', 'Hemel-en-Aarde', 'Robertson', 'Swartland', 'Tulbagh',
+
+    // Canada
+    'Niagara Peninsula', 'Okanagan Valley', 'Similkameen Valley', 'Fraser Valley',
+    'Cowichan Valley', 'Annapolis Valley', 'Prince Edward County',
+
+    // Greece
+    'Santorini', 'Naoussa', 'Nemea', 'Mantinia', 'Patras', 'Samos',
+    'Crete', 'Rhodes', 'Cephalonia', 'Paros',
+
+    // Hungary
+    'Tokaj', 'Eger', 'Villány', 'Szekszárd', 'Somló', 'Balaton',
+    'Badacsony', 'Csopak', 'Kunság', 'Mátra',
+
+    // Croatia
+    'Istria', 'Dalmatia', 'Slavonia', 'Primorje', 'Hrvatsko Zagorje',
+    'Plešivica', 'Međimurje', 'Podunavlje',
+
+    // Georgia
+    'Kakheti', 'Imereti', 'Racha', 'Lechkhumi', 'Kartli', 'Adjara',
+    'Guria', 'Samegrelo', 'Svaneti', 'Meskheti',
+
+    // Turkey
+    'Thrace', 'Aegean', 'Central Anatolia', 'Eastern Anatolia', 'Southeastern Anatolia',
+    'Marmara', 'Black Sea', 'Mediterranean',
+
+    // Lebanon
+    'Bekaa Valley', 'Mount Lebanon', 'South Lebanon', 'North Lebanon',
+
+    // Israel
+    'Galilee', 'Golan Heights', 'Judean Hills', 'Negev', 'Shomron',
+    'Samaria', 'Coastal Plain',
+
+    // Bulgaria
+    'Northern Region', 'Southern Region', 'Eastern Region', 'Southwestern Region',
+    'Danube Plain', 'Thracian Valley', 'Black Sea Coast',
+
+    // Romania
+    'Transylvania', 'Moldova', 'Muntenia', 'Oltenia', 'Banat', 'Crișana',
+    'Maramureș', 'Dobrogea',
+
+    // Slovenia
+    'Primorska', 'Posavje', 'Podravje', 'Bela Krajina', 'Dolenjska',
+    'Gorenjska', 'Štajerska',
+
+    // Czech Republic
+    'Moravia', 'Bohemia', 'Mikulov', 'Znojmo', 'Velké Pavlovice',
+    'Slovácko', 'Mělník',
+
+    // Slovakia
+    'Malokarpatská', 'Južnoslovenská', 'Východoslovenská', 'Nitrianska',
+    'Stredoslovenská', 'Severoslovenská',
+
+    // Generic
+    'Other'
 ];
 
 // Helper function to get options based on guessing element
