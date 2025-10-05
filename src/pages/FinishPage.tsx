@@ -162,48 +162,45 @@ export default function FinishPage() {
             presentation_order: player.presentation_order
         }));
 
-        // Show guesses for ALL wines, not just the current player's wine
-        const wineData = [];
+        // Show guesses for the current player's wine only
+        const currentPlayerWineNumber = currentPlayer.presentation_order;
+        const wineName = currentPlayer.player_name;
+        const wineNumber = currentPlayerWineNumber;
 
-        for (const wineOwner of allPlayers) {
-            const wineName = wineOwner.name;
-            const wineNumber = wineOwner.presentation_order;
+        const playerGuesses = allPlayers.map(player => {
+            const playerCategories = [];
 
-            const playerGuesses = allPlayers.map(player => {
-                const playerCategories = [];
+            for (const category of wineGuesses.categories) {
+                const playerGuess = category.guesses.find((g: any) =>
+                    g.player_name === player.name && g.wine_number === wineNumber
+                );
 
-                for (const category of wineGuesses.categories) {
-                    const playerGuess = category.guesses.find((g: any) =>
-                        g.player_name === player.name && g.wine_number === wineNumber
-                    );
+                if (playerGuess) {
+                    // Find the correct answer for this wine owner's wine
+                    const correctAnswer = getCorrectAnswer(category.id, wineNumber);
 
-                    if (playerGuess) {
-                        // Find the correct answer for this wine owner's wine
-                        const correctAnswer = getCorrectAnswer(category.id, wineNumber);
-
-                        playerCategories.push({
-                            categoryName: category.guessing_element,
-                            categoryId: category.id,
-                            guess: playerGuess.guess,
-                            correctAnswer: correctAnswer,
-                            isCorrect: isGuessCorrect(playerGuess.guess, category.id, wineNumber)
-                        });
-                    }
+                    playerCategories.push({
+                        categoryName: category.guessing_element,
+                        categoryId: category.id,
+                        guess: playerGuess.guess,
+                        correctAnswer: correctAnswer,
+                        isCorrect: isGuessCorrect(playerGuess.guess, category.id, wineNumber)
+                    });
                 }
+            }
 
-                return {
-                    playerId: player.id,
-                    playerName: player.name,
-                    categories: playerCategories
-                };
-            });
+            return {
+                playerId: player.id,
+                playerName: player.name,
+                categories: playerCategories
+            };
+        });
 
-            wineData.push({
-                wineNumber,
-                wineName,
-                players: playerGuesses
-            });
-        }
+        const wineData = [{
+            wineNumber,
+            wineName,
+            players: playerGuesses
+        }];
 
         return wineData;
     };
