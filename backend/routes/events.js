@@ -234,9 +234,9 @@ router.get('/:eventId/wine-guesses', async (req, res) => {
 router.get('/:eventId/wine-answers', async (req, res) => {
     try {
         const { eventId } = req.params;
-        const categories = await db.getEventWineAnswers(eventId);
+        const players = await db.getEventWineAnswers(eventId);
 
-        res.json({ success: true, categories });
+        res.json({ success: true, players });
     } catch (error) {
         console.error('Error fetching event wine answers:', error);
         res.status(500).json({ error: 'Failed to fetch wine answers' });

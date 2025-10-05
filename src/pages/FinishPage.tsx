@@ -98,25 +98,53 @@ export default function FinishPage() {
     };
 
     const isGuessCorrect = (guess: string, categoryId: string, targetPlayerOrder: number) => {
-        if (!wineAnswers || !wineAnswers.players) return false;
+        if (!wineAnswers) return false;
 
-        const targetPlayer = wineAnswers.players.find((player: any) => player.presentation_order === targetPlayerOrder);
-        if (!targetPlayer) return false;
+        // Handle both old format (categories) and new format (players)
+        if (wineAnswers.categories) {
+            // Old format: find category, then find answer by presentation_order
+            const category = wineAnswers.categories.find((cat: any) => cat.id === categoryId);
+            if (!category) return false;
 
-        const answer = targetPlayer.answers.find((ans: any) => ans.category_id === categoryId);
-        if (!answer) return false;
+            const answer = category.answers.find((ans: any) => ans.presentation_order === targetPlayerOrder);
+            if (!answer) return false;
 
-        return answer.wine_answer.toLowerCase() === guess.toLowerCase();
+            return answer.wine_answer.toLowerCase() === guess.toLowerCase();
+        } else if (wineAnswers.players) {
+            // New format: find player, then find answer by category_id
+            const targetPlayer = wineAnswers.players.find((player: any) => player.presentation_order === targetPlayerOrder);
+            if (!targetPlayer) return false;
+
+            const answer = targetPlayer.answers.find((ans: any) => ans.category_id === categoryId);
+            if (!answer) return false;
+
+            return answer.wine_answer.toLowerCase() === guess.toLowerCase();
+        }
+
+        return false;
     };
 
     const getCorrectAnswer = (categoryId: string, targetPlayerOrder: number) => {
-        if (!wineAnswers || !wineAnswers.players) return 'Unknown';
+        if (!wineAnswers) return 'Unknown';
 
-        const targetPlayer = wineAnswers.players.find((player: any) => player.presentation_order === targetPlayerOrder);
-        if (!targetPlayer) return 'Unknown';
+        // Handle both old format (categories) and new format (players)
+        if (wineAnswers.categories) {
+            // Old format: find category, then find answer by presentation_order
+            const category = wineAnswers.categories.find((cat: any) => cat.id === categoryId);
+            if (!category) return 'Unknown';
 
-        const answer = targetPlayer.answers.find((ans: any) => ans.category_id === categoryId);
-        return answer ? answer.wine_answer : 'Unknown';
+            const answer = category.answers.find((ans: any) => ans.presentation_order === targetPlayerOrder);
+            return answer ? answer.wine_answer : 'Unknown';
+        } else if (wineAnswers.players) {
+            // New format: find player, then find answer by category_id
+            const targetPlayer = wineAnswers.players.find((player: any) => player.presentation_order === targetPlayerOrder);
+            if (!targetPlayer) return 'Unknown';
+
+            const answer = targetPlayer.answers.find((ans: any) => ans.category_id === categoryId);
+            return answer ? answer.wine_answer : 'Unknown';
+        }
+
+        return 'Unknown';
     };
 
 

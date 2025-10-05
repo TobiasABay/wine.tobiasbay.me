@@ -225,7 +225,7 @@ class ApiService {
 
     async getEventWineAnswers(eventId: string): Promise<{
         success: boolean;
-        players: Array<{
+        players?: Array<{
             player_id: string;
             player_name: string;
             presentation_order: number;
@@ -235,39 +235,36 @@ class ApiService {
                 guessing_element: string;
             }>;
         }>;
+        categories?: Array<{
+            id: string;
+            guessing_element: string;
+            difficulty_factor: string;
+            answers: Array<{
+                wine_answer: string;
+                player_name: string;
+                presentation_order: number;
+            }>;
+        }>;
     }> {
         try {
-            const response = await this.request<{
-                success: boolean;
-                players: Array<{
-                    player_id: string;
-                    player_name: string;
-                    presentation_order: number;
-                    answers: Array<{
-                        category_id: string;
-                        wine_answer: string;
-                        guessing_element: string;
-                    }>;
-                }>;
-            }>(`/api/events/${eventId}/wine-answers`);
-
-            console.log('Raw API response:', response);
+            const response = await this.request<any>(`/api/events/${eventId}/wine-answers`);
 
             // Ensure the response has the expected structure
             if (!response) {
-                console.log('No response received');
-                return { success: false, players: [] };
+                return { success: false };
             }
 
-            if (!response.players || !Array.isArray(response.players)) {
-                console.log('Invalid players structure:', response);
-                return { success: response.success || false, players: [] };
+            // Handle both old format (categories) and new format (players)
+            if (response.players && Array.isArray(response.players)) {
+                return response;
+            } else if (response.categories && Array.isArray(response.categories)) {
+                return response;
             }
 
-            return response;
+            return { success: response.success || false };
         } catch (error) {
             console.error('Error in getEventWineAnswers:', error);
-            return { success: false, players: [] };
+            return { success: false };
         }
     }
 
