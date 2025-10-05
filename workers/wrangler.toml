@@ -11,6 +11,10 @@ database_id = "4e98dae0-7418-4871-98c5-a25203b059ca"
 [vars]
 FRONTEND_URL = "https://wine.tobiasbay.me"
 
+routes = [
+  { pattern = "api.wine.tobiasbay.me/*", zone_name = "tobiasbay.me" }
+]
+
 [env.production]
 name = "wine-tasting-api"
 
