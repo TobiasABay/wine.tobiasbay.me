@@ -134,6 +134,7 @@ export default function FinishPage() {
             if (!category) return 'Unknown';
 
             const answer = category.answers.find((ans: any) => ans.presentation_order === targetPlayerOrder);
+            console.log(`Getting correct answer for category ${categoryId}, player order ${targetPlayerOrder}:`, answer);
             return answer ? answer.wine_answer : 'Unknown';
         } else if (wineAnswers.players) {
             // New format: find player, then find answer by category_id
@@ -179,6 +180,7 @@ export default function FinishPage() {
 
                 if (playerGuess) {
                     // Find the correct answer for this category and wine (the target player's wine)
+                    // The correct answer should be for the wine owner (currentPlayerWineNumber), not the guessing player
                     const correctAnswer = getCorrectAnswer(category.id, currentPlayerWineNumber);
 
                     playerCategories.push({
