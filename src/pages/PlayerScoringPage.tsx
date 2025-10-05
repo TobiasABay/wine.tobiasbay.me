@@ -264,6 +264,8 @@ export default function PlayerScoringPage() {
     const [guessesSubmitted, setGuessesSubmitted] = useState<boolean>(false);
     const [eventStarted, setEventStarted] = useState<boolean>(false);
     const [selectedCountry, setSelectedCountry] = useState<string>('');
+    const [scoreError, setScoreError] = useState<string>('');
+    const [isValidScore, setIsValidScore] = useState<boolean>(true);
     const { eventId } = useParams();
     const navigate = useNavigate();
 
@@ -433,6 +435,8 @@ export default function PlayerScoringPage() {
             setScore('');
             setCategoryGuesses({});
             setSubmitted(false);
+            setScoreError('');
+            setIsValidScore(true);
         };
 
         webSocketService.onCurrentWineChanged(handleCurrentWineChanged);
@@ -463,10 +467,46 @@ export default function PlayerScoringPage() {
 
     const handleScoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
-        // Only allow numbers 1-5
-        if (value === '' || (parseInt(value) >= 1 && parseInt(value) <= 5)) {
+
+        // Clear previous error
+        setScoreError('');
+        setIsValidScore(true);
+
+        // Allow empty value
+        if (value === '') {
             setScore(value);
+            return;
         }
+
+        // Check if it's a valid number
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) {
+            setScoreError('Must be a number');
+            setIsValidScore(false);
+            setScore(value); // Still set the value so user can see what they typed
+            return;
+        }
+
+        // Check if it's an integer
+        if (!Number.isInteger(numValue)) {
+            setScoreError('Must be a whole number');
+            setIsValidScore(false);
+            setScore(value);
+            return;
+        }
+
+        // Check if it's within range
+        if (numValue < 1 || numValue > 5) {
+            setScoreError('Must be between 1 and 5');
+            setIsValidScore(false);
+            setScore(value);
+            return;
+        }
+
+        // Valid score
+        setScore(value);
+        setIsValidScore(true);
+        setScoreError('');
     };
 
     const handleCategoryGuessChange = (categoryId: string, guess: string) => {
@@ -862,31 +902,57 @@ export default function PlayerScoringPage() {
                                 value={score}
                                 onChange={handleScoreChange}
                                 inputProps={{ min: 1, max: 5 }}
+                                error={!isValidScore}
+                                helperText={scoreError}
                                 sx={{
                                     mb: 3,
                                     '& .MuiOutlinedInput-root': {
                                         backgroundColor: 'rgba(255,255,255,0.1)',
                                         color: 'white',
                                         '& fieldset': {
-                                            borderColor: 'rgba(255,255,255,0.3)',
+                                            borderColor: !isValidScore ? '#f44336' : 'rgba(255,255,255,0.3)',
                                         },
                                         '&:hover fieldset': {
-                                            borderColor: 'rgba(255,255,255,0.5)',
+                                            borderColor: !isValidScore ? '#f44336' : 'rgba(255,255,255,0.5)',
                                         },
                                         '&.Mui-focused fieldset': {
-                                            borderColor: '#ffd700',
+                                            borderColor: !isValidScore ? '#f44336' : '#ffd700',
                                         },
                                     },
                                     '& .MuiInputLabel-root': {
-                                        color: 'rgba(255,255,255,0.7)',
+                                        color: !isValidScore ? '#f44336' : 'rgba(255,255,255,0.7)',
                                         '&.Mui-focused': {
-                                            color: '#ffd700',
+                                            color: !isValidScore ? '#f44336' : '#ffd700',
                                         },
+                                    },
+                                    '& .MuiFormHelperText-root': {
+                                        color: '#f44336',
+                                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        marginTop: '4px',
+                                        fontSize: '0.875rem',
+                                        fontWeight: '500',
                                     },
                                 }}
                                 fullWidth
                             />
 
+                            {/* Score validation feedback */}
+                            {score && isValidScore && (
+                                <Typography variant="body2" sx={{
+                                    color: '#4caf50',
+                                    mt: 1,
+                                    mb: 2,
+                                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '500',
+                                }}>
+                                    ✓ Valid score: {score}/5
+                                </Typography>
+                            )}
 
                         </Box>
                     )}
@@ -999,7 +1065,7 @@ export default function PlayerScoringPage() {
 
                         <Button
                             onClick={handleSubmitAll}
-                            disabled={submitting || !score || parseInt(score) < 1 || parseInt(score) > 5 || (wineCategories.length > 0 && Object.keys(categoryGuesses).length !== wineCategories.length)}
+                            disabled={submitting || !score || !isValidScore || (wineCategories.length > 0 && Object.keys(categoryGuesses).length !== wineCategories.length)}
                             variant="contained"
                             sx={{
                                 backgroundColor: '#ffd700',
