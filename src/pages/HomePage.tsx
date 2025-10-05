@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Paper } from "@mui/material";
 import { Add, GroupAdd } from "@mui/icons-material";
@@ -5,6 +6,10 @@ import FullscreenButton from '../components/FullscreenButton';
 
 export default function HomePage() {
     const navigate = useNavigate();
+
+    useEffect(() => {
+        document.title = 'Wine Tasting - Home';
+    }, []);
 
     const handleCreateEvent = () => {
         navigate('/create-event');

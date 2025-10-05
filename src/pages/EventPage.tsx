@@ -15,6 +15,10 @@ import WineCategoriesDisplay from '../components/WineCategoriesDisplay';
 
 export default function EventPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+
+    useEffect(() => {
+        document.title = 'Wine Tasting - Event';
+    }, []);
     const [allPlayers, setAllPlayers] = useState<Player[]>([]);
     const [currentWineNumber, setCurrentWineNumber] = useState<number>(1);
     const [loading, setLoading] = useState<boolean>(true);

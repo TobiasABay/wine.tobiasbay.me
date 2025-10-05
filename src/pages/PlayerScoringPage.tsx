@@ -251,6 +251,10 @@ const ALL_WINE_REGIONS = [
 
 export default function PlayerScoringPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+
+    useEffect(() => {
+        document.title = 'Wine Tasting - Score Wine';
+    }, []);
     const [allPlayers, setAllPlayers] = useState<Player[]>([]);
     const [currentWineNumber, setCurrentWineNumber] = useState<number>(1);
     const [score, setScore] = useState<string>('');

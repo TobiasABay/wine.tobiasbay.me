@@ -17,6 +17,10 @@ import { apiService } from '../../services/api';
 
 export default function EventDetailsPage() {
     const [description, setDescription] = useState('');
+
+    useEffect(() => {
+        document.title = 'Wine Tasting - Event Details';
+    }, []);
     const [budget, setBudget] = useState('');
     const [duration, setDuration] = useState('');
     const [wineNotes, setWineNotes] = useState('');

@@ -127,6 +127,10 @@ function SortablePlayerItem({ player, index, canDrag }: { player: Player; index:
 
 export default function EventCreatedPage() {
     const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+
+    useEffect(() => {
+        document.title = 'Wine Tasting - Event Created';
+    }, []);
     const [joinCode, setJoinCode] = useState<string>('');
     const [players, setPlayers] = useState<Player[]>([]);
     const [autoShuffle, setAutoShuffle] = useState<boolean>(false);

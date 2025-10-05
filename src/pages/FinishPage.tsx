@@ -27,6 +27,10 @@ interface LeaderboardPlayer {
 
 export default function FinishPage() {
     const [event, setEvent] = useState<Event | null>(null);
+
+    useEffect(() => {
+        document.title = 'Wine Tasting - Results';
+    }, []);
     const [leaderboard, setLeaderboard] = useState<LeaderboardPlayer[]>([]);
     const [wineAverages, setWineAverages] = useState<Record<string, number>>({});
     const [wineAnswers, setWineAnswers] = useState<any>(null);
