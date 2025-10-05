@@ -97,16 +97,26 @@ export default function FinishPage() {
         setExpandedPlayers(newExpanded);
     };
 
-    const isGuessCorrect = (guess: string, categoryId: string, wineNumber: number) => {
-        if (!wineAnswers || !wineAnswers.categories) return false;
+    const isGuessCorrect = (guess: string, categoryId: string, targetPlayerOrder: number) => {
+        if (!wineAnswers || !wineAnswers.players) return false;
 
-        const category = wineAnswers.categories.find((cat: any) => cat.id === categoryId);
-        if (!category) return false;
+        const targetPlayer = wineAnswers.players.find((player: any) => player.presentation_order === targetPlayerOrder);
+        if (!targetPlayer) return false;
 
-        const answer = category.answers.find((ans: any) => ans.presentation_order === wineNumber);
+        const answer = targetPlayer.answers.find((ans: any) => ans.category_id === categoryId);
         if (!answer) return false;
 
         return answer.wine_answer.toLowerCase() === guess.toLowerCase();
+    };
+
+    const getCorrectAnswer = (categoryId: string, targetPlayerOrder: number) => {
+        if (!wineAnswers || !wineAnswers.players) return 'Unknown';
+
+        const targetPlayer = wineAnswers.players.find((player: any) => player.presentation_order === targetPlayerOrder);
+        if (!targetPlayer) return 'Unknown';
+
+        const answer = targetPlayer.answers.find((ans: any) => ans.category_id === categoryId);
+        return answer ? answer.wine_answer : 'Unknown';
     };
 
 
@@ -140,11 +150,8 @@ export default function FinishPage() {
                 );
 
                 if (playerGuess) {
-                    // Find the correct answer for this category and wine
-                    const correctAnswer = wineAnswers?.categories
-                        ?.find((cat: any) => cat.id === category.id)
-                        ?.answers?.find((ans: any) => ans.presentation_order === currentPlayerWineNumber)
-                        ?.wine_answer || 'Unknown';
+                    // Find the correct answer for this category and wine (the target player's wine)
+                    const correctAnswer = getCorrectAnswer(category.id, currentPlayerWineNumber);
 
                     playerCategories.push({
                         categoryName: category.guessing_element,

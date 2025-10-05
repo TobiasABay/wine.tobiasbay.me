@@ -578,6 +578,15 @@ class Database {
     getEventWineAnswers(eventId) {
         return new Promise(async (resolve, reject) => {
             try {
+                // Get all players for the event
+                const players = await new Promise((resolve, reject) => {
+                    const sql = 'SELECT * FROM players WHERE event_id = ? ORDER BY presentation_order ASC';
+                    this.db.all(sql, [eventId], (err, rows) => {
+                        if (err) reject(err);
+                        else resolve(rows);
+                    });
+                });
+
                 // Get all wine categories for the event
                 const categories = await new Promise((resolve, reject) => {
                     const sql = 'SELECT * FROM wine_categories WHERE event_id = ? ORDER BY created_at ASC';
@@ -587,32 +596,32 @@ class Database {
                     });
                 });
 
-                // For each category, get all answers
-                const categoriesWithAnswers = [];
-                for (const category of categories) {
+                // For each player, get their wine answers
+                const playersWithAnswers = [];
+                for (const player of players) {
                     const answers = await new Promise((resolve, reject) => {
                         const sql = `
-                            SELECT pwd.wine_answer, p.name as player_name, p.presentation_order
+                            SELECT pwd.category_id, pwd.wine_answer, wc.guessing_element
                             FROM player_wine_details pwd
-                            JOIN players p ON pwd.player_id = p.id
-                            WHERE pwd.category_id = ? AND p.event_id = ?
-                            ORDER BY p.presentation_order ASC
+                            JOIN wine_categories wc ON pwd.category_id = wc.id
+                            WHERE pwd.player_id = ?
+                            ORDER BY wc.created_at ASC
                         `;
-                        this.db.all(sql, [category.id, eventId], (err, rows) => {
+                        this.db.all(sql, [player.id], (err, rows) => {
                             if (err) reject(err);
                             else resolve(rows);
                         });
                     });
 
-                    categoriesWithAnswers.push({
-                        id: category.id,
-                        guessing_element: category.guessing_element,
-                        difficulty_factor: category.difficulty_factor,
+                    playersWithAnswers.push({
+                        player_id: player.id,
+                        player_name: player.name,
+                        presentation_order: player.presentation_order,
                         answers: answers
                     });
                 }
 
-                resolve(categoriesWithAnswers);
+                resolve(playersWithAnswers);
             } catch (error) {
                 reject(error);
             }
