@@ -20,7 +20,7 @@ export default function CreateEventPage() {
     const [eventName, setEventName] = useState('');
 
     useEffect(() => {
-        document.title = '🍷 Wine Tasting - Create Event';
+        document.title = 'Wine Tasting - Create Event';
     }, []);
     const [eventDate, setEventDate] = useState('');
     const [maxParticipants, setMaxParticipants] = useState('');

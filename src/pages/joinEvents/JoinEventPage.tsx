@@ -388,7 +388,7 @@ export default function JoinEventPage() {
     const [activeStep, setActiveStep] = useState(0);
 
     useEffect(() => {
-        document.title = '🍷 Wine Tasting - Join Event';
+        document.title = 'Wine Tasting - Join Event';
     }, []);
     const [playerName, setPlayerName] = useState('');
     const [joinCode, setJoinCode] = useState('');

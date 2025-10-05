@@ -61,7 +61,7 @@ export default function AdminPage() {
     const [wineData, setWineData] = useState<WineData | null>(null);
 
     useEffect(() => {
-        document.title = '🍷 Wine Tasting - Admin';
+        document.title = 'Wine Tasting - Admin';
     }, []);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');

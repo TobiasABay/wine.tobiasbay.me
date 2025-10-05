@@ -253,7 +253,7 @@ export default function PlayerScoringPage() {
     const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
 
     useEffect(() => {
-        document.title = '🍷 Wine Tasting - Score Wine';
+        document.title = 'Wine Tasting - Score Wine';
     }, []);
     const [allPlayers, setAllPlayers] = useState<Player[]>([]);
     const [currentWineNumber, setCurrentWineNumber] = useState<number>(1);
