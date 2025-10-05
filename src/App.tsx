@@ -8,6 +8,7 @@ import JoinEventPage from './pages/joinEvents/JoinEventPage'
 import EventPage from './pages/EventPage'
 import PlayerScoringPage from './pages/PlayerScoringPage'
 import FinishPage from './pages/FinishPage'
+import AdminPage from './pages/AdminPage'
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/score/:eventId" element={<PlayerScoringPage />} />
         <Route path="/finish/:eventId" element={<FinishPage />} />
         <Route path="/join-event" element={<JoinEventPage />} />
+        <Route path="/admin/:eventId" element={<AdminPage />} />
       </Routes>
     </Router>
   )

@@ -286,6 +286,58 @@ class Database {
     savePlayerWineAnswers(playerId, wineAnswers) {
         return new Promise(async (resolve, reject) => {
             try {
+                console.log(`[WINE_ANSWERS] Player ${playerId} submitting wine answers:`, wineAnswers);
+
+                // Get player info for logging
+                const playerInfo = await new Promise((resolve, reject) => {
+                    const sql = `
+                        SELECT p.name, p.presentation_order, e.id as event_id, e.name as event_name
+                        FROM players p
+                        JOIN events e ON p.event_id = e.id
+                        WHERE p.id = ?
+                    `;
+                    this.db.get(sql, [playerId], (err, row) => {
+                        if (err) reject(err);
+                        else resolve(row);
+                    });
+                });
+
+                if (!playerInfo) {
+                    console.log(`[WINE_ANSWERS] Player not found: ${playerId}`);
+                    reject(new Error('Player not found'));
+                    return;
+                }
+
+                console.log(`[WINE_ANSWERS] Player: ${playerInfo.name} (Order: ${playerInfo.presentation_order}) in event: ${playerInfo.event_name}`);
+
+                // Get wine categories for validation
+                const categories = await new Promise((resolve, reject) => {
+                    const sql = 'SELECT id, guessing_element FROM wine_categories WHERE event_id = ?';
+                    this.db.all(sql, [playerInfo.event_id], (err, rows) => {
+                        if (err) reject(err);
+                        else resolve(rows);
+                    });
+                });
+
+                const validCategoryIds = categories.map(c => c.id);
+                console.log(`[WINE_ANSWERS] Valid categories for event:`, validCategoryIds);
+
+                // Validate that all submitted categories are valid for this event
+                for (const answer of wineAnswers) {
+                    if (!validCategoryIds.includes(answer.categoryId)) {
+                        console.log(`[WINE_ANSWERS] Invalid category ID: ${answer.categoryId} for event: ${playerInfo.event_id}`);
+                        reject(new Error(`Invalid category ID: ${answer.categoryId}`));
+                        return;
+                    }
+                }
+
+                // Log the wine answers being submitted
+                console.log(`[WINE_ANSWERS] Submitting answers for ${playerInfo.name}:`);
+                for (const answer of wineAnswers) {
+                    const category = categories.find(c => c.id === answer.categoryId);
+                    console.log(`  - ${category?.guessing_element || 'Unknown'}: "${answer.wineAnswer}"`);
+                }
+
                 // First, delete any existing answers for this player
                 await new Promise((deleteResolve, deleteReject) => {
                     const deleteSql = 'DELETE FROM player_wine_details WHERE player_id = ?';
@@ -322,8 +374,11 @@ class Database {
                     });
                 }
 
+                console.log(`[WINE_ANSWERS] Successfully saved ${wineAnswers.length} wine answers for ${playerInfo.name}`);
+
                 resolve();
             } catch (error) {
+                console.error('[WINE_ANSWERS] Error saving wine answers:', error);
                 reject(error);
             }
         });
@@ -631,6 +686,8 @@ class Database {
     calculateLeaderboard(eventId) {
         return new Promise(async (resolve, reject) => {
             try {
+                console.log(`[LEADERBOARD] Calculating leaderboard for event: ${eventId}`);
+
                 // Get all players for the event
                 const players = await new Promise((resolve, reject) => {
                     const sql = 'SELECT * FROM players WHERE event_id = ? ORDER BY presentation_order ASC';
@@ -639,6 +696,8 @@ class Database {
                         else resolve(rows);
                     });
                 });
+
+                console.log(`[LEADERBOARD] Found ${players.length} players:`, players.map(p => `${p.name} (Order: ${p.presentation_order})`));
 
                 // Get all wine categories for the event
                 const categories = await new Promise((resolve, reject) => {
@@ -649,9 +708,12 @@ class Database {
                     });
                 });
 
+                console.log(`[LEADERBOARD] Found ${categories.length} categories:`, categories.map(c => c.guessing_element));
+
                 // Calculate scores for each player
                 const leaderboard = [];
                 for (const player of players) {
+                    console.log(`[LEADERBOARD] Calculating score for ${player.name} (ID: ${player.id})`);
                     let totalPoints = 0;
                     let correctGuesses = 0;
                     let totalGuesses = 0;
@@ -665,8 +727,12 @@ class Database {
                         });
                     });
 
+                    console.log(`[LEADERBOARD] ${player.name} made ${allPlayerGuesses.length} total guesses`);
+
                     // For each wine (including their own wine)
                     for (const wineOwner of players) {
+                        console.log(`[LEADERBOARD] Checking ${player.name}'s guesses for ${wineOwner.name}'s wine (Order: ${wineOwner.presentation_order})`);
+
                         // Get the actual wine details for this wine (what the wine owner submitted)
                         const actualWineDetails = await new Promise((resolve, reject) => {
                             const sql = 'SELECT category_id, wine_answer FROM player_wine_details WHERE player_id = ?';
@@ -676,26 +742,42 @@ class Database {
                             });
                         });
 
+                        console.log(`[LEADERBOARD] ${wineOwner.name}'s actual wine details:`, actualWineDetails.map(d => {
+                            const category = categories.find(c => c.id === d.category_id);
+                            return `${category?.guessing_element || 'Unknown'}: "${d.wine_answer}"`;
+                        }));
+
                         // Filter guesses for this specific wine
                         const playerGuessesForThisWine = allPlayerGuesses.filter(guess =>
                             guess.wine_number === wineOwner.presentation_order
                         );
 
+                        console.log(`[LEADERBOARD] ${player.name}'s guesses for ${wineOwner.name}'s wine:`, playerGuessesForThisWine.map(g => {
+                            const category = categories.find(c => c.id === g.category_id);
+                            return `${category?.guessing_element || 'Unknown'}: "${g.guess}"`;
+                        }));
+
                         // Compare guesses with actual details
                         for (const guess of playerGuessesForThisWine) {
                             totalGuesses++;
                             const actualDetail = actualWineDetails.find(d => d.category_id === guess.category_id);
+                            const category = categories.find(c => c.id === guess.category_id);
 
                             if (actualDetail && actualDetail.wine_answer.toLowerCase() === guess.guess.toLowerCase()) {
                                 // Correct guess! Get the difficulty factor
-                                const category = categories.find(c => c.id === guess.category_id);
                                 const difficultyFactor = category ? parseInt(category.difficulty_factor) || 1 : 1;
 
                                 totalPoints += difficultyFactor;
                                 correctGuesses++;
+
+                                console.log(`[LEADERBOARD] ✅ ${player.name} correctly guessed ${category?.guessing_element || 'Unknown'}: "${guess.guess}" (${difficultyFactor} points)`);
+                            } else {
+                                console.log(`[LEADERBOARD] ❌ ${player.name} incorrectly guessed ${category?.guessing_element || 'Unknown'}: "${guess.guess}" (Correct: "${actualDetail?.wine_answer || 'N/A'}")`);
                             }
                         }
                     }
+
+                    console.log(`[LEADERBOARD] ${player.name} final score: ${correctGuesses}/${totalGuesses} correct, ${totalPoints} points`);
 
                     leaderboard.push({
                         player_id: player.id,
