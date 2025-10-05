@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { apiService } from '../services/api';
 import {
     Box,
     Typography,
@@ -74,13 +75,12 @@ export default function AdminPage() {
     const loadWineData = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`/api/admin/events/${eventId}/wine-data?t=${Date.now()}`);
-            const data = await response.json();
+            const data = await apiService.getAdminWineData(eventId!);
 
             if (data.success) {
                 setWineData(data);
             } else {
-                setError(data.error || 'Failed to load wine data');
+                setError('Failed to load wine data');
             }
         } catch (err: any) {
             setError(err.message || 'Failed to load wine data');
@@ -99,19 +99,11 @@ export default function AdminPage() {
 
         try {
             setSaving(true);
-            const response = await fetch('/api/admin/wine-answer', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    playerId: editing.playerId,
-                    categoryId: editing.categoryId,
-                    newAnswer: newValue
-                })
-            });
-
-            const result = await response.json();
+            const result = await apiService.updateWineAnswer(
+                editing.playerId,
+                editing.categoryId,
+                newValue
+            );
 
             if (result.success) {
                 setEditing(null);

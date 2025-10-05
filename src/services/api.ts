@@ -444,6 +444,67 @@ class ApiService {
     async healthCheck(): Promise<{ status: string; timestamp: string }> {
         return this.request<{ status: string; timestamp: string }>('/api/health');
     }
+
+    // Admin methods
+    async getAdminWineData(eventId: string): Promise<{
+        success: boolean;
+        event_id: string;
+        players: Array<{
+            id: string;
+            name: string;
+            presentation_order: number;
+        }>;
+        categories: Array<{
+            id: string;
+            guessing_element: string;
+            difficulty_factor: string;
+        }>;
+        wine_answers: Array<{
+            player_id: string;
+            player_name: string;
+            presentation_order: number;
+            answers: Array<{
+                category_id: string;
+                wine_answer: string;
+            }>;
+        }>;
+        wine_guesses: Array<{
+            player_id: string;
+            player_name: string;
+            guesses: Array<{
+                category_id: string;
+                guess: string;
+                wine_number: number;
+            }>;
+        }>;
+    }> {
+        try {
+            return await this.request(`/api/admin/events/${eventId}/wine-data`);
+        } catch (error) {
+            console.error('Error in getAdminWineData:', error);
+            throw error;
+        }
+    }
+
+    async updateWineAnswer(playerId: string, categoryId: string, newAnswer: string): Promise<{
+        success: boolean;
+        message?: string;
+        error?: string;
+    }> {
+        try {
+            return await this.request('/api/admin/wine-answer', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    playerId,
+                    categoryId,
+                    newAnswer
+                })
+            });
+        } catch (error) {
+            console.error('Error in updateWineAnswer:', error);
+            throw error;
+        }
+    }
 }
 
 export const apiService = new ApiService();
