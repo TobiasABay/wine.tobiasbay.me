@@ -1,5 +1,5 @@
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_BASE_URL = isLocalhost ? 'http://localhost:3001' : 'https://wine.tobiasbay.me/backend';
+const API_BASE_URL = isLocalhost ? 'http://localhost:3001' : 'https://wine-tasting-api.tobiasabay.workers.dev';
 
 export interface WineCategory {
     id: string;
