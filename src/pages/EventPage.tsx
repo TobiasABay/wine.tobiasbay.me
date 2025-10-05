@@ -10,7 +10,7 @@ import { ArrowBack } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Player } from '../services/api';
 import { useSmartPolling } from '../hooks/useSmartPolling';
-import AverageScore from '../components/AverageScore';
+//import AverageScore from '../components/AverageScore';
 import WineCategoriesDisplay from '../components/WineCategoriesDisplay';
 
 export default function EventPage() {
@@ -197,13 +197,14 @@ export default function EventPage() {
                     </Box>
                 </Box>
 
-                {/* Average Score Component - Fixed position in upper right */}
+                {/*
                 {eventId && currentPlayer && (
                     <AverageScore
                         eventId={eventId}
                         wineNumber={currentPlayer.presentation_order}
                     />
                 )}
+                */}
 
                 {/* Wine Categories Display */}
                 {eventId && !loading && !error && (
