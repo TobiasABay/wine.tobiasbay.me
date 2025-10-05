@@ -74,7 +74,7 @@ export default function AdminPage() {
     const loadWineData = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`/api/admin/events/${eventId}/wine-data`);
+            const response = await fetch(`/api/admin/events/${eventId}/wine-data?t=${Date.now()}`);
             const data = await response.json();
 
             if (data.success) {
