@@ -9,8 +9,7 @@ import {
     Avatar,
     CircularProgress,
     Chip,
-    Collapse,
-    Divider
+    Collapse
 } from '@mui/material';
 import { ArrowBack, EmojiEvents, Star, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { apiService } from '../services/api';
@@ -162,24 +161,26 @@ export default function FinishPage() {
             presentation_order: player.presentation_order
         }));
 
-        // Show guesses for the current player's wine only
-        const currentPlayerWineNumber = currentPlayer.presentation_order;
-        const wineName = currentPlayer.player_name;
-        const wineNumber = currentPlayerWineNumber;
+        // Show ALL wines with guesses from the current player
+        const wineData = [];
 
-        const playerGuesses = allPlayers.map(player => {
-            const playerCategories = [];
+        for (const wineOwner of allPlayers) {
+            const wineName = wineOwner.name;
+            const wineNumber = wineOwner.presentation_order;
+
+            // Get the current player's guesses for this wine
+            const currentPlayerGuesses = [];
 
             for (const category of wineGuesses.categories) {
                 const playerGuess = category.guesses.find((g: any) =>
-                    g.player_name === player.name && g.wine_number === wineNumber
+                    g.player_name === currentPlayer.player_name && g.wine_number === wineNumber
                 );
 
                 if (playerGuess) {
                     // Find the correct answer for this wine owner's wine
                     const correctAnswer = getCorrectAnswer(category.id, wineNumber);
 
-                    playerCategories.push({
+                    currentPlayerGuesses.push({
                         categoryName: category.guessing_element,
                         categoryId: category.id,
                         guess: playerGuess.guess,
@@ -189,18 +190,15 @@ export default function FinishPage() {
                 }
             }
 
-            return {
-                playerId: player.id,
-                playerName: player.name,
-                categories: playerCategories
-            };
-        });
-
-        const wineData = [{
-            wineNumber,
-            wineName,
-            players: playerGuesses
-        }];
+            // Only show wine if the current player has guesses for it
+            if (currentPlayerGuesses.length > 0) {
+                wineData.push({
+                    wineNumber,
+                    wineName,
+                    categories: currentPlayerGuesses
+                });
+            }
+        }
 
         return wineData;
     };
@@ -535,77 +533,59 @@ export default function FinishPage() {
                                                                     🍷 {wineData.wineName}:
                                                                 </Typography>
 
-                                                                {wineData.players.map((playerData, playerIndex) => (
-                                                                    <Box key={playerIndex} sx={{ mb: 2 }}>
+                                                                {wineData.categories.map((category: any, categoryIndex: number) => (
+                                                                    <Box key={categoryIndex} sx={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: 1,
+                                                                        mb: 1,
+                                                                        ml: 3,
+                                                                        p: 1,
+                                                                        backgroundColor: category.isCorrect ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
+                                                                        borderRadius: 1,
+                                                                        border: `1px solid ${category.isCorrect ? 'rgba(40, 167, 69, 0.3)' : 'rgba(220, 53, 69, 0.3)'}`
+                                                                    }}>
                                                                         <Typography
-                                                                            variant="body1"
+                                                                            variant="body2"
                                                                             sx={{
-                                                                                fontWeight: 'bold',
+                                                                                fontWeight: 'medium',
                                                                                 color: '#2c3e50',
-                                                                                mb: 1,
-                                                                                fontSize: '1rem',
+                                                                                minWidth: '80px'
+                                                                            }}
+                                                                        >
+                                                                            {category.categoryName}:
+                                                                        </Typography>
+                                                                        <Chip
+                                                                            label={category.isCorrect ? "Correct" : "Incorrect"}
+                                                                            size="small"
+                                                                            sx={{
+                                                                                height: 18,
+                                                                                fontSize: '0.65rem',
+                                                                                backgroundColor: category.isCorrect ? '#e8f5e8' : '#f8d7da',
+                                                                                color: category.isCorrect ? '#155724' : '#721c24'
+                                                                            }}
+                                                                        />
+                                                                        <Typography
+                                                                            variant="body2"
+                                                                            sx={{
+                                                                                fontWeight: 'medium',
+                                                                                color: '#2c3e50',
+                                                                                fontStyle: 'italic'
+                                                                            }}
+                                                                        >
+                                                                            "{category.guess}"
+                                                                        </Typography>
+                                                                        <Typography
+                                                                            variant="body2"
+                                                                            sx={{
+                                                                                fontWeight: 'normal',
+                                                                                color: '#7f8c8d',
+                                                                                fontSize: '0.75rem',
                                                                                 ml: 1
                                                                             }}
                                                                         >
-                                                                            {playerData.playerName}:
+                                                                            (Correct: "{category.correctAnswer}")
                                                                         </Typography>
-
-                                                                        {playerData.categories.map((category: any, categoryIndex: number) => (
-                                                                            <Box key={categoryIndex} sx={{
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                gap: 1,
-                                                                                mb: 1,
-                                                                                ml: 3,
-                                                                                p: 1,
-                                                                                backgroundColor: category.isCorrect ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
-                                                                                borderRadius: 1,
-                                                                                border: `1px solid ${category.isCorrect ? 'rgba(40, 167, 69, 0.3)' : 'rgba(220, 53, 69, 0.3)'}`
-                                                                            }}>
-                                                                                <Typography
-                                                                                    variant="body2"
-                                                                                    sx={{
-                                                                                        fontWeight: 'medium',
-                                                                                        color: '#2c3e50',
-                                                                                        minWidth: '80px'
-                                                                                    }}
-                                                                                >
-                                                                                    {category.categoryName}:
-                                                                                </Typography>
-                                                                                <Chip
-                                                                                    label={category.isCorrect ? "Correct" : "Incorrect"}
-                                                                                    size="small"
-                                                                                    sx={{
-                                                                                        height: 18,
-                                                                                        fontSize: '0.65rem',
-                                                                                        backgroundColor: category.isCorrect ? '#e8f5e8' : '#f8d7da',
-                                                                                        color: category.isCorrect ? '#155724' : '#721c24'
-                                                                                    }}
-                                                                                />
-                                                                                <Typography
-                                                                                    variant="body2"
-                                                                                    sx={{
-                                                                                        fontWeight: 'medium',
-                                                                                        color: '#2c3e50',
-                                                                                        fontStyle: 'italic'
-                                                                                    }}
-                                                                                >
-                                                                                    "{category.guess}"
-                                                                                </Typography>
-                                                                                <Typography
-                                                                                    variant="body2"
-                                                                                    sx={{
-                                                                                        fontWeight: 'normal',
-                                                                                        color: '#7f8c8d',
-                                                                                        fontSize: '0.75rem',
-                                                                                        ml: 1
-                                                                                    }}
-                                                                                >
-                                                                                    (Correct: "{category.correctAnswer}")
-                                                                                </Typography>
-                                                                            </Box>
-                                                                        ))}
-                                                                        <Divider sx={{ my: 1 }} />
                                                                     </Box>
                                                                 ))}
                                                             </Box>
