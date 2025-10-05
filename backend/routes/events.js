@@ -255,6 +255,14 @@ router.put('/:eventId/current-wine', async (req, res) => {
 
         await db.setCurrentWine(eventId, wineNumber);
 
+        // Emit real-time update to all clients in this event
+        const io = req.app.get('io');
+        io.to(`event-${eventId}`).emit('current-wine-changed', {
+            eventId,
+            wineNumber,
+            timestamp: new Date().toISOString()
+        });
+
         res.json({ success: true, message: 'Current wine updated successfully' });
     } catch (error) {
         console.error('Error setting current wine:', error);

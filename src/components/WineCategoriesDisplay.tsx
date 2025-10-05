@@ -11,6 +11,7 @@ import {
 import { WineBar } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import { useSmartPolling } from '../hooks/useSmartPolling';
+import { webSocketService } from '../services/websocket';
 
 interface WineCategoriesDisplayProps {
     eventId: string;
@@ -122,8 +123,9 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         const nextWineNumber = currentWineNumber + 1;
         if (nextWineNumber <= totalWines) {
             try {
+                // API call will trigger WebSocket broadcast for immediate updates
                 await apiService.setCurrentWine(eventId, nextWineNumber);
-                setCurrentWineNumber(nextWineNumber);
+                // Note: setCurrentWineNumber is removed - WebSocket will handle the update
             } catch (error) {
                 console.error('Error setting current wine:', error);
             }
@@ -139,55 +141,82 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         const prevWineNumber = currentWineNumber - 1;
         if (prevWineNumber >= 1) {
             try {
+                // API call will trigger WebSocket broadcast for immediate updates
                 await apiService.setCurrentWine(eventId, prevWineNumber);
-                setCurrentWineNumber(prevWineNumber);
+                // Note: setCurrentWineNumber is removed - WebSocket will handle the update
             } catch (error) {
                 console.error('Error setting current wine:', error);
             }
         }
     };
 
-    // Use polling for real-time updates
-    useSmartPolling(async () => {
-        try {
-            // Get updated event data
-            const event = await apiService.getEvent(eventId);
-            const wineNum = event.current_wine_number || 1;
-            setCurrentWineNumber(wineNum);
-            setTotalWines(event.players?.length || 0);
+    // WebSocket setup for real-time wine changes
+    useEffect(() => {
+        if (!eventId) return;
 
+        // Connect to WebSocket and join event room
+        webSocketService.connect();
+        webSocketService.joinEvent(eventId);
+
+        // Listen for current wine changes
+        const handleCurrentWineChanged = (data: { eventId: string; wineNumber: number; timestamp: string }) => {
+            console.log('Current wine changed via WebSocket to', data.wineNumber);
+            setCurrentWineNumber(data.wineNumber);
+
+            // Refresh data for the new wine immediately
+            refreshWineData(data.wineNumber);
+        };
+
+        webSocketService.onCurrentWineChanged(handleCurrentWineChanged);
+
+        // Cleanup
+        return () => {
+            webSocketService.offCurrentWineChanged(handleCurrentWineChanged);
+            webSocketService.leaveEvent(eventId);
+        };
+    }, [eventId]);
+
+    // Function to refresh wine data
+    const refreshWineData = async (wineNumber?: number) => {
+        const targetWineNumber = wineNumber || currentWineNumber;
+
+        try {
             // Get updated average score for current wine
-            try {
-                const scoresResponse = await apiService.getWineScores(eventId);
-                const wineData = scoresResponse.averages[wineNum.toString()];
-                if (wineData) {
-                    setAverageScore(wineData.average);
-                    setScoreCount(wineData.totalScores);
-                } else {
-                    setAverageScore(null);
-                    setScoreCount(0);
-                }
-            } catch (scoreError) {
-                console.log('Error fetching scores:', scoreError);
+            const scoresResponse = await apiService.getWineScores(eventId);
+            const wineData = scoresResponse.averages[targetWineNumber.toString()];
+            if (wineData) {
+                setAverageScore(wineData.average);
+                setScoreCount(wineData.totalScores);
+            } else {
                 setAverageScore(null);
                 setScoreCount(0);
             }
 
             // Get updated wine guesses
-            try {
-                const guessesResponse = await apiService.getEventWineGuesses(eventId);
-                if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
-                    setCategories(guessesResponse.categories);
-                }
-            } catch (guessesError) {
-                console.log('Error fetching guesses:', guessesError);
+            const guessesResponse = await apiService.getEventWineGuesses(eventId);
+            if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
+                setCategories(guessesResponse.categories);
             }
+        } catch (error) {
+            console.error('Error refreshing wine data:', error);
+        }
+    };
+
+    // Fallback polling for other updates (reduced frequency)
+    useSmartPolling(async () => {
+        try {
+            // Get updated event data for total wines count
+            const event = await apiService.getEvent(eventId);
+            setTotalWines(event.players?.length || 0);
+
+            // Refresh wine data
+            await refreshWineData();
         } catch (error) {
             console.error('Error polling for updates:', error);
         }
     }, {
         enabled: true,
-        interval: 15000 // Poll every 15 seconds
+        interval: 30000 // Poll every 30 seconds for other updates (reduced frequency)
     });
 
     // Fetch initial data and total wines count

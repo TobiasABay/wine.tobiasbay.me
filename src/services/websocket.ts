@@ -111,6 +111,14 @@ class WebSocketService {
         }
     }
 
+    onCurrentWineChanged(callback: (data: { eventId: string; wineNumber: number; timestamp: string }) => void): void {
+        if (this.socket) {
+            this.socket.on('current-wine-changed', callback);
+        } else {
+            console.error('❌ Socket not connected when setting up current-wine-changed listener');
+        }
+    }
+
 
     // Remove event listeners
     offPlayerJoined(callback?: (data: any) => void): void {
@@ -146,6 +154,12 @@ class WebSocketService {
     offEventCreated(callback?: (data: any) => void): void {
         if (this.socket) {
             this.socket.off('event-created', callback);
+        }
+    }
+
+    offCurrentWineChanged(callback?: (data: { eventId: string; wineNumber: number; timestamp: string }) => void): void {
+        if (this.socket) {
+            this.socket.off('current-wine-changed', callback);
         }
     }
 
