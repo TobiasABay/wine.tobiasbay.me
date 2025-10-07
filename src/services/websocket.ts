@@ -7,7 +7,7 @@ class WebSocketService {
     connect(): Socket {
         if (!this.socket) {
             const wsUrl = process.env.NODE_ENV === 'production'
-                ? 'https://backend.wine.tobiasbay.me'
+                ? 'https://api.wine.tobiasbay.me'
                 : 'http://localhost:3001';
             // Connecting to WebSocket
             this.socket = io(wsUrl, {
