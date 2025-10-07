@@ -9,9 +9,8 @@ function generateUUID() {
 
 // Input validation functions
 function validateScore(score) {
-    const num = parseInt(score);
-    const scoreStr = String(score);
-    return !isNaN(num) && num >= 1 && num <= 5 && !scoreStr.includes('.') && !scoreStr.includes(',');
+    const num = parseFloat(score);
+    return !isNaN(num) && num >= 1 && num <= 5;
 }
 
 function validateUUID(uuid) {
@@ -858,7 +857,7 @@ async function submitWineScore(request, env, eventId, corsHeaders) {
         // Validate score
         if (!validateScore(score)) {
             return new Response(JSON.stringify({
-                error: 'Score must be an integer between 1 and 5'
+                error: 'Score must be a number between 1 and 5'
             }), {
                 status: 400,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }

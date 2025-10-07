@@ -469,14 +469,6 @@ export default function PlayerScoringPage() {
             return;
         }
 
-        // Check if it's an integer
-        if (!Number.isInteger(numValue)) {
-            setScoreError('Must be a whole number');
-            setIsValidScore(false);
-            setScore(value);
-            return;
-        }
-
         // Check if it's within range
         if (numValue < 1 || numValue > 5) {
             setScoreError('Must be between 1 and 5');
@@ -485,7 +477,7 @@ export default function PlayerScoringPage() {
             return;
         }
 
-        // Valid score
+        // Valid score (decimals allowed)
         setScore(value);
         setIsValidScore(true);
         setScoreError('');
@@ -878,12 +870,12 @@ export default function PlayerScoringPage() {
                             </Typography>
 
                             <TextField
-                                label="Score (1-5)"
+                                label="Score (1-5, decimals allowed)"
                                 type="number"
-                                inputMode="numeric"
+                                inputMode="decimal"
                                 value={score}
                                 onChange={handleScoreChange}
-                                inputProps={{ min: 1, max: 5 }}
+                                inputProps={{ min: 1, max: 5, step: 0.1 }}
                                 error={!isValidScore}
                                 helperText={scoreError}
                                 sx={{
