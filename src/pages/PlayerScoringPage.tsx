@@ -265,7 +265,6 @@ export default function PlayerScoringPage() {
     const [wineCategories, setWineCategories] = useState<WineCategory[]>([]);
     const [categoryGuesses, setCategoryGuesses] = useState<Record<string, string>>({});
     const [guessesSubmitted, setGuessesSubmitted] = useState<boolean>(false);
-    const [eventStarted, setEventStarted] = useState<boolean>(false);
     const [selectedCountry, setSelectedCountry] = useState<string>('');
     const [scoreError, setScoreError] = useState<string>('');
     const [isValidScore, setIsValidScore] = useState<boolean>(true);
@@ -317,7 +316,6 @@ export default function PlayerScoringPage() {
                 setWineCategories(categories);
 
                 // Check if event has started
-                setEventStarted(event.event_started || false);
                 if (!event.event_started) {
                     setError('Event has not started yet. Please wait for the event creator to start the event.');
                     setLoading(false);
@@ -418,9 +416,6 @@ export default function PlayerScoringPage() {
 
         try {
             const event = await apiService.getEvent(eventId);
-
-            // Update event started state
-            setEventStarted(event.event_started || false);
 
             // Check if current wine has changed
             const eventCurrentWine = event.current_wine_number || 1;
