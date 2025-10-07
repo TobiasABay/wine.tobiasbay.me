@@ -17,7 +17,6 @@ import { ArrowBack, WineBar } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Player, WineCategory } from '../services/api';
 import { useSmartPolling } from '../hooks/useSmartPolling';
-import { webSocketService } from '../services/websocket';
 
 // Country to regions mapping for smart filtering
 const COUNTRY_REGIONS_MAP: { [key: string]: string[] } = {
@@ -413,60 +412,44 @@ export default function PlayerScoringPage() {
         loadCurrentWineData();
     }, [eventId, currentPlayerId, currentPlayer, currentWineNumber]);
 
-    // WebSocket setup for real-time updates
-    useEffect(() => {
-        if (!eventId) return;
-
-        // Connect to WebSocket and join event room
-        webSocketService.connect();
-        webSocketService.joinEvent(eventId);
-
-        // Listen for current wine changes
-        const handleCurrentWineChanged = (data: { eventId: string; wineNumber: number; timestamp: string }) => {
-            console.log('Current wine changed via WebSocket from', currentWineNumber, 'to', data.wineNumber);
-
-            // Update current wine number
-            setCurrentWineNumber(data.wineNumber);
-
-            // Update current player to match the new wine number
-            const playerForWine = allPlayers.find(p => p.presentation_order === data.wineNumber);
-            if (playerForWine) {
-                setCurrentPlayer(playerForWine);
-                console.log('Updated current player to:', playerForWine.name);
-            }
-
-            // Clear any existing scores and guesses for the new wine
-            setScore('');
-            setCategoryGuesses({});
-            setSubmitted(false);
-            setScoreError('');
-            setIsValidScore(true);
-        };
-
-        webSocketService.onCurrentWineChanged(handleCurrentWineChanged);
-
-        // Cleanup
-        return () => {
-            webSocketService.offCurrentWineChanged(handleCurrentWineChanged);
-            webSocketService.leaveEvent(eventId);
-        };
-    }, [eventId, allPlayers, currentWineNumber]);
-
-    // Fallback polling for other event updates (reduced frequency)
+    // Polling for real-time updates (current wine changes and event status)
     const { refreshNow } = useSmartPolling(async () => {
-        if (!eventId || !eventStarted) return;
+        if (!eventId) return;
 
         try {
             const event = await apiService.getEvent(eventId);
 
             // Update event started state
             setEventStarted(event.event_started || false);
+
+            // Check if current wine has changed
+            const eventCurrentWine = event.current_wine_number || 1;
+            if (eventCurrentWine !== currentWineNumber) {
+                console.log('Current wine changed from', currentWineNumber, 'to', eventCurrentWine);
+
+                // Update current wine number
+                setCurrentWineNumber(eventCurrentWine);
+
+                // Update current player to match the new wine number
+                const playerForWine = allPlayers.find(p => p.presentation_order === eventCurrentWine);
+                if (playerForWine) {
+                    setCurrentPlayer(playerForWine);
+                    console.log('Updated current player to:', playerForWine.name);
+                }
+
+                // Clear any existing scores and guesses for the new wine
+                setScore('');
+                setCategoryGuesses({});
+                setSubmitted(false);
+                setScoreError('');
+                setIsValidScore(true);
+            }
         } catch (error) {
             console.error('Error polling for event updates:', error);
         }
     }, {
-        enabled: !!eventId && eventStarted,
-        interval: 30000 // Poll every 30 seconds for other updates (reduced frequency)
+        enabled: !!eventId,
+        interval: 5000 // Poll every 5 seconds for real-time updates
     });
 
     const handleScoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {

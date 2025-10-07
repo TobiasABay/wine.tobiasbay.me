@@ -11,7 +11,6 @@ import {
 import { WineBar } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import { useSmartPolling } from '../hooks/useSmartPolling';
-import { webSocketService } from '../services/websocket';
 
 interface WineCategoriesDisplayProps {
     eventId: string;
@@ -150,31 +149,6 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         }
     };
 
-    // WebSocket setup for real-time wine changes
-    useEffect(() => {
-        if (!eventId) return;
-
-        // Connect to WebSocket and join event room
-        webSocketService.connect();
-        webSocketService.joinEvent(eventId);
-
-        // Listen for current wine changes
-        const handleCurrentWineChanged = (data: { eventId: string; wineNumber: number; timestamp: string }) => {
-            console.log('Current wine changed via WebSocket to', data.wineNumber);
-            setCurrentWineNumber(data.wineNumber);
-
-            // Refresh data for the new wine immediately
-            refreshWineData(data.wineNumber);
-        };
-
-        webSocketService.onCurrentWineChanged(handleCurrentWineChanged);
-
-        // Cleanup
-        return () => {
-            webSocketService.offCurrentWineChanged(handleCurrentWineChanged);
-            webSocketService.leaveEvent(eventId);
-        };
-    }, [eventId]);
 
     // Function to refresh wine data
     const refreshWineData = async (wineNumber?: number) => {
@@ -202,21 +176,30 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         }
     };
 
-    // Fallback polling for other updates (reduced frequency)
+    // Polling for real-time updates (wine changes, scores, guesses)
     useSmartPolling(async () => {
         try {
-            // Get updated event data for total wines count
+            // Get updated event data for total wines count and current wine
             const event = await apiService.getEvent(eventId);
             setTotalWines(event.players?.length || 0);
 
-            // Refresh wine data
-            await refreshWineData();
+            // Check if current wine has changed
+            const eventCurrentWine = event.current_wine_number || 1;
+            if (eventCurrentWine !== currentWineNumber) {
+                console.log('Current wine changed to', eventCurrentWine);
+                setCurrentWineNumber(eventCurrentWine);
+                // Refresh data for the new wine immediately
+                await refreshWineData(eventCurrentWine);
+            } else {
+                // Refresh wine data for current wine
+                await refreshWineData();
+            }
         } catch (error) {
             console.error('Error polling for updates:', error);
         }
     }, {
         enabled: true,
-        interval: 30000 // Poll every 30 seconds for other updates (reduced frequency)
+        interval: 5000 // Poll every 5 seconds for real-time updates
     });
 
     // Fetch initial data and total wines count
