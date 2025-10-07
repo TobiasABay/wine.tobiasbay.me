@@ -122,9 +122,11 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         const nextWineNumber = currentWineNumber + 1;
         if (nextWineNumber <= totalWines) {
             try {
-                // API call will trigger WebSocket broadcast for immediate updates
+                // Update database and local state immediately
                 await apiService.setCurrentWine(eventId, nextWineNumber);
-                // Note: setCurrentWineNumber is removed - WebSocket will handle the update
+                setCurrentWineNumber(nextWineNumber);
+                // Refresh data for the new wine
+                await refreshWineData(nextWineNumber);
             } catch (error) {
                 console.error('Error setting current wine:', error);
             }
@@ -140,9 +142,11 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         const prevWineNumber = currentWineNumber - 1;
         if (prevWineNumber >= 1) {
             try {
-                // API call will trigger WebSocket broadcast for immediate updates
+                // Update database and local state immediately
                 await apiService.setCurrentWine(eventId, prevWineNumber);
-                // Note: setCurrentWineNumber is removed - WebSocket will handle the update
+                setCurrentWineNumber(prevWineNumber);
+                // Refresh data for the new wine
+                await refreshWineData(prevWineNumber);
             } catch (error) {
                 console.error('Error setting current wine:', error);
             }
@@ -199,7 +203,7 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         }
     }, {
         enabled: true,
-        interval: 5000 // Poll every 5 seconds for real-time updates
+        interval: 3000 // Poll every 3 seconds for real-time updates
     });
 
     // Fetch initial data and total wines count

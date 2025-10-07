@@ -449,7 +449,7 @@ export default function PlayerScoringPage() {
         }
     }, {
         enabled: !!eventId,
-        interval: 5000 // Poll every 5 seconds for real-time updates
+        interval: 3000 // Poll every 3 seconds for real-time updates
     });
 
     const handleScoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
