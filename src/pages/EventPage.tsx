@@ -178,10 +178,23 @@ export default function EventPage() {
                     <Box sx={{
                         mt: 4,
                         display: 'flex',
-                        flexDirection: 'column',
+                        alignItems: 'center',
                         gap: 2,
-                        alignItems: 'flex-start'
+                        flexWrap: 'wrap'
                     }}>
+                        <Typography
+                            variant="h1"
+                            sx={{
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: { xs: '2.5rem', md: '4rem' },
+                                textShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                                letterSpacing: '-0.02em',
+                                lineHeight: 1.1
+                            }}
+                        >
+                            {currentPlayer.name}
+                        </Typography>
                         <Chip
                             label={`Wine #${currentPlayer.presentation_order}`}
                             sx={{
@@ -199,19 +212,6 @@ export default function EventPage() {
                                 }
                             }}
                         />
-                        <Typography
-                            variant="h1"
-                            sx={{
-                                color: 'white',
-                                fontWeight: 'bold',
-                                fontSize: { xs: '2.5rem', md: '4rem' },
-                                textShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                                letterSpacing: '-0.02em',
-                                lineHeight: 1.1
-                            }}
-                        >
-                            {currentPlayer.name}
-                        </Typography>
                     </Box>
                 </Box>
 
