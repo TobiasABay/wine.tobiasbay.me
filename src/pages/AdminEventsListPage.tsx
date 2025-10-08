@@ -15,15 +15,28 @@ import {
     CircularProgress,
     Alert,
     Link,
-    Chip
+    Chip,
+    IconButton,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
+    Button,
+    Snackbar
 } from '@mui/material';
 import { UserButton, useUser } from '@clerk/clerk-react';
-import { CheckCircle, Cancel } from '@mui/icons-material';
+import { CheckCircle, Cancel, Delete } from '@mui/icons-material';
 
 export default function AdminEventsListPage() {
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+    const [deleting, setDeleting] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
     const { user } = useUser();
     const navigate = useNavigate();
 
@@ -50,6 +63,44 @@ export default function AdminEventsListPage() {
 
     const handleEventClick = (eventId: string) => {
         navigate(`/admin/${eventId}`);
+    };
+
+    const handleDeleteClick = (event: Event, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEventToDelete(event);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+        setEventToDelete(null);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!eventToDelete) return;
+
+        try {
+            setDeleting(true);
+            await apiService.deleteEvent(eventToDelete.id);
+
+            // Remove the event from the list
+            setEvents(events.filter(e => e.id !== eventToDelete.id));
+
+            setSnackbarMessage(`Event "${eventToDelete.name}" deleted successfully`);
+            setSnackbarOpen(true);
+            setDeleteDialogOpen(false);
+            setEventToDelete(null);
+        } catch (err: any) {
+            setError(err.message || 'Failed to delete event');
+            setSnackbarMessage('Failed to delete event');
+            setSnackbarOpen(true);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false);
     };
 
     if (loading) {
@@ -112,12 +163,13 @@ export default function AdminEventsListPage() {
                                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Location</TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Players</TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Status</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {events.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                                         <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                                             No events found
                                         </Typography>
@@ -207,6 +259,21 @@ export default function AdminEventsListPage() {
                                                 )}
                                             </Box>
                                         </TableCell>
+                                        <TableCell>
+                                            <IconButton
+                                                onClick={(e) => handleDeleteClick(event, e)}
+                                                color="error"
+                                                size="small"
+                                                sx={{
+                                                    '&:hover': {
+                                                        backgroundColor: 'error.light',
+                                                        color: 'white'
+                                                    }
+                                                }}
+                                            >
+                                                <Delete />
+                                            </IconButton>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             )}
@@ -214,6 +281,51 @@ export default function AdminEventsListPage() {
                     </Table>
                 </TableContainer>
             </Paper>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={handleDeleteCancel}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Delete Event</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete the event <strong>"{eventToDelete?.name}"</strong>?
+                        <br /><br />
+                        This action will permanently delete:
+                        <ul style={{ marginTop: '8px', marginBottom: '8px' }}>
+                            <li>The event and all its details</li>
+                            <li>All players and their wine submissions</li>
+                            <li>All wine scores and guesses</li>
+                        </ul>
+                        <strong>This action cannot be undone.</strong>
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleDeleteCancel} disabled={deleting}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDeleteConfirm}
+                        color="error"
+                        variant="contained"
+                        disabled={deleting}
+                        startIcon={deleting ? <CircularProgress size={16} /> : <Delete />}
+                    >
+                        {deleting ? 'Deleting...' : 'Delete Event'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Snackbar for notifications */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={4000}
+                onClose={handleSnackbarClose}
+                message={snackbarMessage}
+            />
         </Container>
     );
 }

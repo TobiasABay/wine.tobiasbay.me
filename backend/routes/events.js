@@ -89,6 +89,33 @@ router.get('/:eventId', async (req, res) => {
     }
 });
 
+// Delete an event
+router.delete('/:eventId', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+
+        // Check if event exists first
+        const event = await db.getEventById(eventId);
+        if (!event) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        await db.deleteEvent(eventId);
+
+        // Emit real-time update
+        const io = req.app.get('io');
+        io.emit('event-deleted', { eventId });
+
+        res.json({
+            success: true,
+            message: 'Event and all related data deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        res.status(500).json({ error: 'Failed to delete event' });
+    }
+});
+
 // Get event by join code
 router.get('/join/:joinCode', async (req, res) => {
     try {

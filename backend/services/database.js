@@ -121,6 +121,46 @@ class Database {
         });
     }
 
+    deleteEvent(eventId) {
+        return new Promise((resolve, reject) => {
+            // Delete all related data in a transaction
+            this.db.serialize(() => {
+                this.db.run('BEGIN TRANSACTION');
+
+                // Delete wine guesses
+                this.db.run('DELETE FROM wine_guesses WHERE player_id IN (SELECT id FROM players WHERE event_id = ?)', [eventId]);
+
+                // Delete wine scores
+                this.db.run('DELETE FROM wine_scores WHERE event_id = ?', [eventId]);
+
+                // Delete wine answers
+                this.db.run('DELETE FROM wine_answers WHERE player_id IN (SELECT id FROM players WHERE event_id = ?)', [eventId]);
+
+                // Delete players
+                this.db.run('DELETE FROM players WHERE event_id = ?', [eventId]);
+
+                // Delete wine categories
+                this.db.run('DELETE FROM wine_categories WHERE event_id = ?', [eventId]);
+
+                // Delete the event itself
+                this.db.run('DELETE FROM events WHERE id = ?', [eventId], function (err) {
+                    if (err) {
+                        this.db.run('ROLLBACK');
+                        reject(err);
+                    } else {
+                        this.db.run('COMMIT', (commitErr) => {
+                            if (commitErr) {
+                                reject(commitErr);
+                            } else {
+                                resolve({ success: true, deletedRows: this.changes });
+                            }
+                        });
+                    }
+                }.bind(this.db));
+            });
+        });
+    }
+
     updateEventAutoShuffle(eventId, autoShuffle) {
         return new Promise((resolve, reject) => {
             const sql = 'UPDATE events SET auto_shuffle = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';

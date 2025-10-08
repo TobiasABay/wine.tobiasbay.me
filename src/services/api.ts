@@ -157,6 +157,12 @@ class ApiService {
         return this.request<Event>(`/api/events/${eventId}`);
     }
 
+    async deleteEvent(eventId: string): Promise<{ success: boolean; message: string }> {
+        return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}`, {
+            method: 'DELETE',
+        });
+    }
+
     async getEventByJoinCode(joinCode: string): Promise<Event> {
         return this.request<Event>(`/api/events/join/${joinCode}`);
     }
