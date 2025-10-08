@@ -157,6 +157,13 @@ class ApiService {
         return this.request<Event>(`/api/events/${eventId}`);
     }
 
+    async updateEvent(eventId: string, eventData: Partial<EventData>): Promise<{ success: boolean; message: string }> {
+        return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}`, {
+            method: 'PUT',
+            body: JSON.stringify(eventData),
+        });
+    }
+
     async deleteEvent(eventId: string): Promise<{ success: boolean; message: string }> {
         return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}`, {
             method: 'DELETE',

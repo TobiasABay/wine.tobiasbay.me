@@ -89,6 +89,34 @@ router.get('/:eventId', async (req, res) => {
     }
 });
 
+// Update an event
+router.put('/:eventId', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const eventData = req.body;
+
+        // Check if event exists first
+        const event = await db.getEventById(eventId);
+        if (!event) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        await db.updateEvent(eventId, eventData);
+
+        // Emit real-time update
+        const io = req.app.get('io');
+        io.emit('event-updated', { eventId });
+
+        res.json({
+            success: true,
+            message: 'Event updated successfully'
+        });
+    } catch (error) {
+        console.error('Error updating event:', error);
+        res.status(500).json({ error: 'Failed to update event' });
+    }
+});
+
 // Delete an event
 router.delete('/:eventId', async (req, res) => {
     try {

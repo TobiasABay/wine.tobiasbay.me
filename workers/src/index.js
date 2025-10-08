@@ -130,6 +130,11 @@ export default {
                 return await adminUpdateWineAnswer(request, env, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/events/') && method === 'PUT' && apiPath.split('/').length === 4) {
+                const eventId = apiPath.split('/')[3];
+                return await updateEvent(eventId, request, env, corsHeaders);
+            }
+
             if (apiPath.startsWith('/api/events/') && method === 'DELETE') {
                 const eventId = apiPath.split('/')[3];
                 return await deleteEvent(eventId, env, corsHeaders);
@@ -276,6 +281,60 @@ async function createEvent(request, env, corsHeaders) {
     } catch (error) {
         console.error('Error in createEvent:', error);
         throw error;
+    }
+}
+
+async function updateEvent(eventId, request, env, corsHeaders) {
+    try {
+        const eventData = await request.json();
+
+        // Check if event exists first
+        const event = await env.wine_events.prepare(`
+            SELECT * FROM events WHERE id = ?
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Update the event
+        await env.wine_events.prepare(`
+            UPDATE events 
+            SET name = ?, date = ?, max_participants = ?, wine_type = ?, 
+                location = ?, description = ?, budget = ?, duration = ?, 
+                wine_notes = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `).bind(
+            eventData.name,
+            eventData.date,
+            eventData.maxParticipants || eventData.max_participants,
+            eventData.wineType || eventData.wine_type,
+            eventData.location,
+            eventData.description || '',
+            eventData.budget || '',
+            eventData.duration || '',
+            eventData.wineNotes || eventData.wine_notes || '',
+            eventId
+        ).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Event updated successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('[UPDATE_EVENT] Error updating event:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to update event',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
     }
 }
 

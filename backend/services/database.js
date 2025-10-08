@@ -121,6 +121,37 @@ class Database {
         });
     }
 
+    updateEvent(eventId, eventData) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                UPDATE events 
+                SET name = ?, date = ?, max_participants = ?, wine_type = ?, 
+                    location = ?, description = ?, budget = ?, duration = ?, 
+                    wine_notes = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `;
+
+            this.db.run(sql, [
+                eventData.name,
+                eventData.date,
+                eventData.maxParticipants || eventData.max_participants,
+                eventData.wineType || eventData.wine_type,
+                eventData.location,
+                eventData.description || '',
+                eventData.budget || '',
+                eventData.duration || '',
+                eventData.wineNotes || eventData.wine_notes || '',
+                eventId
+            ], function (err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
     deleteEvent(eventId) {
         return new Promise((resolve, reject) => {
             // Delete all related data in a transaction

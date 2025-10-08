@@ -23,10 +23,15 @@ import {
     DialogContentText,
     DialogActions,
     Button,
-    Snackbar
+    Snackbar,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
+    TextField
 } from '@mui/material';
 import { UserButton, useUser } from '@clerk/clerk-react';
-import { CheckCircle, Cancel, Delete } from '@mui/icons-material';
+import { CheckCircle, Cancel, Delete, MoreVert, Edit } from '@mui/icons-material';
 
 export default function AdminEventsListPage() {
     const [events, setEvents] = useState<Event[]>([]);
@@ -37,6 +42,21 @@ export default function AdminEventsListPage() {
     const [deleting, setDeleting] = useState(false);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editFormData, setEditFormData] = useState({
+        name: '',
+        date: '',
+        location: '',
+        wine_type: '',
+        max_participants: 0,
+        description: '',
+        budget: '',
+        duration: '',
+        wine_notes: ''
+    });
+    const [saving, setSaving] = useState(false);
     const { user } = useUser();
     const navigate = useNavigate();
 
@@ -65,10 +85,86 @@ export default function AdminEventsListPage() {
         navigate(`/admin/${eventId}`);
     };
 
-    const handleDeleteClick = (event: Event, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setEventToDelete(event);
-        setDeleteDialogOpen(true);
+    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, selectedEvent: Event) => {
+        event.stopPropagation();
+        setMenuAnchorEl(event.currentTarget);
+        setSelectedEvent(selectedEvent);
+    };
+
+    const handleMenuClose = () => {
+        setMenuAnchorEl(null);
+        setSelectedEvent(null);
+    };
+
+    const handleEditClick = () => {
+        if (selectedEvent) {
+            // Populate form with current event data
+            setEditFormData({
+                name: selectedEvent.name,
+                date: selectedEvent.date.split('T')[0], // Convert to YYYY-MM-DD format
+                location: selectedEvent.location,
+                wine_type: selectedEvent.wine_type,
+                max_participants: selectedEvent.max_participants,
+                description: selectedEvent.description || '',
+                budget: selectedEvent.budget || '',
+                duration: selectedEvent.duration || '',
+                wine_notes: selectedEvent.wine_notes || ''
+            });
+            setEditDialogOpen(true);
+            handleMenuClose();
+        }
+    };
+
+    const handleEditDialogClose = () => {
+        setEditDialogOpen(false);
+        setSelectedEvent(null);
+    };
+
+    const handleEditFormChange = (field: string, value: string | number) => {
+        setEditFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleEditSave = async () => {
+        if (!selectedEvent) return;
+
+        try {
+            setSaving(true);
+            await apiService.updateEvent(selectedEvent.id, {
+                name: editFormData.name,
+                date: editFormData.date,
+                location: editFormData.location,
+                wineType: editFormData.wine_type,
+                maxParticipants: editFormData.max_participants,
+                description: editFormData.description,
+                budget: editFormData.budget,
+                duration: editFormData.duration,
+                wineNotes: editFormData.wine_notes
+            });
+
+            // Reload events to show updated data
+            await loadEvents();
+
+            setSnackbarMessage(`Event "${editFormData.name}" updated successfully`);
+            setSnackbarOpen(true);
+            handleEditDialogClose();
+        } catch (err: any) {
+            setError(err.message || 'Failed to update event');
+            setSnackbarMessage('Failed to update event');
+            setSnackbarOpen(true);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteClick = () => {
+        if (selectedEvent) {
+            setEventToDelete(selectedEvent);
+            setDeleteDialogOpen(true);
+            handleMenuClose();
+        }
     };
 
     const handleDeleteCancel = () => {
@@ -261,17 +357,10 @@ export default function AdminEventsListPage() {
                                         </TableCell>
                                         <TableCell>
                                             <IconButton
-                                                onClick={(e) => handleDeleteClick(event, e)}
-                                                color="error"
+                                                onClick={(e) => handleMenuOpen(e, event)}
                                                 size="small"
-                                                sx={{
-                                                    '&:hover': {
-                                                        backgroundColor: 'error.light',
-                                                        color: 'white'
-                                                    }
-                                                }}
                                             >
-                                                <Delete />
+                                                <MoreVert />
                                             </IconButton>
                                         </TableCell>
                                     </TableRow>
@@ -281,6 +370,133 @@ export default function AdminEventsListPage() {
                     </Table>
                 </TableContainer>
             </Paper>
+
+            {/* Actions Menu */}
+            <Menu
+                anchorEl={menuAnchorEl}
+                open={Boolean(menuAnchorEl)}
+                onClose={handleMenuClose}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
+            >
+                <MenuItem onClick={handleEditClick}>
+                    <ListItemIcon>
+                        <Edit fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Edit</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
+                    <ListItemIcon>
+                        <Delete fontSize="small" sx={{ color: 'error.main' }} />
+                    </ListItemIcon>
+                    <ListItemText>Delete</ListItemText>
+                </MenuItem>
+            </Menu>
+
+            {/* Edit Dialog */}
+            <Dialog
+                open={editDialogOpen}
+                onClose={handleEditDialogClose}
+                maxWidth="md"
+                fullWidth
+            >
+                <DialogTitle>Edit Event</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <TextField
+                            fullWidth
+                            label="Event Name"
+                            value={editFormData.name}
+                            onChange={(e) => handleEditFormChange('name', e.target.value)}
+                            required
+                        />
+                        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                            <TextField
+                                fullWidth
+                                label="Date"
+                                type="date"
+                                value={editFormData.date}
+                                onChange={(e) => handleEditFormChange('date', e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                                required
+                            />
+                            <TextField
+                                fullWidth
+                                label="Max Participants"
+                                type="number"
+                                value={editFormData.max_participants}
+                                onChange={(e) => handleEditFormChange('max_participants', parseInt(e.target.value))}
+                                required
+                            />
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                            <TextField
+                                fullWidth
+                                label="Wine Type"
+                                value={editFormData.wine_type}
+                                onChange={(e) => handleEditFormChange('wine_type', e.target.value)}
+                                required
+                            />
+                            <TextField
+                                fullWidth
+                                label="Location"
+                                value={editFormData.location}
+                                onChange={(e) => handleEditFormChange('location', e.target.value)}
+                                required
+                            />
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                            <TextField
+                                fullWidth
+                                label="Budget"
+                                value={editFormData.budget}
+                                onChange={(e) => handleEditFormChange('budget', e.target.value)}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Duration"
+                                value={editFormData.duration}
+                                onChange={(e) => handleEditFormChange('duration', e.target.value)}
+                            />
+                        </Box>
+                        <TextField
+                            fullWidth
+                            label="Description"
+                            multiline
+                            rows={3}
+                            value={editFormData.description}
+                            onChange={(e) => handleEditFormChange('description', e.target.value)}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Wine Notes"
+                            multiline
+                            rows={3}
+                            value={editFormData.wine_notes}
+                            onChange={(e) => handleEditFormChange('wine_notes', e.target.value)}
+                        />
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleEditDialogClose} disabled={saving}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleEditSave}
+                        variant="contained"
+                        disabled={saving || !editFormData.name || !editFormData.date}
+                        startIcon={saving ? <CircularProgress size={16} /> : null}
+                    >
+                        {saving ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Delete Confirmation Dialog */}
             <Dialog
