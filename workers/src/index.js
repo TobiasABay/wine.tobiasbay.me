@@ -132,6 +132,11 @@ export default {
                 return await adminUpdateWineAnswer(request, env, corsHeaders);
             }
 
+            if (apiPath.startsWith('/api/events/') && method === 'DELETE') {
+                const eventId = apiPath.split('/')[3];
+                return await deleteEvent(eventId, env, corsHeaders);
+            }
+
             if (apiPath.startsWith('/api/events/') && method === 'GET') {
                 const eventId = apiPath.split('/')[3];
                 return await getEvent(eventId, env, corsHeaders);
@@ -277,6 +282,85 @@ async function createEvent(request, env, corsHeaders) {
     } catch (error) {
         console.error('Error in createEvent:', error);
         throw error;
+    }
+}
+
+async function deleteEvent(eventId, env, corsHeaders) {
+    try {
+        console.log(`[DELETE_EVENT] Deleting event: ${eventId}`);
+
+        // Check if event exists first
+        const event = await env.wine_events.prepare(`
+            SELECT * FROM events WHERE id = ?
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Delete all related data (D1 doesn't support transactions, so we do it sequentially)
+        // Get all player IDs for this event first
+        const playersResult = await env.wine_events.prepare(`
+            SELECT id FROM players WHERE event_id = ?
+        `).bind(eventId).all();
+        const playerIds = playersResult.results || [];
+
+        console.log(`[DELETE_EVENT] Deleting data for ${playerIds.length} players`);
+
+        // Delete wine guesses for all players
+        for (const player of playerIds) {
+            await env.wine_events.prepare(`
+                DELETE FROM player_wine_guesses WHERE player_id = ?
+            `).bind(player.id).run();
+        }
+
+        // Delete wine scores
+        await env.wine_events.prepare(`
+            DELETE FROM wine_scores WHERE event_id = ?
+        `).bind(eventId).run();
+
+        // Delete wine answers for all players
+        for (const player of playerIds) {
+            await env.wine_events.prepare(`
+                DELETE FROM player_wine_details WHERE player_id = ?
+            `).bind(player.id).run();
+        }
+
+        // Delete players
+        await env.wine_events.prepare(`
+            DELETE FROM players WHERE event_id = ?
+        `).bind(eventId).run();
+
+        // Delete wine categories
+        await env.wine_events.prepare(`
+            DELETE FROM wine_categories WHERE event_id = ?
+        `).bind(eventId).run();
+
+        // Delete the event itself
+        await env.wine_events.prepare(`
+            DELETE FROM events WHERE id = ?
+        `).bind(eventId).run();
+
+        console.log(`[DELETE_EVENT] Successfully deleted event: ${eventId}`);
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Event and all related data deleted successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('[DELETE_EVENT] Error deleting event:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to delete event',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
     }
 }
 
