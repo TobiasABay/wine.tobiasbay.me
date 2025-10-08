@@ -4,7 +4,8 @@ import {
     Box,
     Typography,
     Container,
-    Button
+    Button,
+    Chip
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { apiService } from '../services/api';
@@ -174,29 +175,42 @@ export default function EventPage() {
                     </Button>
 
                     {/* Player Name and Wine Number */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 4 }}>
+                    <Box sx={{
+                        mt: 4,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        alignItems: 'flex-start'
+                    }}>
+                        <Chip
+                            label={`Wine #${currentPlayer.presentation_order}`}
+                            sx={{
+                                backgroundColor: 'rgba(255,255,255,0.25)',
+                                color: 'white',
+                                border: '2px solid rgba(255,255,255,0.4)',
+                                fontSize: { xs: '0.9rem', md: '1.1rem' },
+                                fontWeight: 'bold',
+                                height: { xs: '32px', md: '40px' },
+                                px: 1,
+                                backdropFilter: 'blur(10px)',
+                                textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                '& .MuiChip-label': {
+                                    px: 2
+                                }
+                            }}
+                        />
                         <Typography
                             variant="h1"
                             sx={{
                                 color: 'white',
                                 fontWeight: 'bold',
-                                fontSize: { xs: '2.5rem', md: '3.5rem' },
-                                textShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                                fontSize: { xs: '2.5rem', md: '4rem' },
+                                textShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                                letterSpacing: '-0.02em',
+                                lineHeight: 1.1
                             }}
                         >
                             {currentPlayer.name}
-                        </Typography>
-                        <Typography
-                            variant="h2"
-                            sx={{
-                                color: 'white',
-                                opacity: 0.8,
-                                fontWeight: 'medium',
-                                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                                fontSize: { xs: '1.5rem', md: '2rem' }
-                            }}
-                        >
-                            Wine #{currentPlayer.presentation_order}
                         </Typography>
                     </Box>
                 </Box>
