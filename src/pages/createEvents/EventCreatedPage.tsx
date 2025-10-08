@@ -81,14 +81,32 @@ function SortablePlayerItem({ player, index, canDrag }: { player: Player; index:
                                 {player.name}
                             </Typography>
                             {player.is_ready && (
-                                <CheckCircle sx={{ color: '#4caf50', fontSize: '1.2rem' }} />
+                                <Chip
+                                    label="Ready"
+                                    size="small"
+                                    icon={<CheckCircle sx={{ fontSize: '1rem !important' }} />}
+                                    sx={{
+                                        backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                                        color: '#4caf50',
+                                        border: '1px solid rgba(76, 175, 80, 0.4)',
+                                        fontWeight: 'medium',
+                                        height: '20px',
+                                        '& .MuiChip-icon': {
+                                            color: '#4caf50'
+                                        }
+                                    }}
+                                />
                             )}
                         </Box>
                     }
                     secondary={
-                        <Box>
-                            <Typography variant="body2" sx={{ color: 'white', opacity: 0.7 }}>
-                                Wine #{index + 1} • Joined {new Date(player.joined_at).toLocaleString()}
+                        <Box sx={{ mt: 0.5 }}>
+                            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem' }}>
+                                Joined {new Date(player.joined_at).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                })}
                             </Typography>
                         </Box>
                     }
