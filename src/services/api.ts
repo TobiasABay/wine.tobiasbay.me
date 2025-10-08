@@ -446,6 +446,15 @@ class ApiService {
     }
 
     // Admin methods
+    async getAllEvents(): Promise<Event[]> {
+        try {
+            return await this.request<Event[]>('/api/events/list');
+        } catch (error) {
+            console.error('Error in getAllEvents:', error);
+            throw error;
+        }
+    }
+
     async getAdminWineData(eventId: string): Promise<{
         success: boolean;
         event_id: string;

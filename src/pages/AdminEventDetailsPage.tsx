@@ -23,6 +23,7 @@ import {
     DialogActions
 } from '@mui/material';
 import { Edit, Save, Cancel } from '@mui/icons-material';
+import { UserButton, useUser } from '@clerk/clerk-react';
 
 interface WineData {
     success: boolean;
@@ -57,8 +58,9 @@ interface WineData {
     }>;
 }
 
-export default function AdminPage() {
+export default function AdminEventDetailsPage() {
     const [wineData, setWineData] = useState<WineData | null>(null);
+    const { user } = useUser();
 
     useEffect(() => {
         document.title = 'Wine Tasting - Admin';
@@ -153,9 +155,26 @@ export default function AdminPage() {
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-                Admin - Wine Data Debug
-            </Typography>
+            {/* Header with User Info */}
+            <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 3,
+                pb: 2,
+                borderBottom: '1px solid',
+                borderColor: 'divider'
+            }}>
+                <Box>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+                        Admin - Wine Data Debug
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Signed in as {user?.primaryEmailAddress?.emailAddress || user?.fullName || 'Admin'}
+                    </Typography>
+                </Box>
+                <UserButton afterSignOutUrl="/" />
+            </Box>
 
             <Typography variant="h6" sx={{ mb: 2 }}>
                 Event: {wineData.event_id}
