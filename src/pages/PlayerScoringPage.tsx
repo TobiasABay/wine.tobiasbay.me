@@ -854,9 +854,6 @@ export default function PlayerScoringPage() {
                                     Your category guesses have been submitted successfully!
                                 </Typography>
                             )}
-                            <Typography variant="body1" sx={{ color: 'white', opacity: 0.8 }}>
-                                Thank you for participating! The results will be shown to the event creator.
-                            </Typography>
                         </Box>
                     ) : (
                         <Box>
