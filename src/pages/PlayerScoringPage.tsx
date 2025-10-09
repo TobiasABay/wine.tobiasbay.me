@@ -5,15 +5,15 @@ import {
     Typography,
     Container,
     Button,
-    TextField,
     Paper,
     Alert,
     FormControl,
     InputLabel,
     Select,
-    MenuItem
+    MenuItem,
+    Slider
 } from '@mui/material';
-import { ArrowBack, WineBar } from '@mui/icons-material';
+import { ArrowBack, WineBar, Star, StarBorder } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Player, WineCategory } from '../services/api';
 import { useSmartPolling } from '../hooks/useSmartPolling';
@@ -256,7 +256,7 @@ export default function PlayerScoringPage() {
     }, []);
     const [allPlayers, setAllPlayers] = useState<Player[]>([]);
     const [currentWineNumber, setCurrentWineNumber] = useState<number>(1);
-    const [score, setScore] = useState<string>('');
+    const [score, setScore] = useState<number>(3);
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [submitted, setSubmitted] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
@@ -266,8 +266,6 @@ export default function PlayerScoringPage() {
     const [categoryGuesses, setCategoryGuesses] = useState<Record<string, string>>({});
     const [guessesSubmitted, setGuessesSubmitted] = useState<boolean>(false);
     const [selectedCountry, setSelectedCountry] = useState<string>('');
-    const [scoreError, setScoreError] = useState<string>('');
-    const [isValidScore, setIsValidScore] = useState<boolean>(true);
     const { eventId } = useParams();
     const navigate = useNavigate();
 
@@ -364,7 +362,7 @@ export default function PlayerScoringPage() {
 
             try {
                 // Reset states
-                setScore('');
+                setScore(3);
                 setSubmitted(false);
                 setCategoryGuesses({});
                 setGuessesSubmitted(false);
@@ -377,7 +375,7 @@ export default function PlayerScoringPage() {
                     const playerScore = wineData.scores.find(s => s.player_id === currentPlayerId);
                     if (playerScore) {
                         console.log('Found existing score:', playerScore.score);
-                        setScore(playerScore.score.toString());
+                        setScore(playerScore.score);
                         setSubmitted(true);
                     }
                 }
@@ -433,11 +431,9 @@ export default function PlayerScoringPage() {
                 }
 
                 // Clear any existing scores and guesses for the new wine
-                setScore('');
+                setScore(3);
                 setCategoryGuesses({});
                 setSubmitted(false);
-                setScoreError('');
-                setIsValidScore(true);
             }
         } catch (error) {
             console.error('Error polling for event updates:', error);
@@ -447,40 +443,37 @@ export default function PlayerScoringPage() {
         interval: 3000 // Poll every 3 seconds for real-time updates
     });
 
-    const handleScoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = event.target.value;
+    const handleScoreChange = (_event: Event, newValue: number | number[]) => {
+        setScore(newValue as number);
+    };
 
-        // Clear previous error
-        setScoreError('');
-        setIsValidScore(true);
-
-        // Allow empty value
-        if (value === '') {
-            setScore(value);
-            return;
+    const renderStars = (score: number) => {
+        const stars = [];
+        for (let i = 1; i <= 5; i++) {
+            if (i <= score) {
+                stars.push(
+                    <Star
+                        key={i}
+                        sx={{
+                            color: '#ffd700',
+                            fontSize: '2rem',
+                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
+                        }}
+                    />
+                );
+            } else {
+                stars.push(
+                    <StarBorder
+                        key={i}
+                        sx={{
+                            color: 'rgba(255,255,255,0.3)',
+                            fontSize: '2rem'
+                        }}
+                    />
+                );
+            }
         }
-
-        // Check if it's a valid number
-        const numValue = parseFloat(value);
-        if (isNaN(numValue)) {
-            setScoreError('Must be a number');
-            setIsValidScore(false);
-            setScore(value); // Still set the value so user can see what they typed
-            return;
-        }
-
-        // Check if it's within range
-        if (numValue < 1 || numValue > 5) {
-            setScoreError('Must be between 1 and 5');
-            setIsValidScore(false);
-            setScore(value);
-            return;
-        }
-
-        // Valid score (decimals allowed)
-        setScore(value);
-        setIsValidScore(true);
-        setScoreError('');
+        return stars;
     };
 
     const handleCategoryGuessChange = (categoryId: string, guess: string) => {
@@ -643,10 +636,9 @@ export default function PlayerScoringPage() {
     const handleSubmitAll = async () => {
         if (submitting || !currentPlayer || !currentPlayerId) return;
 
-        // Validate score
-        const scoreNum = parseInt(score);
-        if (isNaN(scoreNum) || scoreNum < 1 || scoreNum > 5) {
-            setError('Please enter a score between 1 and 5');
+        // Validate score (should always be valid from slider, but check anyway)
+        if (score < 1 || score > 5) {
+            setError('Please select a score between 1 and 5');
             return;
         }
 
@@ -667,7 +659,7 @@ export default function PlayerScoringPage() {
 
         try {
             // Submit score
-            await apiService.submitWineScore(eventId!, currentPlayerId, currentPlayer.presentation_order, scoreNum);
+            await apiService.submitWineScore(eventId!, currentPlayerId, currentPlayer.presentation_order, score);
 
             // Submit guesses if there are categories
             if (wineCategories.length > 0) {
@@ -852,8 +844,11 @@ export default function PlayerScoringPage() {
                                 {wineCategories.length > 0 ? 'Score & Guesses Submitted!' : 'Score Submitted!'}
                             </Typography>
                             <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-                                Your Score: {score}/5
+                                Your Score: {score.toFixed(1)}/5
                             </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                                {renderStars(score)}
+                            </Box>
                             {wineCategories.length > 0 && (
                                 <Typography variant="body2" sx={{ color: 'white', opacity: 0.8, mb: 2 }}>
                                     Your category guesses have been submitted successfully!
@@ -869,64 +864,55 @@ export default function PlayerScoringPage() {
                                 Rate This Wine
                             </Typography>
 
-                            <TextField
-                                label="Score (1-5, decimals allowed)"
-                                type="number"
-                                inputMode="decimal"
-                                value={score}
-                                onChange={handleScoreChange}
-                                inputProps={{ min: 1, max: 5, step: 0.1 }}
-                                error={!isValidScore}
-                                helperText={scoreError}
-                                sx={{
-                                    mb: 3,
-                                    '& .MuiOutlinedInput-root': {
-                                        backgroundColor: 'rgba(255,255,255,0.1)',
-                                        color: 'white',
-                                        '& fieldset': {
-                                            borderColor: !isValidScore ? '#f44336' : 'rgba(255,255,255,0.3)',
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: !isValidScore ? '#f44336' : 'rgba(255,255,255,0.5)',
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: !isValidScore ? '#f44336' : '#ffd700',
-                                        },
-                                    },
-                                    '& .MuiInputLabel-root': {
-                                        color: !isValidScore ? '#f44336' : 'rgba(255,255,255,0.7)',
-                                        '&.Mui-focused': {
-                                            color: !isValidScore ? '#f44336' : '#ffd700',
-                                        },
-                                    },
-                                    '& .MuiFormHelperText-root': {
-                                        color: '#f44336',
-                                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        marginTop: '4px',
-                                        fontSize: '0.875rem',
-                                        fontWeight: '500',
-                                    },
-                                }}
-                                fullWidth
-                            />
+                            <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                                Current Score: {score.toFixed(1)}/5
+                            </Typography>
 
-                            {/* Score validation feedback */}
-                            {score && isValidScore && (
-                                <Typography variant="body2" sx={{
-                                    color: '#4caf50',
-                                    mt: 1,
-                                    mb: 2,
-                                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                                    padding: '4px 8px',
-                                    borderRadius: '4px',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '500',
-                                }}>
-                                    ✓ Valid score: {score}/5
-                                </Typography>
-                            )}
+                            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                                {renderStars(score)}
+                            </Box>
+
+                            <Box sx={{ px: 3, mb: 3 }}>
+                                <Slider
+                                    value={score}
+                                    onChange={handleScoreChange}
+                                    min={1}
+                                    max={5}
+                                    step={0.1}
+                                    marks={[
+                                        { value: 1, label: '1' },
+                                        { value: 3, label: '3' },
+                                        { value: 5, label: '5' }
+                                    ]}
+                                    valueLabelDisplay="auto"
+                                    sx={{
+                                        color: '#ffd700',
+                                        '& .MuiSlider-thumb': {
+                                            backgroundColor: '#ffd700',
+                                            border: '2px solid white',
+                                            width: 24,
+                                            height: 24,
+                                        },
+                                        '& .MuiSlider-track': {
+                                            backgroundColor: '#ffd700',
+                                            border: 'none',
+                                        },
+                                        '& .MuiSlider-rail': {
+                                            backgroundColor: 'rgba(255,255,255,0.3)',
+                                        },
+                                        '& .MuiSlider-mark': {
+                                            backgroundColor: 'rgba(255,255,255,0.5)',
+                                        },
+                                        '& .MuiSlider-markLabel': {
+                                            color: 'white',
+                                            fontSize: '0.875rem',
+                                        },
+                                        '& .MuiSlider-valueLabel': {
+                                            backgroundColor: 'rgba(0,0,0,0.8)',
+                                        },
+                                    }}
+                                />
+                            </Box>
 
                         </Box>
                     )}
@@ -1039,7 +1025,7 @@ export default function PlayerScoringPage() {
 
                         <Button
                             onClick={handleSubmitAll}
-                            disabled={submitting || !score || !isValidScore || (wineCategories.length > 0 && Object.keys(categoryGuesses).length !== wineCategories.length)}
+                            disabled={submitting || (wineCategories.length > 0 && Object.keys(categoryGuesses).length !== wineCategories.length)}
                             variant="contained"
                             sx={{
                                 backgroundColor: '#ffd700',
