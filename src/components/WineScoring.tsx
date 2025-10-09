@@ -18,7 +18,7 @@ interface WineScoringProps {
 }
 
 export default function WineScoring({ eventId, wineNumber, playerId, onScoreSubmitted }: WineScoringProps) {
-    const [score, setScore] = useState<number>(5);
+    const [score, setScore] = useState<number>(3);
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [submitted, setSubmitted] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
@@ -71,14 +71,14 @@ export default function WineScoring({ eventId, wineNumber, playerId, onScoreSubm
 
     const renderStars = (score: number) => {
         const stars = [];
-        for (let i = 1; i <= 10; i++) {
+        for (let i = 1; i <= 5; i++) {
             if (i <= score) {
                 stars.push(
                     <Star
                         key={i}
                         sx={{
                             color: '#ffd700',
-                            fontSize: '1.5rem',
+                            fontSize: '2rem',
                             filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
                         }}
                     />
@@ -89,7 +89,7 @@ export default function WineScoring({ eventId, wineNumber, playerId, onScoreSubm
                         key={i}
                         sx={{
                             color: 'rgba(255,255,255,0.3)',
-                            fontSize: '1.5rem'
+                            fontSize: '2rem'
                         }}
                     />
                 );
@@ -114,7 +114,7 @@ export default function WineScoring({ eventId, wineNumber, playerId, onScoreSubm
             {submitted && currentScore !== null ? (
                 <Box>
                     <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-                        Your Score: {currentScore}/10
+                        Your Score: {currentScore.toFixed(1)}/5
                     </Typography>
                     <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
                         {renderStars(currentScore)}
@@ -126,7 +126,7 @@ export default function WineScoring({ eventId, wineNumber, playerId, onScoreSubm
             ) : (
                 <Box>
                     <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-                        Current Score: {score}/10
+                        Current Score: {score.toFixed(1)}/5
                     </Typography>
 
                     <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
@@ -138,13 +138,14 @@ export default function WineScoring({ eventId, wineNumber, playerId, onScoreSubm
                             value={score}
                             onChange={handleScoreChange}
                             min={1}
-                            max={10}
-                            step={1}
+                            max={5}
+                            step={0.1}
                             marks={[
                                 { value: 1, label: '1' },
-                                { value: 5, label: '5' },
-                                { value: 10, label: '10' }
+                                { value: 3, label: '3' },
+                                { value: 5, label: '5' }
                             ]}
+                            valueLabelDisplay="auto"
                             sx={{
                                 color: '#ffd700',
                                 '& .MuiSlider-thumb': {
@@ -166,6 +167,9 @@ export default function WineScoring({ eventId, wineNumber, playerId, onScoreSubm
                                 '& .MuiSlider-markLabel': {
                                     color: 'white',
                                     fontSize: '0.875rem',
+                                },
+                                '& .MuiSlider-valueLabel': {
+                                    backgroundColor: 'rgba(0,0,0,0.8)',
                                 },
                             }}
                         />
