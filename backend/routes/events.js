@@ -380,5 +380,19 @@ router.get('/:eventId/leaderboard', async (req, res) => {
     }
 });
 
+// Admin endpoint to manually trigger cleanup of stale events
+router.post('/admin/cleanup-stale-events', async (req, res) => {
+    try {
+        const result = await db.cleanupStaleEvents();
+        res.json({
+            success: true,
+            message: `Marked ${result.changes} stale events as inactive`,
+            cleanedCount: result.changes
+        });
+    } catch (error) {
+        console.error('Error cleaning up stale events:', error);
+        res.status(500).json({ error: 'Failed to cleanup stale events' });
+    }
+});
 
 module.exports = router;

@@ -152,6 +152,29 @@ class Database {
         });
     }
 
+    cleanupStaleEvents() {
+        return new Promise((resolve, reject) => {
+            // Calculate timestamp for 12 hours ago
+            const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+
+            const sql = `
+                UPDATE events 
+                SET is_active = 0 
+                WHERE is_active = 1 
+                AND updated_at < ?
+            `;
+
+            this.db.run(sql, [twelveHoursAgo], function (err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    console.log(`[CLEANUP] Marked ${this.changes} stale events as inactive (older than ${twelveHoursAgo})`);
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
     deleteEvent(eventId) {
         return new Promise((resolve, reject) => {
             // Delete all related data in a transaction

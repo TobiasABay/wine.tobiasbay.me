@@ -18,7 +18,37 @@ function validateUUID(uuid) {
     return uuidRegex.test(uuid);
 }
 
+// Scheduled task to mark stale events as inactive
+async function cleanupStaleEvents(env) {
+    try {
+        // Calculate timestamp for 12 hours ago
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+
+        // Mark events as inactive if not updated in the last 12 hours
+        const result = await env.wine_events.prepare(`
+            UPDATE events 
+            SET is_active = 0 
+            WHERE is_active = 1 
+            AND updated_at < ?
+        `).bind(twelveHoursAgo).run();
+
+        console.log(`[CLEANUP] Marked ${result.meta.changes} stale events as inactive (older than ${twelveHoursAgo})`);
+
+        return result.meta.changes;
+    } catch (error) {
+        console.error('[CLEANUP] Error marking stale events as inactive:', error);
+        return 0;
+    }
+}
+
 export default {
+    // Scheduled task handler
+    async scheduled(event, env, ctx) {
+        console.log('[SCHEDULED] Running cleanup task at:', new Date().toISOString());
+        const cleanedCount = await cleanupStaleEvents(env);
+        console.log(`[SCHEDULED] Cleanup complete. ${cleanedCount} events marked as inactive.`);
+    },
+
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
         const path = url.pathname;
@@ -49,6 +79,18 @@ export default {
                 return new Response(JSON.stringify({
                     status: 'OK',
                     timestamp: new Date().toISOString()
+                }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+            }
+
+            // Manual cleanup endpoint (for testing or manual triggers)
+            if (apiPath === '/api/admin/cleanup-stale-events' && method === 'POST') {
+                const cleanedCount = await cleanupStaleEvents(env);
+                return new Response(JSON.stringify({
+                    success: true,
+                    message: `Marked ${cleanedCount} stale events as inactive`,
+                    cleanedCount: cleanedCount
                 }), {
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                 });
