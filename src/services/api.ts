@@ -277,6 +277,25 @@ class ApiService {
             }>;
         }>;
     }> {
+        if (isDemoMode() && eventId === DEMO_EVENT_ID) {
+            // Return demo wine answers
+            const players = DEMO_PLAYERS.map(player => ({
+                player_id: player.id,
+                player_name: player.name,
+                presentation_order: player.presentation_order,
+                answers: (player.wine_details || []).map(detail => ({
+                    category_id: detail.category_id,
+                    wine_answer: detail.wine_answer,
+                    guessing_element: detail.guessing_element || ''
+                }))
+            }));
+
+            return Promise.resolve({
+                success: true,
+                players
+            });
+        }
+
         try {
             const response = await this.request<any>(`/api/events/${eventId}/wine-answers`);
 
@@ -383,6 +402,57 @@ class ApiService {
         }>;
         wineAverages: Record<string, number>;
     }> {
+        if (isDemoMode() && eventId === DEMO_EVENT_ID) {
+            // Calculate demo leaderboard from localStorage data
+            const scoresData = getDemoScores(eventId);
+            const guessesData = getDemoGuesses(eventId);
+
+            // Build leaderboard for each player
+            const leaderboard = DEMO_PLAYERS.map(player => {
+                let totalPoints = 0;
+                let correctGuesses = 0;
+                let totalGuesses = 0;
+
+                // Get all guesses from this player
+                guessesData.categories.forEach(category => {
+                    const playerGuesses = category.guesses.filter((g: any) => g.player_id === player.id);
+
+                    playerGuesses.forEach((guess: any) => {
+                        totalGuesses++;
+
+                        // Find the correct answer for this wine/category
+                        const targetWineNumber = guess.wine_number;
+                        const targetPlayer = DEMO_PLAYERS.find(p => p.presentation_order === targetWineNumber);
+
+                        if (targetPlayer && targetPlayer.wine_details) {
+                            const correctAnswer = targetPlayer.wine_details.find(d => d.category_id === category.id);
+
+                            if (correctAnswer && correctAnswer.wine_answer.toLowerCase() === guess.guess.toLowerCase()) {
+                                correctGuesses++;
+                                totalPoints += parseInt(category.difficulty_factor);
+                            }
+                        }
+                    });
+                });
+
+                return {
+                    player_id: player.id,
+                    player_name: player.name,
+                    presentation_order: player.presentation_order,
+                    total_points: totalPoints,
+                    correct_guesses: correctGuesses,
+                    total_guesses: totalGuesses,
+                    accuracy: totalGuesses > 0 ? ((correctGuesses / totalGuesses) * 100).toFixed(1) : '0.0'
+                };
+            }).sort((a, b) => b.total_points - a.total_points);
+
+            return Promise.resolve({
+                success: true,
+                leaderboard,
+                wineAverages: scoresData.averages
+            });
+        }
+
         return this.request<{
             success: boolean;
             leaderboard: Array<{

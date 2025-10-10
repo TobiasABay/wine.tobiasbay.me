@@ -248,7 +248,8 @@ export default function FinishPage() {
         <Box sx={{
             minHeight: '100vh',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            py: 4
+            py: { xs: 2, md: 4 },
+            px: { xs: 1, sm: 2 }
         }}>
             <Container maxWidth="md">
                 {/* Header */}
@@ -269,11 +270,11 @@ export default function FinishPage() {
                 </Box>
 
                 {/* Title */}
-                <Box sx={{ textAlign: 'center', mb: 6 }}>
+                <Box sx={{ textAlign: 'center', mb: { xs: 3, md: 6 } }}>
                     <EmojiEvents sx={{
-                        fontSize: '4rem',
+                        fontSize: { xs: '3rem', md: '4rem' },
                         color: '#ffd700',
-                        mb: 2,
+                        mb: { xs: 1, md: 2 },
                         filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
                     }} />
                     <Typography
@@ -281,9 +282,9 @@ export default function FinishPage() {
                         sx={{
                             color: 'white',
                             fontWeight: 'bold',
-                            fontSize: { xs: '2.5rem', md: '3.5rem' },
+                            fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3.5rem' },
                             textShadow: '0 4px 8px rgba(0,0,0,0.3)',
-                            mb: 2
+                            mb: { xs: 1, md: 2 }
                         }}
                     >
                         Wine Tasting Complete!
@@ -293,6 +294,7 @@ export default function FinishPage() {
                         sx={{
                             color: 'white',
                             opacity: 0.9,
+                            fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
                             textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                         }}
                     >
@@ -302,7 +304,7 @@ export default function FinishPage() {
 
                 {/* Leaderboard */}
                 <Paper sx={{
-                    p: 4,
+                    p: { xs: 2, sm: 3, md: 4 },
                     background: 'rgba(255,255,255,0.95)',
                     backdropFilter: 'blur(10px)',
                     borderRadius: 3,
@@ -314,7 +316,8 @@ export default function FinishPage() {
                         sx={{
                             color: '#2c3e50',
                             fontWeight: 'bold',
-                            mb: 3,
+                            mb: { xs: 2, md: 3 },
+                            fontSize: { xs: '1.25rem', sm: '1.5rem' },
                             textAlign: 'center'
                         }}
                     >
@@ -330,13 +333,13 @@ export default function FinishPage() {
                                 <Box key={player.player_id} sx={{ mb: 2 }}>
                                     <Paper
                                         sx={{
-                                            p: 3,
+                                            p: { xs: 1.5, sm: 2, md: 3 },
                                             backgroundColor: isWinner ? 'rgba(255, 215, 0, 0.1)' : 'rgba(102, 126, 234, 0.05)',
                                             border: isWinner ? '2px solid #ffd700' : '1px solid rgba(102, 126, 234, 0.2)',
                                             borderRadius: 3,
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: 2,
+                                            gap: { xs: 1, sm: 2 },
                                             transition: 'all 0.2s',
                                             position: 'relative',
                                             '&:hover': {
@@ -351,9 +354,9 @@ export default function FinishPage() {
                                             <EmojiEvents
                                                 sx={{
                                                     position: 'absolute',
-                                                    top: -15,
-                                                    left: -15,
-                                                    fontSize: '2rem',
+                                                    top: { xs: -10, sm: -15 },
+                                                    left: { xs: -10, sm: -15 },
+                                                    fontSize: { xs: '1.5rem', sm: '2rem' },
                                                     color: '#ffd700',
                                                     filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
                                                 }}
@@ -366,14 +369,15 @@ export default function FinishPage() {
                                                 backgroundColor: medalColor,
                                                 color: 'white',
                                                 borderRadius: '50%',
-                                                width: 50,
-                                                height: 50,
+                                                width: { xs: 36, sm: 44, md: 50 },
+                                                height: { xs: 36, sm: 44, md: 50 },
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 fontWeight: 'bold',
-                                                fontSize: '1.3rem',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                                                fontSize: { xs: '1rem', sm: '1.2rem', md: '1.3rem' },
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                flexShrink: 0
                                             }}
                                         >
                                             #{index + 1}
@@ -382,79 +386,88 @@ export default function FinishPage() {
                                         {/* Player Avatar */}
                                         <Avatar
                                             sx={{
-                                                width: 50,
-                                                height: 50,
+                                                width: { xs: 36, sm: 44, md: 50 },
+                                                height: { xs: 36, sm: 44, md: 50 },
                                                 backgroundColor: '#667eea',
-                                                fontSize: '1.25rem',
-                                                fontWeight: 'bold'
+                                                fontSize: { xs: '1rem', sm: '1.15rem', md: '1.25rem' },
+                                                fontWeight: 'bold',
+                                                flexShrink: 0
                                             }}
                                         >
                                             {player.player_name.charAt(0).toUpperCase()}
                                         </Avatar>
 
                                         {/* Player Info */}
-                                        <Box sx={{ flex: 1 }}>
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
                                             <Typography
                                                 variant="h6"
                                                 sx={{
                                                     color: '#2c3e50',
                                                     fontWeight: 'bold',
+                                                    fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.25rem' },
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    gap: 1
+                                                    gap: 0.5,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis'
                                                 }}
                                             >
                                                 {player.player_name}
-                                                {isWinner && <Star sx={{ color: '#ffd700', fontSize: '1.2rem' }} />}
+                                                {isWinner && <Star sx={{ color: '#ffd700', fontSize: { xs: '1rem', md: '1.2rem' }, flexShrink: 0 }} />}
                                             </Typography>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap' }}>
                                                 <Typography
                                                     variant="body2"
                                                     sx={{
-                                                        color: '#7f8c8d'
+                                                        color: '#7f8c8d',
+                                                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
                                                     }}
                                                 >
                                                     Wine #{player.presentation_order}
                                                 </Typography>
-                                                {wineAverages && wineAverages[player.presentation_order.toString()] && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                        <Typography
-                                                            variant="body2"
-                                                            sx={{
-                                                                color: '#667eea',
-                                                                fontWeight: 'bold',
-                                                                fontSize: '0.85rem'
-                                                            }}
-                                                        >
-                                                            {wineAverages[player.presentation_order.toString()]}
-                                                        </Typography>
-                                                        <Typography
-                                                            variant="caption"
-                                                            sx={{
-                                                                color: '#95a5a6',
-                                                                fontSize: '0.7rem'
-                                                            }}
-                                                        >
-                                                            /5.0
-                                                        </Typography>
-                                                        <Box sx={{
-                                                            width: 20,
-                                                            height: 4,
-                                                            backgroundColor: '#ecf0f1',
-                                                            borderRadius: 2,
-                                                            overflow: 'hidden',
-                                                            ml: 0.5
-                                                        }}>
+                                                {wineAverages && wineAverages[player.presentation_order.toString()] && (() => {
+                                                    const wineAvg = wineAverages[player.presentation_order.toString()];
+                                                    const avgValue = typeof wineAvg === 'object' ? (wineAvg as any).average : wineAvg;
+                                                    return (
+                                                        <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 0.5 }}>
+                                                            <Typography
+                                                                variant="body2"
+                                                                sx={{
+                                                                    color: '#667eea',
+                                                                    fontWeight: 'bold',
+                                                                    fontSize: '0.85rem'
+                                                                }}
+                                                            >
+                                                                {avgValue}
+                                                            </Typography>
+                                                            <Typography
+                                                                variant="caption"
+                                                                sx={{
+                                                                    color: '#95a5a6',
+                                                                    fontSize: '0.7rem'
+                                                                }}
+                                                            >
+                                                                /5.0
+                                                            </Typography>
                                                             <Box sx={{
-                                                                width: `${(wineAverages[player.presentation_order.toString()] / 5) * 100}%`,
-                                                                height: '100%',
-                                                                backgroundColor: wineAverages[player.presentation_order.toString()] >= 4 ? '#27ae60' :
-                                                                    wineAverages[player.presentation_order.toString()] >= 3 ? '#f39c12' : '#e74c3c',
-                                                                borderRadius: 2
-                                                            }} />
+                                                                width: 20,
+                                                                height: 4,
+                                                                backgroundColor: '#ecf0f1',
+                                                                borderRadius: 2,
+                                                                overflow: 'hidden',
+                                                                ml: 0.5
+                                                            }}>
+                                                                <Box sx={{
+                                                                    width: `${(avgValue / 5) * 100}%`,
+                                                                    height: '100%',
+                                                                    backgroundColor: avgValue >= 4 ? '#27ae60' :
+                                                                        avgValue >= 3 ? '#f39c12' : '#e74c3c',
+                                                                    borderRadius: 2
+                                                                }} />
+                                                            </Box>
                                                         </Box>
-                                                    </Box>
-                                                )}
+                                                    );
+                                                })()}
                                                 {/* Dropdown Button */}
                                                 <Button
                                                     size="small"
@@ -474,12 +487,13 @@ export default function FinishPage() {
                                         </Box>
 
                                         {/* Score Info */}
-                                        <Box sx={{ textAlign: 'right' }}>
+                                        <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
                                             <Typography
                                                 variant="h5"
                                                 sx={{
                                                     color: '#2c3e50',
-                                                    fontWeight: 'bold'
+                                                    fontWeight: 'bold',
+                                                    fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' }
                                                 }}
                                             >
                                                 {player.total_points} pts
@@ -487,22 +501,25 @@ export default function FinishPage() {
                                             <Typography
                                                 variant="body2"
                                                 sx={{
-                                                    color: '#7f8c8d'
+                                                    color: '#7f8c8d',
+                                                    fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                                                    display: { xs: 'none', sm: 'block' }
                                                 }}
                                             >
                                                 {player.correct_guesses}/{player.total_guesses} correct
                                             </Typography>
                                             <Chip
-                                                label={`${player.accuracy}% accuracy`}
+                                                label={`${player.accuracy}%`}
                                                 size="small"
                                                 sx={{
                                                     mt: 0.5,
+                                                    height: { xs: '18px', sm: '24px' },
                                                     backgroundColor: parseFloat(player.accuracy) >= 70 ? '#e8f5e8' :
                                                         parseFloat(player.accuracy) >= 40 ? '#fff3cd' : '#f8d7da',
                                                     color: parseFloat(player.accuracy) >= 70 ? '#155724' :
                                                         parseFloat(player.accuracy) >= 40 ? '#856404' : '#721c24',
                                                     fontWeight: 'medium',
-                                                    fontSize: '0.7rem'
+                                                    fontSize: { xs: '0.65rem', sm: '0.7rem' }
                                                 }}
                                             />
                                         </Box>
@@ -512,7 +529,7 @@ export default function FinishPage() {
                                     <Collapse in={expandedPlayers.has(player.player_id)}>
                                         <Paper sx={{
                                             mt: 1,
-                                            p: 2,
+                                            p: { xs: 1.5, sm: 2 },
                                             backgroundColor: 'rgba(102, 126, 234, 0.02)',
                                             border: '1px solid rgba(102, 126, 234, 0.1)',
                                             borderRadius: 2
@@ -528,8 +545,8 @@ export default function FinishPage() {
                                                                     sx={{
                                                                         fontWeight: 'bold',
                                                                         color: '#2c3e50',
-                                                                        mb: 2,
-                                                                        fontSize: '1.1rem',
+                                                                        mb: { xs: 1, sm: 2 },
+                                                                        fontSize: { xs: '0.95rem', sm: '1.1rem' },
                                                                         borderBottom: '2px solid #667eea',
                                                                         pb: 1
                                                                     }}
@@ -540,56 +557,62 @@ export default function FinishPage() {
                                                                 {wineData.categories.map((category: any, categoryIndex: number) => (
                                                                     <Box key={categoryIndex} sx={{
                                                                         display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        gap: 1,
+                                                                        flexDirection: { xs: 'column', sm: 'row' },
+                                                                        alignItems: { xs: 'flex-start', sm: 'center' },
+                                                                        gap: { xs: 0.5, sm: 1 },
                                                                         mb: 1,
-                                                                        ml: 3,
-                                                                        p: 1,
+                                                                        ml: { xs: 1, sm: 3 },
+                                                                        p: { xs: 0.75, sm: 1 },
                                                                         backgroundColor: category.isCorrect ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
                                                                         borderRadius: 1,
                                                                         border: `1px solid ${category.isCorrect ? 'rgba(40, 167, 69, 0.3)' : 'rgba(220, 53, 69, 0.3)'}`
                                                                     }}>
-                                                                        <Typography
-                                                                            variant="body2"
-                                                                            sx={{
-                                                                                fontWeight: 'medium',
-                                                                                color: '#2c3e50',
-                                                                                minWidth: '80px'
-                                                                            }}
-                                                                        >
-                                                                            {category.categoryName}:
-                                                                        </Typography>
-                                                                        <Chip
-                                                                            label={category.isCorrect ? "Correct" : "Incorrect"}
-                                                                            size="small"
-                                                                            sx={{
-                                                                                height: 18,
-                                                                                fontSize: '0.65rem',
-                                                                                backgroundColor: category.isCorrect ? '#e8f5e8' : '#f8d7da',
-                                                                                color: category.isCorrect ? '#155724' : '#721c24'
-                                                                            }}
-                                                                        />
-                                                                        <Typography
-                                                                            variant="body2"
-                                                                            sx={{
-                                                                                fontWeight: 'medium',
-                                                                                color: '#2c3e50',
-                                                                                fontStyle: 'italic'
-                                                                            }}
-                                                                        >
-                                                                            "{category.guess}"
-                                                                        </Typography>
-                                                                        <Typography
-                                                                            variant="body2"
-                                                                            sx={{
-                                                                                fontWeight: 'normal',
-                                                                                color: '#7f8c8d',
-                                                                                fontSize: '0.75rem',
-                                                                                ml: 1
-                                                                            }}
-                                                                        >
-                                                                            (Correct: "{category.correctAnswer}")
-                                                                        </Typography>
+                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                                                            <Typography
+                                                                                variant="body2"
+                                                                                sx={{
+                                                                                    fontWeight: 'medium',
+                                                                                    color: '#2c3e50',
+                                                                                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                                                                    minWidth: { xs: '60px', sm: '80px' }
+                                                                                }}
+                                                                            >
+                                                                                {category.categoryName}:
+                                                                            </Typography>
+                                                                            <Chip
+                                                                                label={category.isCorrect ? "✓" : "✗"}
+                                                                                size="small"
+                                                                                sx={{
+                                                                                    height: { xs: 16, sm: 18 },
+                                                                                    fontSize: { xs: '0.6rem', sm: '0.65rem' },
+                                                                                    backgroundColor: category.isCorrect ? '#e8f5e8' : '#f8d7da',
+                                                                                    color: category.isCorrect ? '#155724' : '#721c24'
+                                                                                }}
+                                                                            />
+                                                                        </Box>
+                                                                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 0.25, sm: 1 }, ml: { xs: 0, sm: 0 } }}>
+                                                                            <Typography
+                                                                                variant="body2"
+                                                                                sx={{
+                                                                                    fontWeight: 'medium',
+                                                                                    color: '#2c3e50',
+                                                                                    fontStyle: 'italic',
+                                                                                    fontSize: { xs: '0.7rem', sm: '0.875rem' }
+                                                                                }}
+                                                                            >
+                                                                                "{category.guess}"
+                                                                            </Typography>
+                                                                            <Typography
+                                                                                variant="body2"
+                                                                                sx={{
+                                                                                    fontWeight: 'normal',
+                                                                                    color: '#7f8c8d',
+                                                                                    fontSize: { xs: '0.65rem', sm: '0.75rem' }
+                                                                                }}
+                                                                            >
+                                                                                (Correct: "{category.correctAnswer}")
+                                                                            </Typography>
+                                                                        </Box>
                                                                     </Box>
                                                                 ))}
                                                             </Box>

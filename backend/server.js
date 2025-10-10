@@ -10,7 +10,16 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: config.FRONTEND_URL,
+        origin: function (origin, callback) {
+            if (!origin) return callback(null, true);
+            if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+                return callback(null, true);
+            }
+            if (origin === config.FRONTEND_URL) {
+                return callback(null, true);
+            }
+            callback(new Error('Not allowed by CORS'));
+        },
         methods: ["GET", "POST"]
     }
 });
@@ -20,7 +29,22 @@ const PORT = config.PORT;
 // Middleware
 app.use(helmet());
 app.use(cors({
-    origin: config.FRONTEND_URL,
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        // Allow localhost on any port for development
+        if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+            return callback(null, true);
+        }
+
+        // Allow configured frontend URL
+        if (origin === config.FRONTEND_URL) {
+            return callback(null, true);
+        }
+
+        callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
 }));
 app.use(express.json());

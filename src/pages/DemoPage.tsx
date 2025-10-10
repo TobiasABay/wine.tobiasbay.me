@@ -116,12 +116,12 @@ export default function DemoPage() {
                                             </Typography>
                                         }
                                         secondary={
-                                            <Box>
-                                                <Typography variant="body2" sx={{ color: 'white', opacity: 0.7 }}>
+                                            <Box component="span" sx={{ display: 'block' }}>
+                                                <Typography component="span" variant="body2" sx={{ color: 'white', opacity: 0.7, display: 'block' }}>
                                                     Wine #{player.presentation_order}
                                                 </Typography>
                                                 {player.wine_details && player.wine_details.length > 0 && (
-                                                    <Typography variant="caption" sx={{ color: 'white', opacity: 0.6 }}>
+                                                    <Typography component="span" variant="caption" sx={{ color: 'white', opacity: 0.6, display: 'block', mt: 0.5 }}>
                                                         Wine: {player.wine_details.find(d => d.guessing_element === 'Grape Variety')?.wine_answer} from {player.wine_details.find(d => d.guessing_element === 'Country')?.wine_answer}
                                                     </Typography>
                                                 )}
@@ -157,6 +157,30 @@ export default function DemoPage() {
                     </Button>
                 </Box>
 
+                {/* View Leaderboard Button */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                    <Button
+                        onClick={() => {
+                            enableDemoMode();
+                            navigate(`/finish/${DEMO_EVENT_ID}`);
+                        }}
+                        variant="contained"
+                        sx={{
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            color: 'white',
+                            border: '2px solid rgba(255,255,255,0.4)',
+                            px: 4,
+                            py: 1.5,
+                            fontWeight: 'bold',
+                            '&:hover': {
+                                backgroundColor: 'rgba(255,255,255,0.3)',
+                            }
+                        }}
+                    >
+                        View Leaderboard
+                    </Button>
+                </Box>
+
                 {/* Info Box */}
                 <Paper sx={{
                     background: 'rgba(255,255,255,0.05)',
@@ -172,6 +196,7 @@ export default function DemoPage() {
                         • Pre-filled wine details for each player<br />
                         • Test scoring with decimal values (1.0 - 5.0)<br />
                         • Test category guessing<br />
+                        • View calculated leaderboard and results<br />
                         • All data stored in localStorage<br />
                         • No database connection required
                     </Typography>
