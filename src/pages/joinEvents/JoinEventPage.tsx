@@ -19,6 +19,7 @@ import {
 import { ArrowBack, PersonAdd, WineBar } from '@mui/icons-material';
 import { apiService, type Event, type WineCategory } from '../../services/api';
 import { getDeviceId } from '../../utils/deviceId';
+import { sanitizePlayerName, sanitizeJoinCode, validatePlayerName } from '../../utils/sanitize';
 
 // Predefined lists for wine regions and countries
 const WINE_COUNTRIES = [
@@ -431,12 +432,22 @@ export default function JoinEventPage() {
     };
 
     const handleStep1 = async () => {
-        if (playerName.trim() && joinCode.trim()) {
+        // Validate player name
+        const nameValidation = validatePlayerName(playerName);
+        if (!nameValidation.isValid) {
+            setError(nameValidation.error || 'Invalid name');
+            return;
+        }
+
+        const sanitizedName = sanitizePlayerName(playerName, true); // Trim for submission
+        const sanitizedCode = sanitizeJoinCode(joinCode);
+
+        if (sanitizedName && sanitizedCode) {
             setLoading(true);
             setError('');
             try {
                 // First, get the event data to check wine categories
-                const event = await apiService.getEventByJoinCode(joinCode.trim());
+                const event = await apiService.getEventByJoinCode(sanitizedCode);
                 setEventData(event);
 
                 // Get wine categories for this event
@@ -446,8 +457,8 @@ export default function JoinEventPage() {
                 if (categories.length === 0) {
                     // No wine categories, join directly
                     const result = await apiService.joinEvent({
-                        playerName: playerName.trim(),
-                        joinCode: joinCode.trim(),
+                        playerName: sanitizedName,
+                        joinCode: sanitizedCode,
                         deviceId: getDeviceId()
                     });
                     navigate(`/event-created/${result.eventId}`);
@@ -469,6 +480,13 @@ export default function JoinEventPage() {
     const handleStep2 = async () => {
         if (!eventData) return;
 
+        // Validate player name again
+        const nameValidation = validatePlayerName(playerName);
+        if (!nameValidation.isValid) {
+            setError(nameValidation.error || 'Invalid name');
+            return;
+        }
+
         // Check if all wine categories have answers
         const allAnswered = wineCategories.every(category =>
             wineAnswers[category.id] && wineAnswers[category.id] !== ''
@@ -479,14 +497,17 @@ export default function JoinEventPage() {
             return;
         }
 
+        const sanitizedName = sanitizePlayerName(playerName, true); // Trim for submission
+        const sanitizedCode = sanitizeJoinCode(joinCode);
+
         setLoading(true);
         setError('');
 
         try {
             // Join the event
             const result = await apiService.joinEvent({
-                playerName: playerName.trim(),
-                joinCode: joinCode.trim(),
+                playerName: sanitizedName,
+                joinCode: sanitizedCode,
                 deviceId: getDeviceId()
             });
 
@@ -631,10 +652,14 @@ export default function JoinEventPage() {
                             label="Your Name"
                             variant="outlined"
                             value={playerName}
-                            onChange={(e) => setPlayerName(e.target.value)}
+                            onChange={(e) => {
+                                const sanitized = sanitizePlayerName(e.target.value);
+                                setPlayerName(sanitized);
+                            }}
                             onKeyPress={handleEnterKey}
                             placeholder="Enter your full name"
                             disabled={loading}
+                            helperText="Letters, numbers, spaces allowed (2-50 characters)"
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     borderRadius: 2,
@@ -646,10 +671,14 @@ export default function JoinEventPage() {
                             label="Join Code"
                             variant="outlined"
                             value={joinCode}
-                            onChange={(e) => setJoinCode(e.target.value)}
+                            onChange={(e) => {
+                                const sanitized = sanitizeJoinCode(e.target.value);
+                                setJoinCode(sanitized);
+                            }}
                             onKeyPress={handleEnterKey}
                             placeholder="Enter the 6-digit join code"
                             disabled={loading}
+                            inputProps={{ maxLength: 6 }}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     borderRadius: 2,

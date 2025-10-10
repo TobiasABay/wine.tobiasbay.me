@@ -18,6 +18,118 @@ function validateUUID(uuid) {
     return uuidRegex.test(uuid);
 }
 
+// List of inappropriate words that should be blocked
+const BLOCKED_WORDS = [
+    'nigger', 'nigga', 'n1gger', 'n1gga',
+    'fuck', 'shit', 'bitch', 'cunt', 'dick', 'cock', 'pussy',
+    'retard', 'fag', 'faggot',
+    'ass', 'asshole', 'bastard', 'damn', 'hell',
+    'whore', 'slut', 'piss',
+    'f4ck', 'fvck', 'sh1t', 'b1tch', 'a55', 'a55hole'
+];
+
+function containsInappropriateContent(text) {
+    if (!text) return false;
+
+    const normalized = text.toLowerCase()
+        .replace(/0/g, 'o')
+        .replace(/1/g, 'i')
+        .replace(/3/g, 'e')
+        .replace(/4/g, 'a')
+        .replace(/5/g, 's')
+        .replace(/7/g, 't')
+        .replace(/\$/g, 's')
+        .replace(/@/g, 'a')
+        .replace(/[\s\-_.@#$%^&*()+=]/g, '');
+
+    return BLOCKED_WORDS.some(word => {
+        const normalizedWord = word.toLowerCase().replace(/[\s\-_.]/g, '');
+        return normalized.includes(normalizedWord);
+    });
+}
+
+// Input sanitization functions
+function sanitizeInput(input, maxLength = 100) {
+    if (!input || typeof input !== 'string') return '';
+
+    let sanitized = input
+        .replace(/<[^>]*>/g, '')
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+        .replace(/javascript:/gi, '')
+        .replace(/data:text\/html/gi, '')
+        .trim();
+
+    if (sanitized.length > maxLength) {
+        sanitized = sanitized.substring(0, maxLength);
+    }
+
+    return sanitized;
+}
+
+function sanitizePlayerName(name, trimSpaces = true) {
+    if (!name || typeof name !== 'string') return '';
+
+    let sanitized = name
+        .replace(/<[^>]*>/g, '')
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+        .replace(/javascript:/gi, '')
+        .replace(/data:text\/html/gi, '');
+
+    sanitized = sanitized.replace(/[^\p{L}\p{N}\s\-'.]/gu, '');
+    sanitized = sanitized.replace(/\s+/g, ' ');
+
+    if (trimSpaces) {
+        sanitized = sanitized.trim();
+    }
+
+    if (sanitized.length > 50) {
+        sanitized = sanitized.substring(0, 50);
+    }
+
+    return sanitized;
+}
+
+function validatePlayerName(name) {
+    const sanitized = sanitizePlayerName(name);
+
+    if (!sanitized) {
+        return { isValid: false, error: 'Name is required' };
+    }
+
+    if (sanitized.length < 2) {
+        return { isValid: false, error: 'Name must be at least 2 characters' };
+    }
+
+    if (sanitized.length > 50) {
+        return { isValid: false, error: 'Name must be less than 50 characters' };
+    }
+
+    if (!/\p{L}/u.test(sanitized)) {
+        return { isValid: false, error: 'Name must contain at least one letter' };
+    }
+
+    // Check for inappropriate content
+    if (containsInappropriateContent(sanitized)) {
+        return { isValid: false, error: 'Please choose an appropriate name' };
+    }
+
+    return { isValid: true };
+}
+
+function sanitizeJoinCode(code) {
+    if (!code || typeof code !== 'string') return '';
+
+    let sanitized = code
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .substring(0, 6);
+
+    return sanitized;
+}
+
 // Scheduled task to mark stale events as inactive
 async function cleanupStaleEvents(env) {
     try {
@@ -566,9 +678,24 @@ async function joinEvent(request, env, corsHeaders) {
         });
     }
 
+    // Sanitize and validate inputs
+    const sanitizedName = sanitizePlayerName(playerName);
+    const sanitizedCode = sanitizeJoinCode(joinCode);
+
+    // Validate player name
+    const nameValidation = validatePlayerName(sanitizedName);
+    if (!nameValidation.isValid) {
+        return new Response(JSON.stringify({
+            error: nameValidation.error || 'Invalid player name'
+        }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+
     const event = await env.wine_events.prepare(`
     SELECT * FROM events WHERE join_code = ? AND is_active = 1
-  `).bind(joinCode).first();
+  `).bind(sanitizedCode).first();
 
     if (!event) {
         return new Response(JSON.stringify({ error: 'Invalid join code' }), {
@@ -585,10 +712,10 @@ async function joinEvent(request, env, corsHeaders) {
 
         if (existingPlayer) {
             // Update the player's name if it changed
-            if (existingPlayer.name !== playerName) {
+            if (existingPlayer.name !== sanitizedName) {
                 await env.wine_events.prepare(`
                     UPDATE players SET name = ? WHERE id = ?
-                `).bind(playerName, existingPlayer.id).run();
+                `).bind(sanitizedName, existingPlayer.id).run();
             }
 
             return new Response(JSON.stringify({
@@ -596,7 +723,7 @@ async function joinEvent(request, env, corsHeaders) {
                 eventId: event.id,
                 playerId: existingPlayer.id,
                 presentationOrder: existingPlayer.presentation_order,
-                message: `Welcome back ${playerName}! You're already in this event.`
+                message: `Welcome back ${sanitizedName}! You're already in this event.`
             }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
@@ -622,12 +749,12 @@ async function joinEvent(request, env, corsHeaders) {
         await env.wine_events.prepare(`
             INSERT INTO players (id, event_id, name, presentation_order, device_id)
             VALUES (?, ?, ?, ?, ?)
-        `).bind(playerId, event.id, playerName, presentationOrder, deviceId).run();
+        `).bind(playerId, event.id, sanitizedName, presentationOrder, deviceId).run();
     } else {
         await env.wine_events.prepare(`
             INSERT INTO players (id, event_id, name, presentation_order)
             VALUES (?, ?, ?, ?)
-        `).bind(playerId, event.id, playerName, presentationOrder).run();
+        `).bind(playerId, event.id, sanitizedName, presentationOrder).run();
     }
 
     return new Response(JSON.stringify({
@@ -635,7 +762,7 @@ async function joinEvent(request, env, corsHeaders) {
         eventId: event.id,
         playerId: playerId,
         presentationOrder: presentationOrder,
-        message: `Welcome ${playerName}! You've joined the event.`
+        message: `Welcome ${sanitizedName}! You've joined the event.`
     }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

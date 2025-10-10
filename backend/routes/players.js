@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../services/database');
+const { sanitizePlayerName, sanitizeJoinCode, validatePlayerName } = require('../utils/sanitize');
 
 // Join an event
 router.post('/join', async (req, res) => {
@@ -13,8 +14,20 @@ router.post('/join', async (req, res) => {
             });
         }
 
+        // Sanitize and validate inputs
+        const sanitizedName = sanitizePlayerName(playerName);
+        const sanitizedCode = sanitizeJoinCode(joinCode);
+
+        // Validate player name
+        const nameValidation = validatePlayerName(sanitizedName);
+        if (!nameValidation.isValid) {
+            return res.status(400).json({
+                error: nameValidation.error || 'Invalid player name'
+            });
+        }
+
         // Get event by join code
-        const event = await db.getEventByJoinCode(joinCode);
+        const event = await db.getEventByJoinCode(sanitizedCode);
         if (!event) {
             return res.status(404).json({ error: 'Invalid join code' });
         }
@@ -25,8 +38,8 @@ router.post('/join', async (req, res) => {
             return res.status(400).json({ error: 'Event is full' });
         }
 
-        // Add player to event
-        const result = await db.addPlayer(event.id, playerName);
+        // Add player to event with sanitized name
+        const result = await db.addPlayer(event.id, sanitizedName);
 
         // Get updated player list
         const updatedPlayers = await db.getPlayersByEventId(event.id);
@@ -36,7 +49,7 @@ router.post('/join', async (req, res) => {
         io.to(`event-${event.id}`).emit('player-joined', {
             player: {
                 id: result.id,
-                name: playerName,
+                name: sanitizedName,
                 presentationOrder: result.presentationOrder,
                 joinedAt: new Date().toISOString()
             },
@@ -48,7 +61,7 @@ router.post('/join', async (req, res) => {
             eventId: event.id,
             playerId: result.id,
             presentationOrder: result.presentationOrder,
-            message: `Welcome ${playerName}! You've joined the event.`
+            message: `Welcome ${sanitizedName}! You've joined the event.`
         });
     } catch (error) {
         console.error('Error joining event:', error);
