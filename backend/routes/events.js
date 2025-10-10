@@ -3,11 +3,39 @@ const router = express.Router();
 const db = require('../services/database');
 const { sanitizeEventName, validateEventName } = require('../utils/sanitize');
 
+// In-memory rate limiting store (deviceId/IP -> last creation timestamp)
+const rateLimitStore = new Map();
+const COOLDOWN_MS = 60 * 1000; // 60 seconds
+
+// Clean up old entries every 5 minutes
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, timestamp] of rateLimitStore.entries()) {
+        if (now - timestamp > COOLDOWN_MS) {
+            rateLimitStore.delete(key);
+        }
+    }
+}, 5 * 60 * 1000);
 
 // Create a new event
 router.post('/', async (req, res) => {
     try {
         const eventData = req.body;
+
+        // Rate limiting check
+        const identifier = eventData.deviceId || req.ip;
+        const lastCreationTime = rateLimitStore.get(identifier);
+
+        if (lastCreationTime) {
+            const timeSinceLastCreation = Date.now() - lastCreationTime;
+            if (timeSinceLastCreation < COOLDOWN_MS) {
+                const remainingCooldown = Math.ceil((COOLDOWN_MS - timeSinceLastCreation) / 1000);
+                return res.status(429).json({
+                    error: `Please wait ${remainingCooldown} seconds before creating another event`,
+                    cooldownRemaining: remainingCooldown
+                });
+            }
+        }
 
         // Validate required fields
         if (!eventData.name || !eventData.date || !eventData.maxParticipants ||
@@ -29,6 +57,9 @@ router.post('/', async (req, res) => {
         eventData.name = sanitizeEventName(eventData.name, true);
 
         const result = await db.createEvent(eventData);
+
+        // Set rate limit timestamp
+        rateLimitStore.set(identifier, Date.now());
 
         // Emit real-time update
         const io = req.app.get('io');

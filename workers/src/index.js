@@ -431,6 +431,34 @@ async function createEvent(request, env, corsHeaders) {
     try {
         const eventData = await request.json();
 
+        // Rate limiting check (using deviceId or IP)
+        const identifier = eventData.deviceId || request.headers.get('CF-Connecting-IP') || 'unknown';
+        const cooldownKey = `cooldown-${identifier}`;
+
+        // Check recent events created by this identifier
+        const recentEvents = await env.wine_events.prepare(`
+            SELECT created_at FROM events 
+            WHERE (id LIKE ? OR id LIKE ?)
+            ORDER BY created_at DESC 
+            LIMIT 1
+        `).bind(`${identifier}%`, `%${identifier}%`).first();
+
+        if (recentEvents) {
+            const timeSinceLastCreation = Date.now() - new Date(recentEvents.created_at).getTime();
+            const cooldownMs = 60 * 1000; // 60 seconds
+
+            if (timeSinceLastCreation < cooldownMs) {
+                const remainingCooldown = Math.ceil((cooldownMs - timeSinceLastCreation) / 1000);
+                return new Response(JSON.stringify({
+                    error: `Please wait ${remainingCooldown} seconds before creating another event`,
+                    cooldownRemaining: remainingCooldown
+                }), {
+                    status: 429,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+            }
+        }
+
         // Validate event name
         const nameValidation = validateEventName(eventData.name);
         if (!nameValidation.isValid) {

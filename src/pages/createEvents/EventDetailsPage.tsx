@@ -10,11 +10,16 @@ import {
     FormControl,
     Select,
     MenuItem,
+    Alert,
+    LinearProgress
 } from '@mui/material';
 import { ArrowBack, Description, Delete } from '@mui/icons-material';
 import FullscreenButton from '../../components/FullscreenButton';
 import { apiService } from '../../services/api';
 import { sanitizeEventName, validateEventName } from '../../utils/sanitize';
+import { getDeviceId } from '../../utils/deviceId';
+
+const COOLDOWN_SECONDS = 60; // 60 seconds cooldown between event creations
 
 export default function EventDetailsPage() {
     const [description, setDescription] = useState('');
@@ -34,8 +39,48 @@ export default function EventDetailsPage() {
         guessing_element: '',
         difficulty_factor: ''
     }]);
+    const [cooldownRemaining, setCooldownRemaining] = useState(0);
+    const [isOnCooldown, setIsOnCooldown] = useState(false);
     const navigate = useNavigate();
     const isInitialized = useRef(false);
+
+    // Check cooldown on mount and set up countdown timer
+    useEffect(() => {
+        const checkCooldown = () => {
+            const deviceId = getDeviceId();
+            const lastCreationTime = localStorage.getItem(`last-event-creation-${deviceId}`);
+
+            if (lastCreationTime) {
+                const timeSinceLastCreation = Date.now() - parseInt(lastCreationTime);
+                const remainingCooldown = COOLDOWN_SECONDS * 1000 - timeSinceLastCreation;
+
+                if (remainingCooldown > 0) {
+                    setIsOnCooldown(true);
+                    setCooldownRemaining(Math.ceil(remainingCooldown / 1000));
+                }
+            }
+        };
+
+        checkCooldown();
+    }, []);
+
+    // Countdown timer
+    useEffect(() => {
+        if (cooldownRemaining > 0) {
+            const timer = setTimeout(() => {
+                setCooldownRemaining(prev => {
+                    const newValue = prev - 1;
+                    if (newValue <= 0) {
+                        setIsOnCooldown(false);
+                        return 0;
+                    }
+                    return newValue;
+                });
+            }, 1000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [cooldownRemaining]);
 
     // Load saved form data from localStorage on component mount
     useEffect(() => {
@@ -95,6 +140,12 @@ export default function EventDetailsPage() {
     };
 
     const handleNext = async () => {
+        // Check cooldown before proceeding
+        if (isOnCooldown) {
+            alert(`Please wait ${cooldownRemaining} seconds before creating another event.`);
+            return;
+        }
+
         // For now, allow creating events without wine categories
         // if (allCategoriesValid) {
         try {
@@ -134,11 +185,16 @@ export default function EventDetailsPage() {
                 budget: budget.trim(),
                 duration: duration.trim(),
                 wineNotes: wineNotes.trim(),
-                wineCategories: validWineCategories
+                wineCategories: validWineCategories,
+                deviceId: getDeviceId() // Add deviceId for rate limiting
             };
 
             // Create the event in the database
             const result = await apiService.createEvent(completeEventData);
+
+            // Set cooldown timestamp
+            const deviceId = getDeviceId();
+            localStorage.setItem(`last-event-creation-${deviceId}`, Date.now().toString());
 
             // Set the event creator flag so drag and drop is enabled
             // Store the creator session with a unique identifier and timestamp
@@ -161,9 +217,22 @@ export default function EventDetailsPage() {
 
             // Navigate to the event created page with the real event ID
             navigate(`/event-created/${result.eventId}`);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating event:', error);
-            alert('Failed to create event. Please try again.');
+
+            // Check if it's a rate limit error
+            if (error.message && error.message.includes('wait')) {
+                // Extract cooldown time if available
+                const match = error.message.match(/(\d+)\s+seconds/);
+                if (match) {
+                    const seconds = parseInt(match[1]);
+                    setIsOnCooldown(true);
+                    setCooldownRemaining(seconds);
+                }
+                alert(error.message);
+            } else {
+                alert('Failed to create event. Please try again.');
+            }
         }
         // } else {
         //     alert('Please select at least one guessing element');
@@ -413,12 +482,48 @@ export default function EventDetailsPage() {
 
                         {/* Create Button */}
                         <Grid size={12}>
+                            {isOnCooldown && (
+                                <Alert
+                                    severity="warning"
+                                    sx={{
+                                        mb: 2,
+                                        backgroundColor: 'rgba(255,255,255,0.15)',
+                                        color: 'white',
+                                        border: '1px solid rgba(255,193,7,0.5)',
+                                        '& .MuiAlert-icon': {
+                                            color: '#ffc107'
+                                        }
+                                    }}
+                                >
+                                    <Box>
+                                        <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                            ⏱️ Rate Limit Active
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ mb: 1 }}>
+                                            Please wait {cooldownRemaining} seconds before creating another event
+                                        </Typography>
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={((COOLDOWN_SECONDS - cooldownRemaining) / COOLDOWN_SECONDS) * 100}
+                                            sx={{
+                                                mt: 1,
+                                                height: 6,
+                                                borderRadius: 3,
+                                                backgroundColor: 'rgba(255,255,255,0.2)',
+                                                '& .MuiLinearProgress-bar': {
+                                                    backgroundColor: '#ffc107'
+                                                }
+                                            }}
+                                        />
+                                    </Box>
+                                </Alert>
+                            )}
                             <Box sx={{ textAlign: 'center', mt: 2 }}>
                                 <Button
                                     variant="contained"
                                     size="large"
                                     onClick={handleNext}
-                                    disabled={false}
+                                    disabled={isOnCooldown}
                                     sx={{
                                         backgroundColor: 'rgba(255,255,255,0.2)',
                                         color: 'white',
@@ -441,7 +546,7 @@ export default function EventDetailsPage() {
                                         }
                                     }}
                                 >
-                                    Create Event 🍷
+                                    {isOnCooldown ? `Wait ${cooldownRemaining}s...` : 'Create Event 🍷'}
                                 </Button>
                             </Box>
                         </Grid>
