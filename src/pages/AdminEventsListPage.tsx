@@ -60,6 +60,7 @@ export default function AdminEventsListPage() {
     const [saving, setSaving] = useState(false);
     const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
     const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
     const { user } = useUser();
     const navigate = useNavigate();
 
@@ -211,14 +212,29 @@ export default function AdminEventsListPage() {
         }
     };
 
-    const handleSelectEvent = (eventId: string) => {
-        setSelectedEvents(prev => {
-            if (prev.includes(eventId)) {
-                return prev.filter(id => id !== eventId);
-            } else {
-                return [...prev, eventId];
-            }
-        });
+    const handleSelectEvent = (eventId: string, index: number, shiftKey: boolean = false) => {
+        if (shiftKey && lastSelectedIndex !== null) {
+            // Range selection with Shift
+            const start = Math.min(lastSelectedIndex, index);
+            const end = Math.max(lastSelectedIndex, index);
+            const rangeIds = events.slice(start, end + 1).map(e => e.id);
+            
+            setSelectedEvents(prev => {
+                // Merge with existing selection
+                const newSelection = new Set([...prev, ...rangeIds]);
+                return Array.from(newSelection);
+            });
+        } else {
+            // Normal toggle selection
+            setSelectedEvents(prev => {
+                if (prev.includes(eventId)) {
+                    return prev.filter(id => id !== eventId);
+                } else {
+                    return [...prev, eventId];
+                }
+            });
+            setLastSelectedIndex(index);
+        }
     };
 
     const handleBulkDeleteClick = () => {
@@ -293,15 +309,34 @@ export default function AdminEventsListPage() {
 
             {/* Bulk Actions Toolbar */}
             {selectedEvents.length > 0 && (
-                <Paper sx={{ mb: 2, p: 2, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                            {selectedEvents.length} event(s) selected
-                        </Typography>
+                <Paper 
+                    elevation={3}
+                    sx={{ 
+                        mb: 2, 
+                        p: 2.5, 
+                        backgroundColor: '#e3f2fd', 
+                        border: '2px solid', 
+                        borderColor: '#1976d2',
+                        borderRadius: 2
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1976d2', mb: 0.5 }}>
+                                ✓ {selectedEvents.length} event(s) selected
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                Hold Shift and click to select a range
+                            </Typography>
+                        </Box>
                         <Box sx={{ display: 'flex', gap: 2 }}>
                             <Button
                                 variant="outlined"
-                                onClick={() => setSelectedEvents([])}
+                                onClick={() => {
+                                    setSelectedEvents([]);
+                                    setLastSelectedIndex(null);
+                                }}
+                                sx={{ fontWeight: 'bold' }}
                             >
                                 Clear Selection
                             </Button>
@@ -310,6 +345,7 @@ export default function AdminEventsListPage() {
                                 color="error"
                                 startIcon={<DeleteSweep />}
                                 onClick={handleBulkDeleteClick}
+                                sx={{ fontWeight: 'bold', px: 3 }}
                             >
                                 Delete Selected ({selectedEvents.length})
                             </Button>
@@ -319,9 +355,12 @@ export default function AdminEventsListPage() {
             )}
 
             {/* Events Count */}
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" sx={{ color: 'text.secondary' }}>
                     Total Events: {events.length}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                    💡 Tip: Hold Shift to select a range
                 </Typography>
             </Box>
 
@@ -359,7 +398,7 @@ export default function AdminEventsListPage() {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                events.map((event) => (
+                                events.map((event, index) => (
                                     <TableRow
                                         key={event.id}
                                         hover
@@ -374,7 +413,10 @@ export default function AdminEventsListPage() {
                                         <TableCell padding="checkbox">
                                             <Checkbox
                                                 checked={selectedEvents.includes(event.id)}
-                                                onChange={() => handleSelectEvent(event.id)}
+                                                onChange={(changeEvent) => {
+                                                    const isShiftPressed = (changeEvent.nativeEvent as any).shiftKey || false;
+                                                    handleSelectEvent(event.id, index, isShiftPressed);
+                                                }}
                                                 onClick={(e) => e.stopPropagation()}
                                             />
                                         </TableCell>
