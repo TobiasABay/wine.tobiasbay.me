@@ -28,10 +28,11 @@ import {
     MenuItem,
     ListItemIcon,
     ListItemText,
-    TextField
+    TextField,
+    Checkbox
 } from '@mui/material';
 import { UserButton, useUser } from '@clerk/clerk-react';
-import { CheckCircle, Cancel, Delete, MoreVert, Edit } from '@mui/icons-material';
+import { CheckCircle, Cancel, Delete, MoreVert, Edit, DeleteSweep } from '@mui/icons-material';
 
 export default function AdminEventsListPage() {
     const [events, setEvents] = useState<Event[]>([]);
@@ -57,6 +58,8 @@ export default function AdminEventsListPage() {
         wine_notes: ''
     });
     const [saving, setSaving] = useState(false);
+    const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+    const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
     const { user } = useUser();
     const navigate = useNavigate();
 
@@ -199,6 +202,56 @@ export default function AdminEventsListPage() {
         setSnackbarOpen(false);
     };
 
+    // Multi-select handlers
+    const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.checked) {
+            setSelectedEvents(events.map(e => e.id));
+        } else {
+            setSelectedEvents([]);
+        }
+    };
+
+    const handleSelectEvent = (eventId: string) => {
+        setSelectedEvents(prev => {
+            if (prev.includes(eventId)) {
+                return prev.filter(id => id !== eventId);
+            } else {
+                return [...prev, eventId];
+            }
+        });
+    };
+
+    const handleBulkDeleteClick = () => {
+        setBulkDeleteDialogOpen(true);
+    };
+
+    const handleBulkDeleteCancel = () => {
+        setBulkDeleteDialogOpen(false);
+    };
+
+    const handleBulkDeleteConfirm = async () => {
+        try {
+            setDeleting(true);
+
+            // Delete all selected events
+            await Promise.all(selectedEvents.map(eventId => apiService.deleteEvent(eventId)));
+
+            // Remove deleted events from the list
+            setEvents(events.filter(e => !selectedEvents.includes(e.id)));
+
+            setSnackbarMessage(`${selectedEvents.length} event(s) deleted successfully`);
+            setSnackbarOpen(true);
+            setBulkDeleteDialogOpen(false);
+            setSelectedEvents([]);
+        } catch (err: any) {
+            setError(err.message || 'Failed to delete events');
+            setSnackbarMessage('Failed to delete some events');
+            setSnackbarOpen(true);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -238,6 +291,33 @@ export default function AdminEventsListPage() {
                 <UserButton afterSignOutUrl="/" />
             </Box>
 
+            {/* Bulk Actions Toolbar */}
+            {selectedEvents.length > 0 && (
+                <Paper sx={{ mb: 2, p: 2, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                            {selectedEvents.length} event(s) selected
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Button
+                                variant="outlined"
+                                onClick={() => setSelectedEvents([])}
+                            >
+                                Clear Selection
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                startIcon={<DeleteSweep />}
+                                onClick={handleBulkDeleteClick}
+                            >
+                                Delete Selected ({selectedEvents.length})
+                            </Button>
+                        </Box>
+                    </Box>
+                </Paper>
+            )}
+
             {/* Events Count */}
             <Box sx={{ mb: 2 }}>
                 <Typography variant="h6" sx={{ color: 'text.secondary' }}>
@@ -251,6 +331,13 @@ export default function AdminEventsListPage() {
                     <Table stickyHeader>
                         <TableHead>
                             <TableRow>
+                                <TableCell padding="checkbox" sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>
+                                    <Checkbox
+                                        indeterminate={selectedEvents.length > 0 && selectedEvents.length < events.length}
+                                        checked={events.length > 0 && selectedEvents.length === events.length}
+                                        onChange={handleSelectAll}
+                                    />
+                                </TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Event Name</TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Event ID</TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Join Code</TableCell>
@@ -265,7 +352,7 @@ export default function AdminEventsListPage() {
                         <TableBody>
                             {events.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                                    <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                                         <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                                             No events found
                                         </Typography>
@@ -276,6 +363,7 @@ export default function AdminEventsListPage() {
                                     <TableRow
                                         key={event.id}
                                         hover
+                                        selected={selectedEvents.includes(event.id)}
                                         sx={{
                                             cursor: 'pointer',
                                             '&:hover': {
@@ -283,6 +371,13 @@ export default function AdminEventsListPage() {
                                             }
                                         }}
                                     >
+                                        <TableCell padding="checkbox">
+                                            <Checkbox
+                                                checked={selectedEvents.includes(event.id)}
+                                                onChange={() => handleSelectEvent(event.id)}
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                        </TableCell>
                                         <TableCell>
                                             <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
                                                 {event.name}
@@ -531,6 +626,57 @@ export default function AdminEventsListPage() {
                         startIcon={deleting ? <CircularProgress size={16} /> : <Delete />}
                     >
                         {deleting ? 'Deleting...' : 'Delete Event'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Bulk Delete Confirmation Dialog */}
+            <Dialog
+                open={bulkDeleteDialogOpen}
+                onClose={handleBulkDeleteCancel}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Delete Multiple Events</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete <strong>{selectedEvents.length} event(s)</strong>?
+                        <br /><br />
+                        This action will permanently delete:
+                        <ul style={{ marginTop: '8px', marginBottom: '8px' }}>
+                            <li>All selected events and their details</li>
+                            <li>All players and their wine submissions</li>
+                            <li>All wine scores and guesses</li>
+                        </ul>
+                        <strong>This action cannot be undone.</strong>
+                        <br /><br />
+                        <Box sx={{ mt: 2, p: 2, backgroundColor: 'grey.100', borderRadius: 1, maxHeight: '200px', overflow: 'auto' }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                Events to be deleted:
+                            </Typography>
+                            {selectedEvents.map(eventId => {
+                                const event = events.find(e => e.id === eventId);
+                                return event ? (
+                                    <Typography key={eventId} variant="body2" sx={{ mb: 0.5 }}>
+                                        • {event.name}
+                                    </Typography>
+                                ) : null;
+                            })}
+                        </Box>
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleBulkDeleteCancel} disabled={deleting}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleBulkDeleteConfirm}
+                        color="error"
+                        variant="contained"
+                        disabled={deleting}
+                        startIcon={deleting ? <CircularProgress size={16} /> : <DeleteSweep />}
+                    >
+                        {deleting ? `Deleting ${selectedEvents.length} event(s)...` : `Delete ${selectedEvents.length} Event(s)`}
                     </Button>
                 </DialogActions>
             </Dialog>
