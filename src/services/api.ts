@@ -1,3 +1,15 @@
+import {
+    isDemoMode,
+    DEMO_EVENT,
+    DEMO_CATEGORIES,
+    DEMO_PLAYERS,
+    DEMO_EVENT_ID,
+    getDemoScores,
+    saveDemoScore,
+    getDemoGuesses,
+    saveDemoGuess
+} from '../utils/demoData';
+
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const API_BASE_URL = isLocalhost ? 'http://localhost:3001' : 'https://api.wine.tobiasbay.me';
 
@@ -154,6 +166,9 @@ class ApiService {
     }
 
     async getEvent(eventId: string): Promise<Event> {
+        if (isDemoMode() && eventId === DEMO_EVENT_ID) {
+            return Promise.resolve(DEMO_EVENT);
+        }
         return this.request<Event>(`/api/events/${eventId}`);
     }
 
@@ -233,6 +248,9 @@ class ApiService {
     }
 
     async getWineCategories(eventId: string): Promise<WineCategory[]> {
+        if (isDemoMode() && eventId === DEMO_EVENT_ID) {
+            return Promise.resolve(DEMO_CATEGORIES);
+        }
         return this.request<WineCategory[]>(`/api/events/${eventId}/wine-categories`);
     }
 
@@ -282,6 +300,10 @@ class ApiService {
     }
 
     async getPlayerWineDetails(playerId: string): Promise<PlayerWineDetail[]> {
+        if (isDemoMode() && playerId.startsWith('demo-player-')) {
+            const player = DEMO_PLAYERS.find(p => p.id === playerId);
+            return Promise.resolve(player?.wine_details || []);
+        }
         return this.request<PlayerWineDetail[]>(`/api/players/${playerId}/wine-details`);
     }
 
@@ -293,10 +315,17 @@ class ApiService {
     }
 
     async getWineScores(eventId: string): Promise<{ success: boolean; averages: Record<string, { average: number; totalScores: number; scores: any[] }>; allScores: any[] }> {
+        if (isDemoMode() && eventId === DEMO_EVENT_ID) {
+            return Promise.resolve(getDemoScores(eventId));
+        }
         return this.request<{ success: boolean; averages: Record<string, { average: number; totalScores: number; scores: any[] }>; allScores: any[] }>(`/api/events/${eventId}/scores`);
     }
 
     async submitWineScore(eventId: string, playerId: string, wineNumber: number, score: number): Promise<{ success: boolean; message: string }> {
+        if (isDemoMode() && eventId === DEMO_EVENT_ID) {
+            saveDemoScore(eventId, playerId, wineNumber, score);
+            return Promise.resolve({ success: true, message: 'Demo score saved' });
+        }
         return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}/scores`, {
             method: 'POST',
             body: JSON.stringify({ playerId, wineNumber, score })
@@ -304,6 +333,10 @@ class ApiService {
     }
 
     async submitPlayerWineGuesses(playerId: string, wineNumber: number, guesses: Array<{ category_id: string; guess: string }>): Promise<{ success: boolean; message: string }> {
+        if (isDemoMode() && playerId.startsWith('demo-player-')) {
+            guesses.forEach(g => saveDemoGuess(playerId, wineNumber, g.category_id, g.guess));
+            return Promise.resolve({ success: true, message: 'Demo guesses saved' });
+        }
         return this.request<{ success: boolean; message: string }>(`/api/players/${playerId}/wine-guesses`, {
             method: 'POST',
             body: JSON.stringify({ wineNumber, guesses })
@@ -318,6 +351,9 @@ class ApiService {
     }
 
     async getEventWineGuesses(eventId: string): Promise<{ success: boolean; categories: Array<{ id: string; guessing_element: string; difficulty_factor: string; guesses: Array<{ player_name: string; guess: string; presentation_order: number; wine_number: number }> }> }> {
+        if (isDemoMode() && eventId === DEMO_EVENT_ID) {
+            return Promise.resolve(getDemoGuesses(eventId));
+        }
         return this.request<{ success: boolean; categories: Array<{ id: string; guessing_element: string; difficulty_factor: string; guesses: Array<{ player_name: string; guess: string; presentation_order: number; wine_number: number }> }> }>(`/api/events/${eventId}/wine-guesses`);
     }
 

@@ -11,6 +11,7 @@ import FinishPage from './pages/FinishPage'
 import AdminEventsListPage from './pages/AdminEventsListPage'
 import AdminEventDetailsPage from './pages/AdminEventDetailsPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import DemoPage from './pages/DemoPage'
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="/score/:eventId" element={<PlayerScoringPage />} />
         <Route path="/finish/:eventId" element={<FinishPage />} />
         <Route path="/join-event" element={<JoinEventPage />} />
+        <Route path="/demo" element={<DemoPage />} />
         <Route
           path="/admin"
           element={
