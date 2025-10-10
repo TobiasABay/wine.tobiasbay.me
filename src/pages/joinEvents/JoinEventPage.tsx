@@ -564,36 +564,53 @@ export default function JoinEventPage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: 2,
+                padding: { xs: 2, md: 2 },
                 position: 'relative'
             }}
         >
             <Paper
                 elevation={24}
                 sx={{
-                    p: 4,
-                    borderRadius: 3,
+                    p: { xs: 3, md: 4 },
+                    borderRadius: { xs: 2, md: 3 },
                     maxWidth: 600,
                     width: '100%',
                     background: 'rgba(255, 255, 255, 0.95)',
                     backdropFilter: 'blur(10px)'
                 }}
             >
-                <Box sx={{ textAlign: 'center', mb: 4 }}>
-                    <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
+                <Box sx={{ textAlign: 'center', mb: { xs: 3, md: 4 } }}>
+                    <Typography
+                        variant="h4"
+                        component="h1"
+                        gutterBottom
+                        sx={{
+                            fontWeight: 'bold',
+                            color: '#2c3e50',
+                            fontSize: { xs: '1.5rem', md: '2.125rem' }
+                        }}
+                    >
                         Join Wine Event
                     </Typography>
-                    <Typography variant="body1" color="text.secondary">
+                    <Typography variant="body1" color="text.secondary" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>
                         {activeStep === 0 ? 'Enter your details to join the wine tasting event' : 'Tell us about your wine'}
                     </Typography>
                 </Box>
 
                 {/* Stepper */}
-                <Box sx={{ mb: 4 }}>
+                <Box sx={{ mb: { xs: 3, md: 4 } }}>
                     <Stepper activeStep={activeStep} alternativeLabel>
                         {steps.map((label) => (
                             <Step key={label}>
-                                <StepLabel>{label}</StepLabel>
+                                <StepLabel
+                                    sx={{
+                                        '& .MuiStepLabel-label': {
+                                            fontSize: { xs: '0.75rem', md: '0.875rem' }
+                                        }
+                                    }}
+                                >
+                                    {label}
+                                </StepLabel>
                             </Step>
                         ))}
                     </Stepper>
@@ -645,8 +662,18 @@ export default function JoinEventPage() {
                 {/* Step 2: Wine Information */}
                 {activeStep === 1 && (
                     <Box>
-                        <Typography variant="h6" gutterBottom sx={{ mb: 3, color: '#2c3e50', display: 'flex', alignItems: 'center' }}>
-                            <WineBar sx={{ mr: 1 }} />
+                        <Typography
+                            variant="h6"
+                            gutterBottom
+                            sx={{
+                                mb: { xs: 2, md: 3 },
+                                color: '#2c3e50',
+                                display: 'flex',
+                                alignItems: 'center',
+                                fontSize: { xs: '1.125rem', md: '1.25rem' }
+                            }}
+                        >
+                            <WineBar sx={{ mr: 1, fontSize: { xs: '1.25rem', md: '1.5rem' } }} />
                             Tell us about your wine
                         </Typography>
 
@@ -655,7 +682,7 @@ export default function JoinEventPage() {
                             const guessingElement = category.guessing_element;
                             const options = getOptionsForCategory(guessingElement, selectedCountry);
                             return (
-                                <Box key={category.id} sx={{ mb: 3 }}>
+                                <Box key={category.id} sx={{ mb: { xs: 2, md: 3 } }}>
                                     <FormControl fullWidth>
                                         <InputLabel id={`wine-category-${category.id}`}>
                                             What is your wine's {guessingElement?.toLowerCase() || 'detail'}?
@@ -692,7 +719,7 @@ export default function JoinEventPage() {
                     </Box>
                 )}
 
-                <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center' }}>
+                <Box sx={{ mt: { xs: 3, md: 4 }, display: 'flex', gap: { xs: 1.5, md: 2 }, justifyContent: 'center', flexWrap: 'wrap' }}>
                     <Button
                         variant="outlined"
                         startIcon={<ArrowBack />}
@@ -700,10 +727,10 @@ export default function JoinEventPage() {
                         disabled={loading}
                         sx={{
                             borderRadius: 2,
-                            px: 3,
-                            py: 1.5,
+                            px: { xs: 2, md: 3 },
+                            py: { xs: 1.25, md: 1.5 },
                             textTransform: 'none',
-                            fontSize: '1rem',
+                            fontSize: { xs: '0.875rem', md: '1rem' },
                             fontWeight: 'medium'
                         }}
                     >
@@ -720,10 +747,10 @@ export default function JoinEventPage() {
                         }
                         sx={{
                             borderRadius: 2,
-                            px: 4,
-                            py: 1.5,
+                            px: { xs: 3, md: 4 },
+                            py: { xs: 1.25, md: 1.5 },
                             textTransform: 'none',
-                            fontSize: '1rem',
+                            fontSize: { xs: '0.875rem', md: '1rem' },
                             fontWeight: 'medium',
                             background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
                             '&:hover': {

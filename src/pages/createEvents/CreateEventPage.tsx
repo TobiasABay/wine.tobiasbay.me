@@ -104,7 +104,7 @@ export default function CreateEventPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: 3,
+                    padding: { xs: 2, md: 3 },
                     borderBottom: '1px solid rgba(255,255,255,0.1)'
                 }}
             >
@@ -114,14 +114,23 @@ export default function CreateEventPage() {
                         startIcon={<ArrowBack />}
                         sx={{
                             color: 'white',
-                            scale: 1.5,
+                            scale: { xs: 1.2, md: 1.5 },
                             '&:hover': {
-                                scale: 1.7,
+                                scale: { xs: 1.3, md: 1.7 },
                             }
                         }}
                     >
                     </Button>
-                    <Typography variant="h4" component="h1" sx={{ ml: 3, fontWeight: 'bold', color: 'white' }}>
+                    <Typography
+                        variant="h4"
+                        component="h1"
+                        sx={{
+                            ml: { xs: 1, md: 3 },
+                            fontWeight: 'bold',
+                            color: 'white',
+                            fontSize: { xs: '1.25rem', md: '2.125rem' }
+                        }}
+                    >
                         Create Wine Event
                     </Typography>
                 </Box>
@@ -136,7 +145,7 @@ export default function CreateEventPage() {
                     display: 'flex',
                     alignItems: 'flex-start',
                     justifyContent: 'center',
-                    padding: 4,
+                    padding: { xs: 2, md: 4 },
                     minHeight: 'calc(100vh - 120px)'
                 }}
             >
@@ -145,25 +154,32 @@ export default function CreateEventPage() {
                     sx={{
                         background: 'rgba(255,255,255,0.1)',
                         backdropFilter: 'blur(10px)',
-                        borderRadius: 4,
-                        padding: 6,
+                        borderRadius: { xs: 2, md: 4 },
+                        padding: { xs: 3, md: 6 },
                         border: '1px solid rgba(255,255,255,0.2)',
                         maxWidth: 600,
                         width: '100%',
                         overflow: 'auto'
                     }}
                 >
-                    <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <WineBar sx={{ fontSize: 80, mb: 2, opacity: 0.9, color: 'white' }} />
-                        <Typography sx={{ color: 'white' }} variant="h4" component="h2" gutterBottom fontWeight="bold">
+                    <Box sx={{ textAlign: 'center', mb: { xs: 3, md: 4 } }}>
+                        <WineBar sx={{ fontSize: { xs: 50, md: 80 }, mb: 2, opacity: 0.9, color: 'white' }} />
+                        <Typography
+                            sx={{ color: 'white' }}
+                            variant="h4"
+                            component="h2"
+                            gutterBottom
+                            fontWeight="bold"
+                            fontSize={{ xs: '1.5rem', md: '2.125rem' }}
+                        >
                             Plan Your Wine Event
                         </Typography>
-                        <Typography variant="body1" sx={{ opacity: 0.9, color: 'white' }}>
+                        <Typography variant="body1" sx={{ opacity: 0.9, color: 'white', fontSize: { xs: '0.875rem', md: '1rem' } }}>
                             Create a memorable wine tasting experience
                         </Typography>
                     </Box>
 
-                    <Grid container spacing={3}>
+                    <Grid container spacing={{ xs: 2, md: 3 }}>
                         {/* Event Name */}
                         <Grid size={12}>
                             <TextField
@@ -351,7 +367,7 @@ export default function CreateEventPage() {
 
                         {/* Create Button */}
                         <Grid size={12}>
-                            <Box sx={{ textAlign: 'center', mt: 2 }}>
+                            <Box sx={{ textAlign: 'center', mt: { xs: 1, md: 2 } }}>
                                 <Button
                                     variant="contained"
                                     size="large"
@@ -361,12 +377,12 @@ export default function CreateEventPage() {
                                         backgroundColor: 'rgba(255,255,255,0.2)',
                                         color: 'white',
                                         border: '2px solid white',
-                                        px: 6,
-                                        py: 2,
-                                        fontSize: '1.2rem',
+                                        px: { xs: 4, md: 6 },
+                                        py: { xs: 1.5, md: 2 },
+                                        fontSize: { xs: '1rem', md: '1.2rem' },
                                         fontWeight: 'bold',
                                         borderRadius: '2rem',
-                                        minWidth: 200,
+                                        minWidth: { xs: 150, md: 200 },
                                         '&:hover': {
                                             backgroundColor: 'white',
                                             color: '#667eea',
