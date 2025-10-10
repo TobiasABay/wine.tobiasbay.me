@@ -23,10 +23,10 @@ export default function HomePage() {
         <Box
             sx={{
                 display: 'flex',
-                height: '100vh',
+                flexDirection: { xs: 'column', md: 'row' },
+                minHeight: '100vh',
                 padding: 0,
                 margin: 0,
-                minHeight: '100vh',
                 border: 'none',
                 outline: 'none',
                 position: 'relative'
@@ -35,9 +35,9 @@ export default function HomePage() {
             {/* Fullscreen Button */}
             <Box
                 sx={{
-                    position: 'absolute',
-                    top: 20,
-                    right: 20,
+                    position: 'fixed',
+                    top: { xs: 10, md: 20 },
+                    right: { xs: 10, md: 20 },
                     zIndex: 1000
                 }}
             >
@@ -56,8 +56,10 @@ export default function HomePage() {
                     position: 'relative',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
+                    minHeight: { xs: '50vh', md: '100vh' },
+                    padding: { xs: 3, md: 0 },
                     '&:hover': {
-                        transform: 'scale(1.02)',
+                        transform: { xs: 'none', md: 'scale(1.02)' },
                         boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
                     }
                 }}
@@ -69,21 +71,26 @@ export default function HomePage() {
                         background: 'rgba(255,255,255,0.1)',
                         backdropFilter: 'blur(10px)',
                         borderRadius: 3,
-                        padding: 4,
                         textAlign: 'center',
                         border: '1px solid rgba(255,255,255,0.2)',
                         transition: 'all 0.3s ease',
+                        width: { xs: '100%', md: '400px' },
+                        minHeight: { xs: '280px', md: '320px' },
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
                         '&:hover': {
                             background: 'rgba(255,255,255,0.2)',
-                            transform: 'translateY(-5px)'
+                            transform: { xs: 'none', md: 'translateY(-5px)' }
                         }
                     }}
                 >
-                    <Add sx={{ fontSize: 60, mb: 2, color: 'white' }} />
-                    <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" color="white">
+                    <Add sx={{ fontSize: { xs: 50, md: 60 }, mb: 2, color: 'white' }} />
+                    <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" color="white" sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
                         Create Event
                     </Typography>
-                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3, color: 'white' }}>
+                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3, color: 'white', fontSize: { xs: '1rem', md: '1.25rem' } }}>
                         Host your own wine tasting experience
                     </Typography>
                     <Button
@@ -123,8 +130,10 @@ export default function HomePage() {
                     position: 'relative',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
+                    minHeight: { xs: '50vh', md: '100vh' },
+                    padding: { xs: 3, md: 0 },
                     '&:hover': {
-                        transform: 'scale(1.02)',
+                        transform: { xs: 'none', md: 'scale(1.02)' },
                         boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
                     }
                 }}
@@ -136,21 +145,26 @@ export default function HomePage() {
                         background: 'rgba(255,255,255,0.1)',
                         backdropFilter: 'blur(10px)',
                         borderRadius: 3,
-                        padding: 4,
                         textAlign: 'center',
                         border: '1px solid rgba(255,255,255,0.2)',
                         transition: 'all 0.3s ease',
+                        width: { xs: '100%', md: '400px' },
+                        minHeight: { xs: '280px', md: '320px' },
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
                         '&:hover': {
                             background: 'rgba(255,255,255,0.2)',
-                            transform: 'translateY(-5px)'
+                            transform: { xs: 'none', md: 'translateY(-5px)' }
                         }
                     }}
                 >
-                    <GroupAdd sx={{ fontSize: 60, mb: 2, color: 'white' }} />
-                    <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" color="white">
+                    <GroupAdd sx={{ fontSize: { xs: 50, md: 60 }, mb: 2, color: 'white' }} />
+                    <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" color="white" sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
                         Join Event
                     </Typography>
-                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3, color: 'white' }}>
+                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3, color: 'white', fontSize: { xs: '1rem', md: '1.25rem' } }}>
                         Join an existing wine tasting event
                     </Typography>
                     <Button
@@ -165,7 +179,6 @@ export default function HomePage() {
                             fontSize: '1.1rem',
                             fontWeight: 'bold',
                             borderRadius: '2rem',
-
                             '&:hover': {
                                 backgroundColor: 'white',
                                 color: '#f5576c',
