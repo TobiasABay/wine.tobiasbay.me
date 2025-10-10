@@ -11,7 +11,7 @@ import {
     Chip,
     Collapse
 } from '@mui/material';
-import { ArrowBack, EmojiEvents, Star, ExpandMore, ExpandLess } from '@mui/icons-material';
+import { ArrowBack, EmojiEvents, Star, ExpandMore, ExpandLess, CheckCircle, Cancel } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Event } from '../services/api';
 
@@ -559,59 +559,109 @@ export default function FinishPage() {
                                                                         display: 'flex',
                                                                         flexDirection: { xs: 'column', sm: 'row' },
                                                                         alignItems: { xs: 'flex-start', sm: 'center' },
-                                                                        gap: { xs: 0.5, sm: 1 },
+                                                                        justifyContent: 'space-between',
+                                                                        gap: { xs: 0.5, sm: 2 },
                                                                         mb: 1,
                                                                         ml: { xs: 1, sm: 3 },
-                                                                        p: { xs: 0.75, sm: 1 },
+                                                                        p: { xs: 0.75, sm: 1.5 },
                                                                         backgroundColor: category.isCorrect ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
                                                                         borderRadius: 1,
                                                                         border: `1px solid ${category.isCorrect ? 'rgba(40, 167, 69, 0.3)' : 'rgba(220, 53, 69, 0.3)'}`
                                                                     }}>
-                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                                                             <Typography
                                                                                 variant="body2"
                                                                                 sx={{
-                                                                                    fontWeight: 'medium',
+                                                                                    fontWeight: 'bold',
                                                                                     color: '#2c3e50',
-                                                                                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                                                                                    minWidth: { xs: '60px', sm: '80px' }
+                                                                                    fontSize: { xs: '0.75rem', sm: '0.9rem' },
+                                                                                    minWidth: { xs: '60px', sm: '100px' }
                                                                                 }}
                                                                             >
                                                                                 {category.categoryName}:
                                                                             </Typography>
                                                                             <Chip
-                                                                                label={category.isCorrect ? "✓" : "✗"}
+                                                                                icon={category.isCorrect ?
+                                                                                    <CheckCircle sx={{ fontSize: { xs: '0.85rem !important', sm: '1rem !important' } }} /> :
+                                                                                    <Cancel sx={{ fontSize: { xs: '0.85rem !important', sm: '1rem !important' } }} />
+                                                                                }
+                                                                                label={category.isCorrect ? "Correct" : "Wrong"}
                                                                                 size="small"
                                                                                 sx={{
-                                                                                    height: { xs: 16, sm: 18 },
-                                                                                    fontSize: { xs: '0.6rem', sm: '0.65rem' },
-                                                                                    backgroundColor: category.isCorrect ? '#e8f5e8' : '#f8d7da',
-                                                                                    color: category.isCorrect ? '#155724' : '#721c24'
+                                                                                    height: { xs: 20, sm: 24 },
+                                                                                    fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                                                                    fontWeight: 'bold',
+                                                                                    backgroundColor: category.isCorrect ? '#d4edda' : '#f8d7da',
+                                                                                    color: category.isCorrect ? '#155724' : '#721c24',
+                                                                                    border: `1px solid ${category.isCorrect ? '#c3e6cb' : '#f5c6cb'}`,
+                                                                                    '& .MuiChip-icon': {
+                                                                                        color: category.isCorrect ? '#155724' : '#721c24'
+                                                                                    }
                                                                                 }}
                                                                             />
                                                                         </Box>
-                                                                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 0.25, sm: 1 }, ml: { xs: 0, sm: 0 } }}>
-                                                                            <Typography
-                                                                                variant="body2"
-                                                                                sx={{
-                                                                                    fontWeight: 'medium',
-                                                                                    color: '#2c3e50',
-                                                                                    fontStyle: 'italic',
-                                                                                    fontSize: { xs: '0.7rem', sm: '0.875rem' }
-                                                                                }}
-                                                                            >
-                                                                                "{category.guess}"
-                                                                            </Typography>
-                                                                            <Typography
-                                                                                variant="body2"
-                                                                                sx={{
-                                                                                    fontWeight: 'normal',
-                                                                                    color: '#7f8c8d',
-                                                                                    fontSize: { xs: '0.65rem', sm: '0.75rem' }
-                                                                                }}
-                                                                            >
-                                                                                (Correct: "{category.correctAnswer}")
-                                                                            </Typography>
+                                                                        <Box sx={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            gap: { xs: 0.5, sm: 2 },
+                                                                            flexWrap: 'wrap',
+                                                                            flex: 1,
+                                                                            justifyContent: { xs: 'flex-start', sm: 'flex-end' }
+                                                                        }}>
+                                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                                                <Typography
+                                                                                    variant="body2"
+                                                                                    sx={{
+                                                                                        fontWeight: 'normal',
+                                                                                        color: '#7f8c8d',
+                                                                                        fontSize: { xs: '0.65rem', sm: '0.75rem' }
+                                                                                    }}
+                                                                                >
+                                                                                    Your guess:
+                                                                                </Typography>
+                                                                                <Typography
+                                                                                    variant="body2"
+                                                                                    sx={{
+                                                                                        fontWeight: 'bold',
+                                                                                        color: '#2c3e50',
+                                                                                        fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                                                                                        px: 1,
+                                                                                        py: 0.25,
+                                                                                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                                                                        borderRadius: 1
+                                                                                    }}
+                                                                                >
+                                                                                    {category.guess}
+                                                                                </Typography>
+                                                                            </Box>
+                                                                            {!category.isCorrect && (
+                                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                                                    <Typography
+                                                                                        variant="body2"
+                                                                                        sx={{
+                                                                                            fontWeight: 'normal',
+                                                                                            color: '#7f8c8d',
+                                                                                            fontSize: { xs: '0.65rem', sm: '0.75rem' }
+                                                                                        }}
+                                                                                    >
+                                                                                        Correct:
+                                                                                    </Typography>
+                                                                                    <Typography
+                                                                                        variant="body2"
+                                                                                        sx={{
+                                                                                            fontWeight: 'bold',
+                                                                                            color: '#27ae60',
+                                                                                            fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                                                                                            px: 1,
+                                                                                            py: 0.25,
+                                                                                            backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                                                                                            borderRadius: 1
+                                                                                        }}
+                                                                                    >
+                                                                                        {category.correctAnswer}
+                                                                                    </Typography>
+                                                                                </Box>
+                                                                            )}
                                                                         </Box>
                                                                     </Box>
                                                                 ))}
