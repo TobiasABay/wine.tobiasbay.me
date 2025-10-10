@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../services/database');
+const { sanitizeEventName, validateEventName } = require('../utils/sanitize');
 
 
 // Create a new event
@@ -15,6 +16,17 @@ router.post('/', async (req, res) => {
                 error: 'Missing required fields: name, date, maxParticipants, wineType, location'
             });
         }
+
+        // Validate and sanitize event name
+        const nameValidation = validateEventName(eventData.name);
+        if (!nameValidation.isValid) {
+            return res.status(400).json({
+                error: nameValidation.error || 'Invalid event name'
+            });
+        }
+
+        // Sanitize event name
+        eventData.name = sanitizeEventName(eventData.name, true);
 
         const result = await db.createEvent(eventData);
 

@@ -144,6 +144,69 @@ function validatePlayerName(name) {
 }
 
 /**
+ * Sanitize event name
+ * - Allows letters, numbers, spaces, and common punctuation
+ * - Maximum 100 characters
+ * @param {string} name - The event name to sanitize
+ * @param {boolean} trimSpaces - Whether to trim leading/trailing spaces (default: true for backend)
+ * @returns {string} Sanitized event name
+ */
+function sanitizeEventName(name, trimSpaces = true) {
+    if (!name || typeof name !== 'string') return '';
+
+    let sanitized = name
+        .replace(/<[^>]*>/g, '')
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+        .replace(/javascript:/gi, '')
+        .replace(/data:text\/html/gi, '');
+
+    // Only allow: letters, numbers, spaces, and common punctuation (.-_'&!?)
+    sanitized = sanitized.replace(/[^\p{L}\p{N}\s\-._'&!?]/gu, '');
+
+    // Remove multiple consecutive spaces
+    sanitized = sanitized.replace(/\s+/g, ' ');
+
+    if (trimSpaces) {
+        sanitized = sanitized.trim();
+    }
+
+    if (sanitized.length > 100) {
+        sanitized = sanitized.substring(0, 100);
+    }
+
+    return sanitized;
+}
+
+/**
+ * Validate event name
+ * @param {string} name - The event name to validate
+ * @returns {{isValid: boolean, error?: string}} Validation result
+ */
+function validateEventName(name) {
+    const sanitized = sanitizeEventName(name);
+
+    if (!sanitized) {
+        return { isValid: false, error: 'Event name is required' };
+    }
+
+    if (sanitized.length < 3) {
+        return { isValid: false, error: 'Event name must be at least 3 characters' };
+    }
+
+    if (sanitized.length > 100) {
+        return { isValid: false, error: 'Event name must be less than 100 characters' };
+    }
+
+    // Check for inappropriate content
+    if (containsInappropriateContent(sanitized)) {
+        return { isValid: false, error: 'Please choose an appropriate event name' };
+    }
+
+    return { isValid: true };
+}
+
+/**
  * Sanitize join code
  * - Only allows alphanumeric characters
  * - Maximum 6 characters
@@ -168,6 +231,8 @@ module.exports = {
     sanitizeInput,
     sanitizePlayerName,
     validatePlayerName,
+    sanitizeEventName,
+    validateEventName,
     sanitizeJoinCode
 };
 

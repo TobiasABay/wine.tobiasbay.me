@@ -118,6 +118,52 @@ function validatePlayerName(name) {
     return { isValid: true };
 }
 
+function sanitizeEventName(name, trimSpaces = true) {
+    if (!name || typeof name !== 'string') return '';
+
+    let sanitized = name
+        .replace(/<[^>]*>/g, '')
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+        .replace(/javascript:/gi, '')
+        .replace(/data:text\/html/gi, '');
+
+    sanitized = sanitized.replace(/[^\p{L}\p{N}\s\-._'&!?]/gu, '');
+    sanitized = sanitized.replace(/\s+/g, ' ');
+
+    if (trimSpaces) {
+        sanitized = sanitized.trim();
+    }
+
+    if (sanitized.length > 100) {
+        sanitized = sanitized.substring(0, 100);
+    }
+
+    return sanitized;
+}
+
+function validateEventName(name) {
+    const sanitized = sanitizeEventName(name);
+
+    if (!sanitized) {
+        return { isValid: false, error: 'Event name is required' };
+    }
+
+    if (sanitized.length < 3) {
+        return { isValid: false, error: 'Event name must be at least 3 characters' };
+    }
+
+    if (sanitized.length > 100) {
+        return { isValid: false, error: 'Event name must be less than 100 characters' };
+    }
+
+    if (containsInappropriateContent(sanitized)) {
+        return { isValid: false, error: 'Please choose an appropriate event name' };
+    }
+
+    return { isValid: true };
+}
+
 function sanitizeJoinCode(code) {
     if (!code || typeof code !== 'string') return '';
 
@@ -385,6 +431,20 @@ async function createEvent(request, env, corsHeaders) {
     try {
         const eventData = await request.json();
 
+        // Validate event name
+        const nameValidation = validateEventName(eventData.name);
+        if (!nameValidation.isValid) {
+            return new Response(JSON.stringify({
+                error: nameValidation.error || 'Invalid event name'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Sanitize event name
+        const sanitizedEventName = sanitizeEventName(eventData.name, true);
+
         const eventId = generateUUID();
         const joinCode = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -395,7 +455,7 @@ async function createEvent(request, env, corsHeaders) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
             eventId,
-            eventData.name,
+            sanitizedEventName,
             eventData.date,
             eventData.maxParticipants,
             eventData.wineType,
@@ -454,6 +514,19 @@ async function updateEvent(eventId, request, env, corsHeaders) {
             });
         }
 
+        // Validate and sanitize event name
+        const nameValidation = validateEventName(eventData.name);
+        if (!nameValidation.isValid) {
+            return new Response(JSON.stringify({
+                error: nameValidation.error || 'Invalid event name'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        const sanitizedEventName = sanitizeEventName(eventData.name, true);
+
         // Update the event
         await env.wine_events.prepare(`
             UPDATE events 
@@ -462,7 +535,7 @@ async function updateEvent(eventId, request, env, corsHeaders) {
                 wine_notes = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         `).bind(
-            eventData.name,
+            sanitizedEventName,
             eventData.date,
             eventData.maxParticipants || eventData.max_participants,
             eventData.wineType || eventData.wine_type,

@@ -149,6 +149,76 @@ export function validatePlayerName(name: string): { isValid: boolean; error?: st
 }
 
 /**
+ * Sanitize event name
+ * - Allows letters, numbers, spaces, and common punctuation
+ * - Maximum 100 characters
+ * @param name - The event name to sanitize
+ * @param trimSpaces - Whether to trim leading/trailing spaces (default: false)
+ * @returns Sanitized event name
+ */
+export function sanitizeEventName(name: string, trimSpaces: boolean = false): string {
+    if (!name) return '';
+
+    let sanitized = name
+        // Remove HTML tags
+        .replace(/<[^>]*>/g, '')
+        // Remove script tags and their content
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        // Remove event handlers (onclick, onerror, etc.)
+        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+        // Remove javascript: protocol
+        .replace(/javascript:/gi, '')
+        // Remove data: protocol (can be used for XSS)
+        .replace(/data:text\/html/gi, '');
+
+    // Only allow: letters, numbers, spaces, and common punctuation (.-_'&!?)
+    sanitized = sanitized.replace(/[^\p{L}\p{N}\s\-._'&!?]/gu, '');
+
+    // Remove multiple consecutive spaces
+    sanitized = sanitized.replace(/\s+/g, ' ');
+
+    // Only trim if explicitly requested
+    if (trimSpaces) {
+        sanitized = sanitized.trim();
+    }
+
+    // Limit length
+    if (sanitized.length > 100) {
+        sanitized = sanitized.substring(0, 100);
+    }
+
+    return sanitized;
+}
+
+/**
+ * Validate event name
+ * @param name - The event name to validate
+ * @returns Object with isValid flag and error message if invalid
+ */
+export function validateEventName(name: string): { isValid: boolean; error?: string } {
+    const sanitized = sanitizeEventName(name, true); // Trim for validation
+
+    if (!sanitized) {
+        return { isValid: false, error: 'Event name is required' };
+    }
+
+    if (sanitized.length < 3) {
+        return { isValid: false, error: 'Event name must be at least 3 characters' };
+    }
+
+    if (sanitized.length > 100) {
+        return { isValid: false, error: 'Event name must be less than 100 characters' };
+    }
+
+    // Check for inappropriate content
+    if (containsInappropriateContent(sanitized)) {
+        return { isValid: false, error: 'Please choose an appropriate event name' };
+    }
+
+    return { isValid: true };
+}
+
+/**
  * Sanitize join code
  * - Only allows alphanumeric characters
  * - Maximum 6 characters

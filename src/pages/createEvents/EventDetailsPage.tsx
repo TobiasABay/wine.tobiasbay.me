@@ -14,6 +14,7 @@ import {
 import { ArrowBack, Description, Delete } from '@mui/icons-material';
 import FullscreenButton from '../../components/FullscreenButton';
 import { apiService } from '../../services/api';
+import { sanitizeEventName, validateEventName } from '../../utils/sanitize';
 
 export default function EventDetailsPage() {
     const [description, setDescription] = useState('');
@@ -107,6 +108,16 @@ export default function EventDetailsPage() {
 
             const parsedBasicData = JSON.parse(basicEventData);
 
+            // Validate event name
+            const nameValidation = validateEventName(parsedBasicData.eventName);
+            if (!nameValidation.isValid) {
+                alert(nameValidation.error || 'Invalid event name');
+                return;
+            }
+
+            // Sanitize event name
+            const sanitizedEventName = sanitizeEventName(parsedBasicData.eventName, true);
+
             // Filter out empty wine categories and prepare them
             const validWineCategories = wineCategories.filter(category =>
                 category.guessing_element.trim() !== '' && category.difficulty_factor.trim() !== ''
@@ -114,7 +125,7 @@ export default function EventDetailsPage() {
 
             // Combine basic event data with additional details
             const completeEventData = {
-                name: parsedBasicData.eventName.trim(),
+                name: sanitizedEventName,
                 date: parsedBasicData.eventDate,
                 maxParticipants: parseInt(parsedBasicData.maxParticipants),
                 wineType: parsedBasicData.wineType,

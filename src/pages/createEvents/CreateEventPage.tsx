@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, WineBar } from '@mui/icons-material';
 import FullscreenButton from '../../components/FullscreenButton';
+import { sanitizeEventName, validateEventName } from '../../utils/sanitize';
 
 export default function CreateEventPage() {
     const [eventName, setEventName] = useState('');
@@ -65,6 +66,13 @@ export default function CreateEventPage() {
     };
 
     const handleCreateEvent = () => {
+        // Validate event name
+        const nameValidation = validateEventName(eventName);
+        if (!nameValidation.isValid) {
+            alert(nameValidation.error || 'Invalid event name');
+            return;
+        }
+
         if (eventName.trim() && eventDate && maxParticipants && wineType && location.trim()) {
             // Navigate to event details page to complete the event creation
             navigate('/event-details');
@@ -187,7 +195,11 @@ export default function CreateEventPage() {
                                 label="Event Name"
                                 placeholder="e.g., 'Summer Wine Tasting' or 'Bordeaux Night'"
                                 value={eventName}
-                                onChange={(e) => setEventName(e.target.value)}
+                                onChange={(e) => {
+                                    const sanitized = sanitizeEventName(e.target.value);
+                                    setEventName(sanitized);
+                                }}
+                                helperText="Letters, numbers, spaces, and basic punctuation allowed (3-100 characters)"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         backgroundColor: 'rgba(0,0,0,0.3)',
@@ -211,6 +223,10 @@ export default function CreateEventPage() {
                                         '&.Mui-focused': {
                                             color: 'white'
                                         }
+                                    },
+                                    '& .MuiFormHelperText-root': {
+                                        color: 'rgba(255,255,255,0.7)',
+                                        fontSize: '0.75rem'
                                     }
                                 }}
                             />
