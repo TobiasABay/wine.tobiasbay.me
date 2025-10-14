@@ -368,6 +368,7 @@ export default function AdminEventsListPage() {
                     <Button
                         variant="outlined"
                         startIcon={<Wifi />}
+                        onClick={() => navigate('/ws-test')}
                         sx={{ textTransform: 'none' }}
                     >
                         WebSocket
