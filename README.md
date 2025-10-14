@@ -7,11 +7,12 @@ A full-stack wine tasting event application built with React, TypeScript, and Cl
 - **Event Management**: Create wine tasting events with custom categories
 - **Player Registration**: Join events with 6-digit codes or QR codes
 - **Smart Region Filtering**: Regions automatically filtered based on selected country
-- **Real-time Updates**: Live player updates and scoring
+- **Real-time Updates**: Live player updates and scoring via WebSocket
 - **Scoring System**: Points based on correct guesses and difficulty factors
 - **Admin Interface**: Review and edit wine answers and guesses
 - **Responsive Design**: Works on desktop and mobile devices
 - **Cloudflare Deployment**: Hosted on Cloudflare Pages and Workers
+- **WebSocket Support**: Real-time bidirectional communication with Socket.IO
 
 ## 🏗️ Architecture
 
@@ -19,7 +20,7 @@ A full-stack wine tasting event application built with React, TypeScript, and Cl
 - **Pages**: Event creation, joining, scoring, results
 - **Components**: Reusable UI components
 - **Services**: API communication and WebSocket handling
-- **Hooks**: Custom React hooks for fullscreen and polling
+- **Hooks**: Custom React hooks for fullscreen, polling, and WebSocket
 
 ### Backend (Cloudflare Workers + SQLite)
 - **API**: RESTful endpoints for all operations
@@ -38,7 +39,8 @@ src/
 │   └── WineScoring.tsx
 ├── hooks/              # Custom React hooks
 │   ├── useFullscreen.ts
-│   └── useSmartPolling.ts
+│   ├── useSmartPolling.ts
+│   └── useWebSocket.ts
 ├── pages/              # Application pages
 │   ├── AdminPage.tsx
 │   ├── EventPage.tsx
@@ -85,6 +87,7 @@ src/
 ### Custom Hooks
 - **`useFullscreen`** - Manage fullscreen state
 - **`useSmartPolling`** - Intelligent polling for real-time updates
+- **`useWebSocket`** - Real-time WebSocket connection management
 
 ## 🔧 Key Variables & Configuration
 
@@ -167,6 +170,18 @@ npm run init-db
 npm run dev
 ```
 
+### WebSocket Testing
+```bash
+# Test WebSocket connection (automated)
+node test-websocket.cjs
+
+# Or open the browser test page
+# Start both frontend and backend servers, then:
+# http://localhost:5173/ws-test
+```
+
+See [WEBSOCKET_IMPLEMENTATION.md](./WEBSOCKET_IMPLEMENTATION.md) for detailed WebSocket documentation.
+
 ## 🌐 Deployment
 
 ### Frontend (Cloudflare Pages)
@@ -226,11 +241,13 @@ npx wrangler deploy
 - **Vite** - Build tool
 - **Material-UI** - Component library
 - **React Router** - Navigation
+- **Socket.IO Client** - WebSocket communication
 
 ### Backend
 - **Cloudflare Workers** - Serverless functions
+- **Node.js/Express** - Local development server
 - **SQLite** - Database
-- **WebSocket** - Real-time communication
+- **Socket.IO** - Real-time WebSocket communication
 - **CORS** - Cross-origin requests
 
 ## 📱 Browser Support
@@ -259,7 +276,15 @@ For issues and questions:
 - Contact the maintainer
 - Check the documentation
 
+## 📚 Additional Documentation
+
+- [WebSocket Implementation](./WEBSOCKET_IMPLEMENTATION.md) - Detailed WebSocket documentation
+- [WebSocket Test Results](./WEBSOCKET_TEST_RESULTS.md) - Test results and verification
+- [WebSocket Integration Examples](./WEBSOCKET_INTEGRATION_EXAMPLE.md) - Code examples for integration
+- [Deployment Guide](./DEPLOYMENT.md) - Production deployment instructions
+
 ---
 
 **Live Application**: https://wine.tobiasbay.me  
-**API Documentation**: https://api.wine.tobiasbay.me
+**API Documentation**: https://api.wine.tobiasbay.me  
+**WebSocket Test Page**: http://localhost:5173/ws-test (development only)

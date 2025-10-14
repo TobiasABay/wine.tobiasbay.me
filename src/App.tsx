@@ -12,6 +12,7 @@ import AdminEventsListPage from './pages/AdminEventsListPage'
 import AdminEventDetailsPage from './pages/AdminEventDetailsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import DemoPage from './pages/DemoPage'
+import WebSocketTestPage from './pages/WebSocketTestPage'
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="/finish/:eventId" element={<FinishPage />} />
         <Route path="/join-event" element={<JoinEventPage />} />
         <Route path="/demo" element={<DemoPage />} />
+        <Route path="/ws-test" element={<WebSocketTestPage />} />
         <Route
           path="/admin"
           element={
