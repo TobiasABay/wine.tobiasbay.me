@@ -22,8 +22,8 @@ import {
     DialogContent,
     DialogActions
 } from '@mui/material';
-import { Edit, Save, Cancel, Insights, Feedback, Wifi } from '@mui/icons-material';
-import { UserButton, useUser } from '@clerk/clerk-react';
+import { Edit, Save, Cancel } from '@mui/icons-material';
+import { useUser } from '@clerk/clerk-react';
 
 interface WineData {
     success: boolean;
@@ -172,30 +172,6 @@ export default function AdminEventDetailsPage() {
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                         Signed in as {user?.primaryEmailAddress?.emailAddress || user?.fullName || 'Admin'}
                     </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Insights />}
-                        sx={{ textTransform: 'none' }}
-                    >
-                        Insights
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Feedback />}
-                        sx={{ textTransform: 'none' }}
-                    >
-                        Feedback
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Wifi />}
-                        sx={{ textTransform: 'none' }}
-                    >
-                        WebSocket
-                    </Button>
-                    <UserButton afterSignOutUrl="/" />
                 </Box>
             </Box>
 
