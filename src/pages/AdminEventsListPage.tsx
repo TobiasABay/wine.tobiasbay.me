@@ -32,7 +32,7 @@ import {
     Checkbox
 } from '@mui/material';
 import { UserButton, useUser } from '@clerk/clerk-react';
-import { CheckCircle, Cancel, Delete, MoreVert, Edit, DeleteSweep } from '@mui/icons-material';
+import { CheckCircle, Cancel, Delete, MoreVert, Edit, DeleteSweep, Restore, Block } from '@mui/icons-material';
 
 export default function AdminEventsListPage() {
     const [events, setEvents] = useState<Event[]>([]);
@@ -203,6 +203,52 @@ export default function AdminEventsListPage() {
         setSnackbarOpen(false);
     };
 
+    const handleReactivateClick = () => {
+        if (selectedEvent) {
+            handleReactivateEvent(selectedEvent.id, selectedEvent.name);
+            handleMenuClose();
+        }
+    };
+
+    const handleReactivateEvent = async (eventId: string, eventName: string) => {
+        try {
+            await apiService.reactivateEvent(eventId);
+
+            // Reload events to show updated status
+            await loadEvents();
+
+            setSnackbarMessage(`Event "${eventName}" reactivated successfully`);
+            setSnackbarOpen(true);
+        } catch (err: any) {
+            setError(err.message || 'Failed to reactivate event');
+            setSnackbarMessage('Failed to reactivate event');
+            setSnackbarOpen(true);
+        }
+    };
+
+    const handleDeactivateClick = () => {
+        if (selectedEvent) {
+            handleDeactivateEvent(selectedEvent.id, selectedEvent.name);
+            handleMenuClose();
+        }
+    };
+
+    const handleDeactivateEvent = async (eventId: string, eventName: string) => {
+        try {
+            await apiService.deactivateEvent(eventId);
+
+            // Reload events to show updated status
+            await loadEvents();
+
+            setSnackbarMessage(`Event "${eventName}" deactivated successfully`);
+            setSnackbarOpen(true);
+        } catch (err: any) {
+            setError(err.message || 'Failed to deactivate event');
+            setSnackbarMessage('Failed to deactivate event');
+            setSnackbarOpen(true);
+        }
+    };
+
     // Multi-select handlers
     const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.checked) {
@@ -218,7 +264,7 @@ export default function AdminEventsListPage() {
             const start = Math.min(lastSelectedIndex, index);
             const end = Math.max(lastSelectedIndex, index);
             const rangeIds = events.slice(start, end + 1).map(e => e.id);
-            
+
             setSelectedEvents(prev => {
                 // Merge with existing selection
                 const newSelection = new Set([...prev, ...rangeIds]);
@@ -309,13 +355,13 @@ export default function AdminEventsListPage() {
 
             {/* Bulk Actions Toolbar */}
             {selectedEvents.length > 0 && (
-                <Paper 
+                <Paper
                     elevation={3}
-                    sx={{ 
-                        mb: 2, 
-                        p: 2.5, 
-                        backgroundColor: '#e3f2fd', 
-                        border: '2px solid', 
+                    sx={{
+                        mb: 2,
+                        p: 2.5,
+                        backgroundColor: '#e3f2fd',
+                        border: '2px solid',
                         borderColor: '#1976d2',
                         borderRadius: 2
                     }}
@@ -528,6 +574,22 @@ export default function AdminEventsListPage() {
                     </ListItemIcon>
                     <ListItemText>Edit</ListItemText>
                 </MenuItem>
+                {selectedEvent && !selectedEvent.is_active && (
+                    <MenuItem onClick={handleReactivateClick} sx={{ color: 'success.main' }}>
+                        <ListItemIcon>
+                            <Restore fontSize="small" sx={{ color: 'success.main' }} />
+                        </ListItemIcon>
+                        <ListItemText>Reactivate</ListItemText>
+                    </MenuItem>
+                )}
+                {selectedEvent && selectedEvent.is_active && (
+                    <MenuItem onClick={handleDeactivateClick} sx={{ color: 'warning.main' }}>
+                        <ListItemIcon>
+                            <Block fontSize="small" sx={{ color: 'warning.main' }} />
+                        </ListItemIcon>
+                        <ListItemText>Deactivate</ListItemText>
+                    </MenuItem>
+                )}
                 <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
                     <ListItemIcon>
                         <Delete fontSize="small" sx={{ color: 'error.main' }} />

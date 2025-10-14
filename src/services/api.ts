@@ -185,6 +185,18 @@ class ApiService {
         });
     }
 
+    async reactivateEvent(eventId: string): Promise<{ success: boolean; message: string }> {
+        return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}/reactivate`, {
+            method: 'POST',
+        });
+    }
+
+    async deactivateEvent(eventId: string): Promise<{ success: boolean; message: string }> {
+        return this.request<{ success: boolean; message: string }>(`/api/events/${eventId}/deactivate`, {
+            method: 'POST',
+        });
+    }
+
     async getEventByJoinCode(joinCode: string): Promise<Event> {
         return this.request<Event>(`/api/events/join/${joinCode}`);
     }

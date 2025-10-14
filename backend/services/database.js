@@ -175,6 +175,48 @@ class Database {
         });
     }
 
+    reactivateEvent(eventId) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                UPDATE events 
+                SET is_active = 1, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `;
+
+            this.db.run(sql, [eventId], function (err) {
+                if (err) {
+                    reject(err);
+                } else if (this.changes === 0) {
+                    reject(new Error('Event not found'));
+                } else {
+                    console.log(`[REACTIVATE] Reactivated event ${eventId}`);
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    deactivateEvent(eventId) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                UPDATE events 
+                SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `;
+
+            this.db.run(sql, [eventId], function (err) {
+                if (err) {
+                    reject(err);
+                } else if (this.changes === 0) {
+                    reject(new Error('Event not found'));
+                } else {
+                    console.log(`[DEACTIVATE] Deactivated event ${eventId}`);
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
     deleteEvent(eventId) {
         return new Promise((resolve, reject) => {
             // Delete all related data in a transaction

@@ -254,6 +254,18 @@ export default {
                 });
             }
 
+            // Reactivate event endpoint
+            if (apiPath.match(/^\/api\/events\/[^/]+\/reactivate$/) && method === 'POST') {
+                const eventId = apiPath.split('/')[3];
+                return await reactivateEvent(eventId, env, corsHeaders);
+            }
+
+            // Deactivate event endpoint
+            if (apiPath.match(/^\/api\/events\/[^/]+\/deactivate$/) && method === 'POST') {
+                const eventId = apiPath.split('/')[3];
+                return await deactivateEvent(eventId, env, corsHeaders);
+            }
+
             if (apiPath === '/api/debug/database') {
                 return await debugDatabase(env, corsHeaders);
             }
@@ -658,6 +670,88 @@ async function deleteEvent(eventId, env, corsHeaders) {
         console.error('[DELETE_EVENT] Error deleting event:', error);
         return new Response(JSON.stringify({
             error: 'Failed to delete event',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function reactivateEvent(eventId, env, corsHeaders) {
+    try {
+        // Check if event exists first
+        const event = await env.wine_events.prepare(`
+            SELECT * FROM events WHERE id = ?
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Reactivate the event
+        await env.wine_events.prepare(`
+            UPDATE events 
+            SET is_active = 1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `).bind(eventId).run();
+
+        console.log(`[REACTIVATE] Reactivated event ${eventId}`);
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Event reactivated successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('[REACTIVATE_EVENT] Error reactivating event:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to reactivate event',
+            details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function deactivateEvent(eventId, env, corsHeaders) {
+    try {
+        // Check if event exists first
+        const event = await env.wine_events.prepare(`
+            SELECT * FROM events WHERE id = ?
+        `).bind(eventId).first();
+
+        if (!event) {
+            return new Response(JSON.stringify({ error: 'Event not found' }), {
+                status: 404,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Deactivate the event
+        await env.wine_events.prepare(`
+            UPDATE events 
+            SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `).bind(eventId).run();
+
+        console.log(`[DEACTIVATE] Deactivated event ${eventId}`);
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Event deactivated successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('[DEACTIVATE_EVENT] Error deactivating event:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to deactivate event',
             details: error.message
         }), {
             status: 500,

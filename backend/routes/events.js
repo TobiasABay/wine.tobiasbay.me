@@ -438,4 +438,58 @@ router.post('/admin/cleanup-stale-events', async (req, res) => {
     }
 });
 
+// Admin endpoint to reactivate an event
+router.post('/:eventId/reactivate', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+
+        // Check if event exists first
+        const event = await db.getEventById(eventId);
+        if (!event) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        await db.reactivateEvent(eventId);
+
+        // Emit real-time update
+        const io = req.app.get('io');
+        io.emit('event-updated', { eventId });
+
+        res.json({
+            success: true,
+            message: 'Event reactivated successfully'
+        });
+    } catch (error) {
+        console.error('Error reactivating event:', error);
+        res.status(500).json({ error: 'Failed to reactivate event' });
+    }
+});
+
+// Admin endpoint to deactivate an event
+router.post('/:eventId/deactivate', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+
+        // Check if event exists first
+        const event = await db.getEventById(eventId);
+        if (!event) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        await db.deactivateEvent(eventId);
+
+        // Emit real-time update
+        const io = req.app.get('io');
+        io.emit('event-updated', { eventId });
+
+        res.json({
+            success: true,
+            message: 'Event deactivated successfully'
+        });
+    } catch (error) {
+        console.error('Error deactivating event:', error);
+        res.status(500).json({ error: 'Failed to deactivate event' });
+    }
+});
+
 module.exports = router;
