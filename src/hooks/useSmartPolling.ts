@@ -24,8 +24,8 @@ export function useSmartPolling(
 ): UseSmartPollingReturn {
     const {
         enabled = true,
-        interval = 12000, // Start with 12 seconds (reduced from 3s)
-        maxInterval = 60000, // Max 60 seconds (increased for better backoff)
+        interval = 30000, // Start with 30 seconds (more reasonable without WebSocket)
+        maxInterval = 120000, // Max 2 minutes
         backoffMultiplier = 1.5,
         onError,
         onSuccess,
@@ -107,9 +107,9 @@ export function useSmartPolling(
                     currentIntervalRef.current = interval; // Reset interval
                     startPolling();
                 } else {
-                    // Continue polling when hidden but with longer interval (30s)
+                    // Continue polling when hidden but with longer interval (60s)
                     if (isPollingRef.current) {
-                        currentIntervalRef.current = Math.max(interval * 2.5, 30000); // At least 30s when hidden
+                        currentIntervalRef.current = Math.max(interval * 2, 60000); // At least 60s when hidden
                     }
                 }
             }

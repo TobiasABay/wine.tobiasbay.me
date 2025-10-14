@@ -380,7 +380,7 @@ export default function EventCreatedPage() {
                     } catch (error) {
                         console.error('Error polling for updates:', error);
                     }
-                }, 10000);
+                }, 30000); // Poll every 30 seconds (consistent with other pages)
                 setPollingInterval(pollInterval);
             }
         };

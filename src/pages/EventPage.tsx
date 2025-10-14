@@ -104,7 +104,7 @@ export default function EventPage() {
         }
     }, {
         enabled: !!eventId && isEventCreator,
-        interval: 15000 // Poll every 15 seconds
+        interval: 30000 // Poll every 30 seconds (consistent with other pages)
     });
 
     const handleBack = () => {
