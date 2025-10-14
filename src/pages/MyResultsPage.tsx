@@ -48,9 +48,8 @@ export default function MyResultsPage() {
             }
 
             try {
-                // Get current player ID from session/localStorage
-                const currentPlayerId = sessionStorage.getItem(`current-player-${eventId}`) ||
-                    localStorage.getItem(`player-${eventId}`);
+                // Get current player ID from localStorage
+                const currentPlayerId = localStorage.getItem(`player-id-${eventId}`);
 
                 if (!currentPlayerId) {
                     setError('Player session not found. Please rejoin the event.');
