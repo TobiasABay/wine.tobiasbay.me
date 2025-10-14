@@ -436,7 +436,7 @@ export default function AdminEventsListPage() {
 
             {/* Events Table */}
             <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-                <TableContainer sx={{ maxHeight: 'calc(100vh - 280px)' }}>
+                <TableContainer sx={{ maxHeight: '100vh' }}>
                     <Table stickyHeader>
                         <TableHead>
                             <TableRow>
