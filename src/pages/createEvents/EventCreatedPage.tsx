@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Box,
@@ -155,11 +155,13 @@ export default function EventCreatedPage() {
     const [eventData, setEventData] = useState<Event | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [isEventCreator, setIsEventCreator] = useState<boolean>(false);
-    const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
     const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
     const [isReady, setIsReady] = useState<boolean>(false);
     const navigate = useNavigate();
     const { eventId: urlEventId } = useParams();
+
+    // Use ref to track if user is creator to avoid stale closures
+    const isEventCreatorRef = useRef(false);
 
     // Drag and drop sensors
     const sensors = useSensors(
@@ -196,6 +198,7 @@ export default function EventCreatedPage() {
         }
     };
 
+    // Load initial event data on mount
     useEffect(() => {
         const loadEventData = async () => {
             if (!urlEventId) {
@@ -204,7 +207,6 @@ export default function EventCreatedPage() {
             }
 
             // Check if user is the event creator by looking at sessionStorage and localStorage
-            // This is a simple approach - in a real app you'd have proper authentication
             const hasCreatorSession = sessionStorage.getItem(`is-creator-${urlEventId}`) === 'true';
             const hasCreatorLocalStorage = localStorage.getItem(`event-creator-${urlEventId}`) !== null;
             const creatorTime = localStorage.getItem(`creator-time-${urlEventId}`);
@@ -213,11 +215,11 @@ export default function EventCreatedPage() {
             const isRecentCreator = creatorTime !== null && (Date.now() - parseInt(creatorTime)) < (24 * 60 * 60 * 1000);
 
             // User is creator if they have sessionStorage OR if they have recent localStorage
-            // Fallback: if localStorage exists but no timestamp, assume they're the creator (for backward compatibility)
             const isCreator = hasCreatorSession || (hasCreatorLocalStorage && isRecentCreator) || (hasCreatorLocalStorage && !creatorTime);
 
             // Set event creator status
             setIsEventCreator(isCreator);
+            isEventCreatorRef.current = isCreator;
 
             try {
                 const event = await apiService.getEvent(urlEventId);
@@ -272,55 +274,6 @@ export default function EventCreatedPage() {
                 });
                 setQrCodeUrl(qrCodeDataURL);
 
-                // Set up polling for real-time updates (since WebSockets aren't available in Cloudflare Workers)
-                // Setting up polling for real-time updates
-
-                // Poll for player updates every 10 seconds (reduced frequency)
-                const pollInterval = setInterval(async () => {
-                    try {
-                        const event = await apiService.getEvent(urlEventId);
-                        const newPlayers = event.players || [];
-
-                        // Check if event has started and redirect non-creator players
-                        if (event.event_started && !isCreator) {
-                            navigate(`/score/${urlEventId}`);
-                            return;
-                        }
-
-                        // Only load wine details if we have new players or player count changed
-                        const currentPlayerIds = players.map(p => p.id).sort();
-                        const newPlayerIds = newPlayers.map(p => p.id).sort();
-                        const hasNewPlayers = JSON.stringify(currentPlayerIds) !== JSON.stringify(newPlayerIds);
-
-                        if (hasNewPlayers) {
-                            // New players detected, loading wine details
-
-                            // Load wine details for new players only
-                            const playersWithWineDetails = await Promise.all(
-                                newPlayers.map(async (player) => {
-                                    try {
-                                        const wineDetails = await apiService.getPlayerWineDetails(player.id);
-                                        return {
-                                            ...player,
-                                            wine_details: wineDetails
-                                        };
-                                    } catch (error) {
-                                        console.error(`Error loading wine details for player ${player.id}:`, error);
-                                        return player;
-                                    }
-                                })
-                            );
-
-                            setPlayers(playersWithWineDetails);
-                        }
-                    } catch (error) {
-                        console.error('Error polling for updates:', error);
-                    }
-                }, 10000); // Increased from 2000ms to 10000ms (10 seconds)
-
-                // Store interval ID for cleanup
-                setPollingInterval(pollInterval);
-
             } catch (error) {
                 console.error('Error loading event:', error);
                 alert('Failed to load event data');
@@ -330,71 +283,50 @@ export default function EventCreatedPage() {
         };
 
         loadEventData();
+    }, [urlEventId, navigate]);
 
-        // Cleanup polling interval on unmount and pause when page is not visible
-        const handleVisibilityChange = () => {
-            if (document.hidden && pollingInterval) {
-                // Page hidden, pausing polling
-                clearInterval(pollingInterval);
-                setPollingInterval(null);
-            } else if (!document.hidden && !pollingInterval && urlEventId) {
-                // Page visible, resuming polling
-                // Restart polling when page becomes visible
-                const pollInterval = setInterval(async () => {
-                    try {
-                        const event = await apiService.getEvent(urlEventId);
-                        const newPlayers = event.players || [];
+    // Separate useEffect for polling player updates
+    useEffect(() => {
+        if (!urlEventId || loading) {
+            return;
+        }
 
-                        // Check if event has started and redirect non-creator players
-                        if (event.event_started && !isEventCreator) {
-                            navigate(`/score/${urlEventId}`);
-                            return;
-                        }
+        // Poll for player updates every 30 seconds
+        const pollInterval = setInterval(async () => {
+            try {
+                const event = await apiService.getEvent(urlEventId);
+                const newPlayers = event.players || [];
 
-                        // Only load wine details if we have new players or player count changed
-                        const currentPlayerIds = players.map(p => p.id).sort();
-                        const newPlayerIds = newPlayers.map(p => p.id).sort();
-                        const hasNewPlayers = JSON.stringify(currentPlayerIds) !== JSON.stringify(newPlayerIds);
+                // Check if event has started and redirect non-creator players
+                if (event.event_started && !isEventCreatorRef.current) {
+                    navigate(`/score/${urlEventId}`);
+                    return;
+                }
 
-                        if (hasNewPlayers) {
-                            // New players detected, loading wine details
+                // Only update if player list has changed
+                setPlayers(currentPlayers => {
+                    const currentPlayerIds = currentPlayers.map(p => p.id).sort().join(',');
+                    const newPlayerIds = newPlayers.map(p => p.id).sort().join(',');
 
-                            // Load wine details for new players only
-                            const playersWithWineDetails = await Promise.all(
-                                newPlayers.map(async (player) => {
-                                    try {
-                                        const wineDetails = await apiService.getPlayerWineDetails(player.id);
-                                        return {
-                                            ...player,
-                                            wine_details: wineDetails
-                                        };
-                                    } catch (error) {
-                                        console.error(`Error loading wine details for player ${player.id}:`, error);
-                                        return player;
-                                    }
-                                })
-                            );
-
-                            setPlayers(playersWithWineDetails);
-                        }
-                    } catch (error) {
-                        console.error('Error polling for updates:', error);
+                    // If player list hasn't changed, don't update
+                    if (currentPlayerIds === newPlayerIds) {
+                        return currentPlayers;
                     }
-                }, 30000); // Poll every 30 seconds (consistent with other pages)
-                setPollingInterval(pollInterval);
+
+                    // New players detected, return updated list without wine details
+                    // Wine details can be fetched on-demand if needed
+                    return newPlayers;
+                });
+            } catch (error) {
+                console.error('Error polling for updates:', error);
             }
-        };
+        }, 30000); // Poll every 30 seconds
 
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
+        // Cleanup interval on unmount
         return () => {
-            if (pollingInterval) {
-                // Clearing polling interval
-                clearInterval(pollingInterval);
-            }
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            clearInterval(pollInterval);
         };
-    }, [urlEventId, pollingInterval]);
+    }, [urlEventId, loading, navigate]);
 
 
     const handleAutoShuffleToggle = async (checked: boolean) => {

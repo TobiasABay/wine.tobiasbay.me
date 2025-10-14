@@ -57,7 +57,7 @@ export function useSmartPolling(
         }
     }, [callback, onError, onSuccess, interval, backoffMultiplier, maxInterval]);
 
-    const startPolling = useCallback(() => {
+    const startPolling = useCallback((immediate = false) => {
         if (isPollingRef.current || !enabled || !isVisibleRef.current) {
             return;
         }
@@ -74,10 +74,12 @@ export function useSmartPolling(
             }
         };
 
-        // Start immediately
-        executeCallback();
+        // Only execute immediately if requested (e.g., on initial mount or manual refresh)
+        if (immediate) {
+            executeCallback();
+        }
 
-        // Then start polling
+        // Start polling interval
         intervalRef.current = setTimeout(poll, currentIntervalRef.current);
     }, [enabled, executeCallback]);
 
@@ -104,8 +106,9 @@ export function useSmartPolling(
 
                 if (isVisible && enabled) {
                     // Resume polling when visible with normal interval
+                    // Don't execute immediately, just resume the interval
                     currentIntervalRef.current = interval; // Reset interval
-                    startPolling();
+                    startPolling(false);
                 } else {
                     // Continue polling when hidden but with longer interval (60s)
                     if (isPollingRef.current) {
@@ -123,9 +126,15 @@ export function useSmartPolling(
     }, [enabled, interval, startPolling, stopPolling, onVisibilityChange]);
 
     // Auto-start/stop based on enabled state
+    // Use a ref to track if this is the initial mount
+    const isInitialMountRef = useRef(true);
+
     useEffect(() => {
         if (enabled && isVisibleRef.current) {
-            startPolling();
+            // Only execute immediately on initial mount
+            const shouldExecuteImmediately = isInitialMountRef.current;
+            startPolling(shouldExecuteImmediately);
+            isInitialMountRef.current = false;
         } else {
             stopPolling();
         }

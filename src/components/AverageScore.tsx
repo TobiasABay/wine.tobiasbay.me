@@ -35,10 +35,10 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
     const { refreshNow } = useSmartPolling(async () => {
         try {
             const response = await apiService.getWineScores(eventId);
-            
+
             if (response && response.averages) {
                 const wineData = response.averages[wineNumber.toString()];
-                
+
                 if (wineData) {
                     setScoreData(wineData);
                 } else {
@@ -54,7 +54,7 @@ export default function AverageScore({ eventId, wineNumber }: AverageScoreProps)
         }
     }, {
         enabled: true,
-        interval: 15000 // Poll every 15 seconds
+        interval: 30000 // Poll every 30 seconds (consistent with other pages)
     });
 
     // Fetch initial data

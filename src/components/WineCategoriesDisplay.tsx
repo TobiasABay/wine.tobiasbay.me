@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -41,10 +41,16 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
     const [scoreCount, setScoreCount] = useState<number>(0);
     const navigate = useNavigate();
 
+    // Fetch initial data on mount
     useEffect(() => {
-        const fetchWineCategoriesWithGuesses = async () => {
+        const fetchInitialData = async () => {
+            if (!eventId) {
+                setLoading(false);
+                return;
+            }
+
             try {
-                console.log('Fetching wine categories with guesses...');
+                console.log('Fetching initial wine data...');
 
                 // Get event data to know current wine number and total wines
                 const event = await apiService.getEvent(eventId);
@@ -76,7 +82,6 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
 
                     if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
                         setCategories(guessesResponse.categories);
-                        setLoading(false);
                         return;
                     }
                 } catch (guessesError) {
@@ -109,11 +114,7 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
             }
         };
 
-        if (eventId) {
-            fetchWineCategoriesWithGuesses();
-        } else {
-            setLoading(false);
-        }
+        fetchInitialData();
     }, [eventId]);
 
     const handleNextWine = async () => {
@@ -181,6 +182,12 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
     };
 
     // Polling for real-time updates (wine changes, scores, guesses)
+    // Use a ref to track current wine to avoid recreating callback on every state change
+    const currentWineNumberRef = useRef(currentWineNumber);
+    useEffect(() => {
+        currentWineNumberRef.current = currentWineNumber;
+    }, [currentWineNumber]);
+
     useSmartPolling(async () => {
         try {
             // Get updated event data for total wines count and current wine
@@ -189,43 +196,22 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
 
             // Check if current wine has changed
             const eventCurrentWine = event.current_wine_number || 1;
-            if (eventCurrentWine !== currentWineNumber) {
+            if (eventCurrentWine !== currentWineNumberRef.current) {
                 console.log('Current wine changed to', eventCurrentWine);
                 setCurrentWineNumber(eventCurrentWine);
                 // Refresh data for the new wine immediately
                 await refreshWineData(eventCurrentWine);
             } else {
                 // Refresh wine data for current wine
-                await refreshWineData();
+                await refreshWineData(eventCurrentWine);
             }
         } catch (error) {
             console.error('Error polling for updates:', error);
         }
     }, {
         enabled: true,
-        interval: 3000 // Poll every 3 seconds for real-time updates
+        interval: 30000 // Poll every 30 seconds (consistent with other pages)
     });
-
-    // Fetch initial data and total wines count
-    useEffect(() => {
-        const fetchInitialData = async () => {
-            try {
-                const event = await apiService.getEvent(eventId);
-                setTotalWines(event.players?.length || 0);
-
-                const guessesResponse = await apiService.getEventWineGuesses(eventId);
-                if (guessesResponse && guessesResponse.categories && Array.isArray(guessesResponse.categories)) {
-                    setCategories(guessesResponse.categories);
-                }
-            } catch (error) {
-                console.error('Error fetching initial data:', error);
-            }
-        };
-
-        if (eventId) {
-            fetchInitialData();
-        }
-    }, [eventId]);
 
     if (loading) {
         return (
