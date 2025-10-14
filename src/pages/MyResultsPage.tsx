@@ -75,12 +75,22 @@ export default function MyResultsPage() {
                 setMyPlayerData(leaderboard[currentPlayerIndex]);
                 setMyRank(currentPlayerIndex + 1);
 
-                // Get wine answers for comparison
-                try {
-                    const answersData = await apiService.getEventWineAnswers(eventId);
+                // Build wine answers from event data (players with their wine_details)
+                if (eventData.players && eventData.players.length > 0) {
+                    const answersData = {
+                        success: true,
+                        players: eventData.players.map(player => ({
+                            player_id: player.id,
+                            player_name: player.name,
+                            presentation_order: player.presentation_order,
+                            answers: (player.wine_details || []).map(detail => ({
+                                category_id: detail.category_id,
+                                wine_answer: detail.wine_answer,
+                                guessing_element: detail.guessing_element || ''
+                            }))
+                        }))
+                    };
                     setWineAnswers(answersData);
-                } catch (answersError) {
-                    console.log('Error fetching wine answers:', answersError);
                 }
 
                 // Get wine guesses
