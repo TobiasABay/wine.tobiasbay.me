@@ -291,7 +291,7 @@ export default function EventCreatedPage() {
             return;
         }
 
-        // Poll for player updates every 30 seconds
+        // Poll for player updates every 5 seconds
         const pollInterval = setInterval(async () => {
             try {
                 const event = await apiService.getEvent(urlEventId);
@@ -320,7 +320,7 @@ export default function EventCreatedPage() {
             } catch (error) {
                 console.error('Error polling for updates:', error);
             }
-        }, 30000); // Poll every 30 seconds
+        }, 5000); // Poll every 5 seconds for real-time updates
 
         // Cleanup interval on unmount
         return () => {

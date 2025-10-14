@@ -210,7 +210,7 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         }
     }, {
         enabled: true,
-        interval: 30000 // Poll every 30 seconds (consistent with other pages)
+        interval: 5000 // Poll every 5 seconds for real-time updates
     });
 
     if (loading) {

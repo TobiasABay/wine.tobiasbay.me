@@ -236,7 +236,7 @@ useEffect(() => {
 
 ### After:
 - ✅ **1 fetch on component mount**
-- ✅ **1 poll every 30 seconds** per component
+- ✅ **1 poll every 5 seconds** per component (real-time updates)
 - ✅ **No duplicate fetches**
 - ✅ **Proper cleanup** on unmount
 - ✅ **Stable polling** even when state changes
@@ -248,12 +248,12 @@ useEffect(() => {
 1. **Open Network Tab** in Chrome DevTools
 2. **Load the app** and observe:
    - Initial mount should trigger 1 request per component
-   - Polling should happen every 30 seconds
+   - Polling should happen every 5 seconds (real-time updates)
    - No burst requests when interacting with the UI
 3. **Navigate between pages** and verify:
    - Old intervals are cleaned up
    - New pages don't trigger excessive requests
-4. **Monitor backend logs** for request frequency
+4. **Monitor backend logs** for request frequency (should see ~1 request per 5 seconds per active component)
 
 ---
 
@@ -264,7 +264,7 @@ useEffect(() => {
 - Separate initial data loading from polling logic
 - Use functional `setState` when you need current state without dependencies
 - Clean up intervals/subscriptions in useEffect return
-- Throttle polling to reasonable intervals (30s+)
+- Throttle polling to reasonable intervals (5-30s depending on real-time needs)
 
 ### ❌ DON'T:
 - Include state in polling callback dependencies unless necessary

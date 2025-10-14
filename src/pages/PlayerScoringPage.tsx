@@ -440,7 +440,7 @@ export default function PlayerScoringPage() {
         }
     }, {
         enabled: !!eventId,
-        interval: 30000 // Poll every 30 seconds (consistent with other pages)
+        interval: 5000 // Poll every 5 seconds for real-time updates
     });
 
     const handleScoreChange = (_event: Event, newValue: number | number[]) => {

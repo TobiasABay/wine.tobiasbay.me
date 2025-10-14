@@ -53,7 +53,7 @@ Your React app was flooding the backend with **dozens of requests per second**. 
 ### Request Frequency
 ```
 BEFORE:  ████████████████████████████ (dozens per second)
-AFTER:   █ (1 on mount) ... █ (every 30s) ... █ (every 30s)
+AFTER:   █ (1 on mount) ... █ (every 5s) ... █ (every 5s)
 ```
 
 ### Components Fixed
@@ -67,7 +67,7 @@ AFTER:   █ (1 on mount) ... █ (every 30s) ... █ (every 30s)
 ## ✅ Best Practices Now Followed
 
 1. ✅ **Data loads once** when component mounts
-2. ✅ **Polling is throttled** to 30 seconds
+2. ✅ **Polling is throttled** to 5 seconds (fast real-time updates)
 3. ✅ **Proper cleanup** on unmount
 4. ✅ **Stable dependencies** (using refs where needed)
 5. ✅ **No duplicate fetches**
@@ -81,7 +81,7 @@ AFTER:   █ (1 on mount) ... █ (every 30s) ... █ (every 30s)
 2. Load your app
 3. Watch the requests:
    - Should see **1 request on mount**
-   - Then **1 request every 30 seconds**
+   - Then **1 request every 5 seconds**
    - **No bursts** when clicking around
 
 ---
