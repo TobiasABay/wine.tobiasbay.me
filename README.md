@@ -281,6 +281,7 @@ For issues and questions:
 - [WebSocket Implementation](./WEBSOCKET_IMPLEMENTATION.md) - Detailed WebSocket documentation
 - [WebSocket Test Results](./WEBSOCKET_TEST_RESULTS.md) - Test results and verification
 - [WebSocket Integration Examples](./WEBSOCKET_INTEGRATION_EXAMPLE.md) - Code examples for integration
+- [WebSocket Production Deployment](./WEBSOCKET_PRODUCTION_DEPLOYMENT.md) - How to enable WebSocket in production
 - [Deployment Guide](./DEPLOYMENT.md) - Production deployment instructions
 
 ---

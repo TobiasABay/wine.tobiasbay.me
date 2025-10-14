@@ -3,6 +3,9 @@ import { io, Socket } from 'socket.io-client';
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const WEBSOCKET_URL = isLocalhost ? 'http://localhost:3001' : 'https://api.wine.tobiasbay.me';
 
+// Disable WebSocket in production until backend is deployed
+const WEBSOCKET_ENABLED = isLocalhost; // Set to true when production backend is ready
+
 class WebSocketService {
     private socket: Socket | null = null;
     private reconnectAttempts = 0;
@@ -11,10 +14,23 @@ class WebSocketService {
     private eventListeners: Map<string, Set<Function>> = new Map();
 
     constructor() {
-        this.connect();
+        if (WEBSOCKET_ENABLED) {
+            this.connect();
+        } else {
+            console.log('ℹ️  WebSocket disabled in production (backend not yet deployed)');
+            this.emit('connection-status', {
+                connected: false,
+                reason: 'WebSocket disabled in production - backend not yet deployed'
+            });
+        }
     }
 
     private connect() {
+        if (!WEBSOCKET_ENABLED) {
+            console.log('⚠️  WebSocket is disabled');
+            return;
+        }
+
         if (this.socket?.connected) {
             console.log('WebSocket already connected');
             return;
@@ -121,6 +137,10 @@ class WebSocketService {
     }
 
     public joinEvent(eventId: string) {
+        if (!WEBSOCKET_ENABLED) {
+            return; // Silently skip if disabled
+        }
+
         if (!this.socket?.connected) {
             console.warn('Cannot join event: WebSocket not connected');
             return;
@@ -131,6 +151,10 @@ class WebSocketService {
     }
 
     public leaveEvent(eventId: string) {
+        if (!WEBSOCKET_ENABLED) {
+            return; // Silently skip if disabled
+        }
+
         if (!this.socket?.connected) {
             console.warn('Cannot leave event: WebSocket not connected');
             return;
@@ -159,6 +183,10 @@ class WebSocketService {
     }
 
     public disconnect() {
+        if (!WEBSOCKET_ENABLED) {
+            return;
+        }
+
         if (this.socket) {
             console.log('Disconnecting WebSocket');
             this.socket.disconnect();
