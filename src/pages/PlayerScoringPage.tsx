@@ -13,7 +13,7 @@ import {
     MenuItem,
     Slider
 } from '@mui/material';
-import { ArrowBack, WineBar, Star, StarBorder } from '@mui/icons-material';
+import { ArrowBack, WineBar, Star, StarBorder, EmojiEvents } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Player, WineCategory } from '../services/api';
 import { useSmartPolling } from '../hooks/useSmartPolling';
@@ -423,6 +423,13 @@ export default function PlayerScoringPage() {
                 // Update current wine number
                 setCurrentWineNumber(eventCurrentWine);
 
+                // Check if event has finished (wine number beyond total players)
+                if (allPlayers.length > 0 && eventCurrentWine > allPlayers.length) {
+                    console.log('Event finished! Redirecting to personal results...');
+                    navigate(`/my-results/${eventId}`);
+                    return;
+                }
+
                 // Update current player to match the new wine number
                 const playerForWine = allPlayers.find(p => p.presentation_order === eventCurrentWine);
                 if (playerForWine) {
@@ -749,6 +756,9 @@ export default function PlayerScoringPage() {
     }
 
     if (!currentPlayer) {
+        // Check if event is finished (current wine number is beyond total players)
+        const isEventFinished = currentWineNumber > allPlayers.length && allPlayers.length > 0;
+
         return (
             <Box sx={{
                 minHeight: '100vh',
@@ -769,9 +779,46 @@ export default function PlayerScoringPage() {
                     >
                         Back
                     </Button>
-                    <Typography variant="h4" align="center" sx={{ color: 'white' }}>
-                        No wine to score at this time
-                    </Typography>
+
+                    {isEventFinished ? (
+                        <Paper sx={{
+                            p: 4,
+                            background: 'rgba(255,255,255,0.95)',
+                            backdropFilter: 'blur(10px)',
+                            borderRadius: 3,
+                            textAlign: 'center'
+                        }}>
+                            <EmojiEvents sx={{ fontSize: '4rem', color: '#ffd700', mb: 2 }} />
+                            <Typography variant="h4" sx={{ color: '#2c3e50', fontWeight: 'bold', mb: 2 }}>
+                                Wine Tasting Complete!
+                            </Typography>
+                            <Typography variant="body1" sx={{ color: '#7f8c8d', mb: 4 }}>
+                                All wines have been scored. View your results below!
+                            </Typography>
+                            <Button
+                                variant="contained"
+                                startIcon={<EmojiEvents />}
+                                onClick={() => navigate(`/my-results/${eventId}`)}
+                                sx={{
+                                    backgroundColor: '#667eea',
+                                    color: 'white',
+                                    fontWeight: 'bold',
+                                    fontSize: '1.1rem',
+                                    px: 4,
+                                    py: 1.5,
+                                    '&:hover': {
+                                        backgroundColor: '#5568d3'
+                                    }
+                                }}
+                            >
+                                View My Results
+                            </Button>
+                        </Paper>
+                    ) : (
+                        <Typography variant="h4" align="center" sx={{ color: 'white' }}>
+                            No wine to score at this time
+                        </Typography>
+                    )}
                 </Container>
             </Box>
         );

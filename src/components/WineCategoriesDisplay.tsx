@@ -132,8 +132,17 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
                 console.error('Error setting current wine:', error);
             }
         } else if (currentWineNumber === totalWines) {
-            // If on last wine and clicking finish, navigate to finish page
-            navigate(`/finish/${eventId}`);
+            // If on last wine and clicking finish:
+            // 1. Set wine number beyond total to signal completion to all players
+            // 2. Navigate to finish page
+            try {
+                await apiService.setCurrentWine(eventId, totalWines + 1);
+                navigate(`/finish/${eventId}`);
+            } catch (error) {
+                console.error('Error finishing event:', error);
+                // Navigate anyway even if the API call fails
+                navigate(`/finish/${eventId}`);
+            }
         }
     };
 
