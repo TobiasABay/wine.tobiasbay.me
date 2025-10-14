@@ -29,6 +29,7 @@ export default function MyResultsPage() {
     const [myPlayerData, setMyPlayerData] = useState<LeaderboardPlayer | null>(null);
     const [myRank, setMyRank] = useState<number>(0);
     const [myGuesses, setMyGuesses] = useState<any[]>([]);
+    const [wineAnswers, setWineAnswers] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
     const { eventId } = useParams();
@@ -74,38 +75,13 @@ export default function MyResultsPage() {
                 setMyPlayerData(leaderboard[currentPlayerIndex]);
                 setMyRank(currentPlayerIndex + 1);
 
-                // Build wine answers from event data (players with their wine_details)
-                let answersData = null;
-                if (eventData.players && eventData.players.length > 0) {
-                    answersData = {
-                        success: true,
-                        players: eventData.players.map(player => ({
-                            player_id: player.id,
-                            player_name: player.name,
-                            presentation_order: player.presentation_order,
-                            answers: (player.wine_details || []).map(detail => ({
-                                category_id: detail.category_id,
-                                wine_answer: detail.wine_answer,
-                                guessing_element: detail.guessing_element || ''
-                            }))
-                        }))
-                    };
-                }
-
-                // Get wine guesses
+                // Get wine answers data for comparison
                 try {
-                    const guessesData = await apiService.getEventWineGuesses(eventId);
-
-                    // Build my guesses array - pass answersData directly
-                    const myGuessesArray = buildMyGuessesArray(
-                        leaderboard[currentPlayerIndex],
-                        guessesData,
-                        leaderboard,
-                        answersData
-                    );
-                    setMyGuesses(myGuessesArray);
-                } catch (guessesError) {
-                    console.log('Error fetching wine guesses:', guessesError);
+                    const answersData = await apiService.getEventWineAnswers(eventId);
+                    setWineAnswers(answersData);
+                } catch (answersError) {
+                    console.log('Error fetching wine answers:', answersError);
+                    setWineAnswers(null);
                 }
 
             } catch (error: any) {
@@ -119,11 +95,34 @@ export default function MyResultsPage() {
         loadMyResults();
     }, [eventId]);
 
+    // Build guesses array when wine answers are loaded
+    useEffect(() => {
+        const buildGuesses = async () => {
+            if (!eventId || !myPlayerData || !wineAnswers) return;
+
+            try {
+                const guessesData = await apiService.getEventWineGuesses(eventId);
+                const leaderboardData = await apiService.getLeaderboard(eventId);
+                const leaderboard = leaderboardData.leaderboard || [];
+
+                const myGuessesArray = buildMyGuessesArray(
+                    myPlayerData,
+                    guessesData,
+                    leaderboard
+                );
+                setMyGuesses(myGuessesArray);
+            } catch (error) {
+                console.log('Error building guesses:', error);
+            }
+        };
+
+        buildGuesses();
+    }, [eventId, myPlayerData, wineAnswers]);
+
     const buildMyGuessesArray = (
         playerData: LeaderboardPlayer,
         guessesData: any,
-        leaderboard: LeaderboardPlayer[],
-        answersData: any
+        leaderboard: LeaderboardPlayer[]
     ) => {
         if (!guessesData || !guessesData.categories) return [];
 
@@ -147,14 +146,14 @@ export default function MyResultsPage() {
                 );
 
                 if (playerGuess) {
-                    const correctAnswer = getCorrectAnswer(category.id, wineNumber, answersData);
+                    const correctAnswer = getCorrectAnswer(category.id, wineNumber);
 
                     currentPlayerGuesses.push({
                         categoryName: category.guessing_element,
                         categoryId: category.id,
                         guess: playerGuess.guess,
                         correctAnswer: correctAnswer,
-                        isCorrect: isGuessCorrect(playerGuess.guess, category.id, wineNumber, answersData)
+                        isCorrect: isGuessCorrect(playerGuess.guess, category.id, wineNumber)
                     });
                 }
             }
@@ -171,19 +170,19 @@ export default function MyResultsPage() {
         return wineData;
     };
 
-    const isGuessCorrect = (guess: string, categoryId: string, targetPlayerOrder: number, answersData: any) => {
-        if (!answersData) return false;
+    const isGuessCorrect = (guess: string, categoryId: string, targetPlayerOrder: number) => {
+        if (!wineAnswers) return false;
 
-        if (answersData.categories) {
-            const category = answersData.categories.find((cat: any) => cat.id === categoryId);
+        if (wineAnswers.categories) {
+            const category = wineAnswers.categories.find((cat: any) => cat.id === categoryId);
             if (!category) return false;
 
             const answer = category.answers.find((ans: any) => ans.presentation_order === targetPlayerOrder);
             if (!answer) return false;
 
             return answer.wine_answer.toLowerCase() === guess.toLowerCase();
-        } else if (answersData.players) {
-            const targetPlayer = answersData.players.find((player: any) => player.presentation_order === targetPlayerOrder);
+        } else if (wineAnswers.players) {
+            const targetPlayer = wineAnswers.players.find((player: any) => player.presentation_order === targetPlayerOrder);
             if (!targetPlayer) return false;
 
             const answer = targetPlayer.answers.find((ans: any) => ans.category_id === categoryId);
@@ -195,17 +194,17 @@ export default function MyResultsPage() {
         return false;
     };
 
-    const getCorrectAnswer = (categoryId: string, targetPlayerOrder: number, answersData: any) => {
-        if (!answersData) return 'Unknown';
+    const getCorrectAnswer = (categoryId: string, targetPlayerOrder: number) => {
+        if (!wineAnswers) return 'Unknown';
 
-        if (answersData.categories) {
-            const category = answersData.categories.find((cat: any) => cat.id === categoryId);
+        if (wineAnswers.categories) {
+            const category = wineAnswers.categories.find((cat: any) => cat.id === categoryId);
             if (!category) return 'Unknown';
 
             const answer = category.answers.find((ans: any) => ans.presentation_order === targetPlayerOrder);
             return answer ? answer.wine_answer : 'Unknown';
-        } else if (answersData.players) {
-            const targetPlayer = answersData.players.find((player: any) => player.presentation_order === targetPlayerOrder);
+        } else if (wineAnswers.players) {
+            const targetPlayer = wineAnswers.players.find((player: any) => player.presentation_order === targetPlayerOrder);
             if (!targetPlayer) return 'Unknown';
 
             const answer = targetPlayer.answers.find((ans: any) => ans.category_id === categoryId);
