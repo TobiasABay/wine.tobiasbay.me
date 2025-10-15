@@ -133,7 +133,10 @@ class ApiService {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                const errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+                const error = new Error(errorMessage);
+                (error as any).status = response.status;
+                throw error;
             }
 
             const data = await response.json();
@@ -149,8 +152,11 @@ class ApiService {
             }
 
             return data;
-        } catch (error) {
-            console.error('API request failed:', error);
+        } catch (error: any) {
+            // Only log errors that aren't 404s (expected for deleted events)
+            if (error?.status !== 404) {
+                console.error('API request failed:', error);
+            }
             throw error;
         }
     }
