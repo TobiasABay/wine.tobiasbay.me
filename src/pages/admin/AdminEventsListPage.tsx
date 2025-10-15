@@ -31,7 +31,7 @@ import {
     Checkbox
 } from '@mui/material';
 import { UserButton, useUser } from '@clerk/clerk-react';
-import { CheckCircle, Cancel, Delete, MoreVert, Edit, DeleteSweep, Restore, Block } from '@mui/icons-material';
+import { CheckCircle, Cancel, Delete, MoreVert, Edit, DeleteSweep, Restore, Block, ArrowUpward, ArrowDownward } from '@mui/icons-material';
 
 export default function AdminEventsListPage() {
     const [events, setEvents] = useState<Event[]>([]);
@@ -60,6 +60,8 @@ export default function AdminEventsListPage() {
     const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
     const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
     const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+    const [sortBy, setSortBy] = useState<'name' | 'created_at' | 'date' | 'location' | 'players'>('created_at');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const { user } = useUser();
     const navigate = useNavigate();
 
@@ -71,20 +73,64 @@ export default function AdminEventsListPage() {
     const loadEvents = async () => {
         try {
             setLoading(true);
-            
+
             // Fetch all events with players (admin endpoint includes inactive events)
             const eventsData = await apiService.getAdminAllEvents();
-            
-            // Sort by created_at descending (most recent first)
-            const sortedEvents = eventsData.sort((a, b) =>
-                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            );
-            setEvents(sortedEvents);
+            setEvents(eventsData);
         } catch (err: any) {
             setError(err.message || 'Failed to load events');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSort = (column: typeof sortBy) => {
+        if (sortBy === column) {
+            // Toggle sort order if same column
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            // New column, default to ascending
+            setSortBy(column);
+            setSortOrder('asc');
+        }
+    };
+
+    const getSortedEvents = () => {
+        const sorted = [...events].sort((a, b) => {
+            let aValue: any;
+            let bValue: any;
+
+            switch (sortBy) {
+                case 'name':
+                    aValue = a.name.toLowerCase();
+                    bValue = b.name.toLowerCase();
+                    break;
+                case 'created_at':
+                    aValue = new Date(a.created_at).getTime();
+                    bValue = new Date(b.created_at).getTime();
+                    break;
+                case 'date':
+                    aValue = new Date(a.date).getTime();
+                    bValue = new Date(b.date).getTime();
+                    break;
+                case 'location':
+                    aValue = a.location.toLowerCase();
+                    bValue = b.location.toLowerCase();
+                    break;
+                case 'players':
+                    aValue = a.players?.length || 0;
+                    bValue = b.players?.length || 0;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return sorted;
     };
 
     const handleEventClick = (eventId: string) => {
@@ -262,10 +308,11 @@ export default function AdminEventsListPage() {
 
     const handleSelectEvent = (eventId: string, index: number, shiftKey: boolean = false) => {
         if (shiftKey && lastSelectedIndex !== null) {
-            // Range selection with Shift
+            // Range selection with Shift (use sorted events)
+            const sortedEvents = getSortedEvents();
             const start = Math.min(lastSelectedIndex, index);
             const end = Math.max(lastSelectedIndex, index);
-            const rangeIds = events.slice(start, end + 1).map(e => e.id);
+            const rangeIds = sortedEvents.slice(start, end + 1).map(e => e.id);
 
             setSelectedEvents(prev => {
                 // Merge with existing selection
@@ -425,13 +472,93 @@ export default function AdminEventsListPage() {
                                         onChange={handleSelectAll}
                                     />
                                 </TableCell>
-                                <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Event Name</TableCell>
+                                <TableCell
+                                    sx={{
+                                        fontWeight: 'bold',
+                                        backgroundColor: 'grey.100',
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                        '&:hover': { backgroundColor: 'grey.200' }
+                                    }}
+                                    onClick={() => handleSort('name')}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        Event Name
+                                        {sortBy === 'name' && (
+                                            sortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                        )}
+                                    </Box>
+                                </TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Event ID</TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Join Code</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Created</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Date</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Location</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Players</TableCell>
+                                <TableCell
+                                    sx={{
+                                        fontWeight: 'bold',
+                                        backgroundColor: 'grey.100',
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                        '&:hover': { backgroundColor: 'grey.200' }
+                                    }}
+                                    onClick={() => handleSort('created_at')}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        Created
+                                        {sortBy === 'created_at' && (
+                                            sortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                        )}
+                                    </Box>
+                                </TableCell>
+                                <TableCell
+                                    sx={{
+                                        fontWeight: 'bold',
+                                        backgroundColor: 'grey.100',
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                        '&:hover': { backgroundColor: 'grey.200' }
+                                    }}
+                                    onClick={() => handleSort('date')}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        Date
+                                        {sortBy === 'date' && (
+                                            sortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                        )}
+                                    </Box>
+                                </TableCell>
+                                <TableCell
+                                    sx={{
+                                        fontWeight: 'bold',
+                                        backgroundColor: 'grey.100',
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                        '&:hover': { backgroundColor: 'grey.200' }
+                                    }}
+                                    onClick={() => handleSort('location')}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        Location
+                                        {sortBy === 'location' && (
+                                            sortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                        )}
+                                    </Box>
+                                </TableCell>
+                                <TableCell
+                                    sx={{
+                                        fontWeight: 'bold',
+                                        backgroundColor: 'grey.100',
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                        '&:hover': { backgroundColor: 'grey.200' }
+                                    }}
+                                    onClick={() => handleSort('players')}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        Players
+                                        {sortBy === 'players' && (
+                                            sortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                        )}
+                                    </Box>
+                                </TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Status</TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'grey.100' }}>Actions</TableCell>
                             </TableRow>
@@ -446,7 +573,7 @@ export default function AdminEventsListPage() {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                events.map((event, index) => (
+                                getSortedEvents().map((event, index) => (
                                     <TableRow
                                         key={event.id}
                                         hover
