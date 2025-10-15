@@ -346,6 +346,14 @@ export default {
                 return await adminUpdateWineAnswer(request, env, corsHeaders);
             }
 
+            if (apiPath === '/api/admin/feedback' && method === 'GET') {
+                return await getAllFeedback(env, corsHeaders);
+            }
+
+            if (apiPath === '/api/feedback' && method === 'POST') {
+                return await submitFeedback(request, env, corsHeaders);
+            }
+
             if (apiPath.startsWith('/api/events/') && method === 'PUT' && apiPath.split('/').length === 4) {
                 const eventId = apiPath.split('/')[3];
                 return await updateEvent(eventId, request, env, corsHeaders);
@@ -1978,6 +1986,77 @@ async function adminUpdateWineAnswer(request, env, corsHeaders) {
         return new Response(JSON.stringify({
             error: 'Failed to update wine answer',
             details: error.message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Feedback functions
+async function submitFeedback(request, env, corsHeaders) {
+    try {
+        const { eventId, playerId, playerName, feedback } = await request.json();
+
+        if (!eventId || !playerId || !playerName || !feedback) {
+            return new Response(JSON.stringify({
+                error: 'Missing required fields'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        const feedbackId = generateUUID();
+
+        await env.wine_events.prepare(`
+            INSERT INTO player_feedback (id, event_id, player_id, player_name, feedback)
+            VALUES (?, ?, ?, ?, ?)
+        `).bind(feedbackId, eventId, playerId, playerName, feedback).run();
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Feedback submitted successfully'
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error submitting feedback:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to submit feedback'
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function getAllFeedback(env, corsHeaders) {
+    try {
+        const feedbackResult = await env.wine_events.prepare(`
+            SELECT 
+                pf.id,
+                pf.event_id,
+                e.name as event_name,
+                pf.player_id,
+                pf.player_name,
+                pf.feedback,
+                pf.created_at
+            FROM player_feedback pf
+            LEFT JOIN events e ON pf.event_id = e.id
+            ORDER BY pf.created_at DESC
+        `).all();
+
+        return new Response(JSON.stringify({
+            success: true,
+            feedback: feedbackResult.results || []
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error getting feedback:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to get feedback'
         }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }

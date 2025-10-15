@@ -660,6 +660,46 @@ class ApiService {
             throw error;
         }
     }
+
+    async submitFeedback(eventId: string, playerId: string, playerName: string, feedback: string): Promise<{
+        success: boolean;
+        message?: string;
+    }> {
+        try {
+            return await this.request('/api/feedback', {
+                method: 'POST',
+                body: JSON.stringify({
+                    eventId,
+                    playerId,
+                    playerName,
+                    feedback
+                })
+            });
+        } catch (error) {
+            console.error('Error in submitFeedback:', error);
+            throw error;
+        }
+    }
+
+    async getAllFeedback(): Promise<{
+        success: boolean;
+        feedback: Array<{
+            id: string;
+            event_id: string;
+            event_name: string;
+            player_id: string;
+            player_name: string;
+            feedback: string;
+            created_at: string;
+        }>;
+    }> {
+        try {
+            return await this.request('/api/admin/feedback');
+        } catch (error) {
+            console.error('Error in getAllFeedback:', error);
+            throw error;
+        }
+    }
 }
 
 export const apiService = new ApiService();

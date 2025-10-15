@@ -8,9 +8,15 @@ import {
     Paper,
     CircularProgress,
     Chip,
-    Divider
+    Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    IconButton
 } from '@mui/material';
-import { ArrowBack, CheckCircle, Cancel, EmojiEvents, Star } from '@mui/icons-material';
+import { ArrowBack, CheckCircle, Cancel, EmojiEvents, Star, Feedback, Close } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import type { Event } from '../services/api';
 
@@ -32,6 +38,9 @@ export default function MyResultsPage() {
     const [wineAnswers, setWineAnswers] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
+    const [feedbackModalOpen, setFeedbackModalOpen] = useState<boolean>(false);
+    const [feedback, setFeedback] = useState<string>('');
+    const [feedbackSubmitting, setFeedbackSubmitting] = useState<boolean>(false);
     const { eventId } = useParams();
     const navigate = useNavigate();
 
@@ -216,6 +225,50 @@ export default function MyResultsPage() {
 
     const handleBack = () => {
         navigate(`/score/${eventId}`);
+    };
+
+    // Show feedback modal after loading results
+    useEffect(() => {
+        if (!loading && myPlayerData && eventId) {
+            // Check if feedback already submitted for this event
+            const feedbackKey = `feedback-${eventId}-${myPlayerData.player_id}`;
+            const alreadySubmitted = localStorage.getItem(feedbackKey);
+            
+            if (!alreadySubmitted) {
+                // Show modal after a short delay
+                setTimeout(() => {
+                    setFeedbackModalOpen(true);
+                }, 1000);
+            }
+        }
+    }, [loading, myPlayerData, eventId]);
+
+    const handleFeedbackSubmit = async () => {
+        if (!feedback.trim() || !eventId || !myPlayerData) return;
+
+        try {
+            setFeedbackSubmitting(true);
+            await apiService.submitFeedback(eventId, myPlayerData.player_id, myPlayerData.player_name, feedback);
+            
+            // Mark as submitted in localStorage
+            const feedbackKey = `feedback-${eventId}-${myPlayerData.player_id}`;
+            localStorage.setItem(feedbackKey, 'true');
+            
+            setFeedbackModalOpen(false);
+        } catch (error) {
+            console.error('Error submitting feedback:', error);
+        } finally {
+            setFeedbackSubmitting(false);
+        }
+    };
+
+    const handleFeedbackSkip = () => {
+        if (!eventId || !myPlayerData) return;
+        
+        // Mark as submitted (skipped) so modal doesn't show again
+        const feedbackKey = `feedback-${eventId}-${myPlayerData.player_id}`;
+        localStorage.setItem(feedbackKey, 'skipped');
+        setFeedbackModalOpen(false);
     };
 
     if (loading) {
@@ -562,6 +615,68 @@ export default function MyResultsPage() {
                     </Typography>
                 </Box>
             </Container>
+
+            {/* Feedback Modal */}
+            <Dialog 
+                open={feedbackModalOpen} 
+                onClose={handleFeedbackSkip}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Feedback sx={{ color: '#667eea' }} />
+                        Share Your Feedback
+                    </Box>
+                    <IconButton
+                        onClick={handleFeedbackSkip}
+                        sx={{
+                            color: 'text.secondary',
+                            '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                            }
+                        }}
+                    >
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                        We'd love to hear about your wine tasting experience! Your feedback helps us improve future events.
+                    </Typography>
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        placeholder="Tell us what you thought about the event..."
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        variant="outlined"
+                        autoFocus
+                        sx={{ mt: 2 }}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ p: 2, gap: 1 }}>
+                    <Button 
+                        onClick={handleFeedbackSubmit}
+                        variant="contained"
+                        disabled={!feedback.trim() || feedbackSubmitting}
+                        startIcon={feedbackSubmitting ? <CircularProgress size={16} /> : null}
+                        fullWidth
+                        sx={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            py: 1.5,
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            '&:hover': {
+                                background: 'linear-gradient(135deg, #5568d3 0%, #653a8b 100%)'
+                            }
+                        }}
+                    >
+                        {feedbackSubmitting ? 'Submitting...' : 'Submit Feedback'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
