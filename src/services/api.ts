@@ -700,6 +700,27 @@ class ApiService {
             throw error;
         }
     }
+
+    async getInsightsData(): Promise<{
+        success: boolean;
+        insights: {
+            topPerformers: any[];
+            wineRatings: any[];
+            categoryAccuracy: any[];
+            activeEvents: any[];
+            commonMistakes: any[];
+            grapeVarieties: any[];
+            countries: any[];
+            wineTypes: any[];
+        };
+    }> {
+        try {
+            return await this.request('/api/admin/insights');
+        } catch (error) {
+            console.error('Error in getInsightsData:', error);
+            throw error;
+        }
+    }
 }
 
 export const apiService = new ApiService();

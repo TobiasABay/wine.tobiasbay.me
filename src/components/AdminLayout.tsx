@@ -67,7 +67,7 @@ export default function AdminLayout() {
 
                 <List>
                     <ListItem disablePadding>
-                        <ListItemButton>
+                        <ListItemButton onClick={() => navigate('/admin/insights')} selected={location.pathname === '/admin/insights'}>
                             <ListItemIcon>
                                 <Insights />
                             </ListItemIcon>
