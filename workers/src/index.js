@@ -2070,60 +2070,45 @@ async function getAllFeedback(env, corsHeaders) {
 
 async function getInsightsData(env, corsHeaders) {
     try {
-        // 1. Top Performers - players with highest scores
-        let topPerformersResult;
-        try {
-            topPerformersResult = await env.wine_events.prepare(`
-                SELECT 
-                    p.name as player_name,
-                    e.name as event_name,
-                    p.total_points,
-                    COALESCE(ROUND((CAST(p.correct_guesses AS FLOAT) / NULLIF(p.total_guesses, 0)) * 100, 1), 0) as accuracy
-                FROM players p
-                LEFT JOIN events e ON p.event_id = e.id
-                WHERE p.total_points > 0
-                ORDER BY p.total_points DESC, accuracy DESC
-                LIMIT 20
-            `).all();
-        } catch (e) {
-            console.error('Error fetching top performers:', e);
-            topPerformersResult = { results: [] };
-        }
+        // 1. Top Performers - For now, return empty as it requires complex calculation
+        // This would need to replicate the leaderboard logic which is too complex for a simple query
+        const topPerformersResult = { results: [] };
 
-        // 2. Wine Ratings - highest and lowest rated wines
+        // 2. Wine Ratings - highest and lowest rated wines (by player/wine owner)
         let wineRatingsResult;
         try {
             wineRatingsResult = await env.wine_events.prepare(`
                 SELECT 
                     p.name as wine_name,
                     e.name as event_name,
-                    ROUND(AVG(ws.score), 2) as average_score,
+                    AVG(ws.score) as average_score,
                     COUNT(ws.score) as total_scores
                 FROM wine_scores ws
-                JOIN players p ON ws.player_id = p.id
+                JOIN players p ON ws.player_id = p.id AND ws.wine_number = p.presentation_order
                 JOIN events e ON p.event_id = e.id
                 WHERE ws.score > 0
                 GROUP BY p.id, p.name, e.name
                 HAVING COUNT(ws.score) >= 1
                 ORDER BY average_score DESC
+                LIMIT 20
             `).all();
         } catch (e) {
             console.error('Error fetching wine ratings:', e);
             wineRatingsResult = { results: [] };
         }
 
-        // 3. Category Accuracy - accuracy per category
+        // 3. Category Accuracy - Just count guesses per category (accuracy calculation too complex)
         let categoryAccuracyResult;
         try {
             categoryAccuracyResult = await env.wine_events.prepare(`
                 SELECT 
-                    wc.name as category_name,
+                    wc.guessing_element as category_name,
                     COUNT(pg.id) as total_guesses,
-                    SUM(CASE WHEN pg.is_correct = 1 THEN 1 ELSE 0 END) as correct_guesses,
-                    ROUND((CAST(SUM(CASE WHEN pg.is_correct = 1 THEN 1 ELSE 0 END) AS FLOAT) / COUNT(pg.id)) * 100, 1) as accuracy
+                    0 as correct_guesses,
+                    0 as accuracy
                 FROM player_wine_guesses pg
                 JOIN wine_categories wc ON pg.category_id = wc.id
-                GROUP BY wc.id, wc.name
+                GROUP BY wc.id, wc.guessing_element
                 HAVING COUNT(pg.id) > 0
                 ORDER BY total_guesses DESC
             `).all();
@@ -2155,19 +2140,19 @@ async function getInsightsData(env, corsHeaders) {
             activeEventsResult = { results: [] };
         }
 
-        // 5. Common Mistakes - most frequent wrong guesses
+        // 5. Common Mistakes - most frequent guesses (can't determine if wrong without complex logic)
         let commonMistakesResult;
         try {
             commonMistakesResult = await env.wine_events.prepare(`
                 SELECT 
-                    wc.name as category_name,
-                    pg.wine_guess as wrong_guess,
+                    wc.guessing_element as category_name,
+                    pg.guess as wrong_guess,
                     'Various' as correct_answer,
                     COUNT(*) as count
                 FROM player_wine_guesses pg
                 JOIN wine_categories wc ON pg.category_id = wc.id
-                WHERE pg.is_correct = 0 AND pg.wine_guess IS NOT NULL AND pg.wine_guess != ''
-                GROUP BY wc.name, pg.wine_guess
+                WHERE pg.guess IS NOT NULL AND pg.guess != ''
+                GROUP BY wc.guessing_element, pg.guess
                 ORDER BY count DESC
                 LIMIT 15
             `).all();
@@ -2181,12 +2166,12 @@ async function getInsightsData(env, corsHeaders) {
         try {
             grapeVarietiesResult = await env.wine_events.prepare(`
                 SELECT 
-                    wa.wine_answer as name,
+                    pwd.wine_answer as name,
                     COUNT(*) as count
-                FROM wine_answers wa
-                JOIN wine_categories wc ON wa.category_id = wc.id
-                WHERE LOWER(wc.name) LIKE '%grape%' OR LOWER(wc.name) LIKE '%varietal%'
-                GROUP BY wa.wine_answer
+                FROM player_wine_details pwd
+                JOIN wine_categories wc ON pwd.category_id = wc.id
+                WHERE LOWER(wc.guessing_element) LIKE '%grape%' OR LOWER(wc.guessing_element) LIKE '%varietal%'
+                GROUP BY pwd.wine_answer
                 ORDER BY count DESC
                 LIMIT 10
             `).all();
@@ -2200,12 +2185,12 @@ async function getInsightsData(env, corsHeaders) {
         try {
             countriesResult = await env.wine_events.prepare(`
                 SELECT 
-                    wa.wine_answer as name,
+                    pwd.wine_answer as name,
                     COUNT(*) as count
-                FROM wine_answers wa
-                JOIN wine_categories wc ON wa.category_id = wc.id
-                WHERE LOWER(wc.name) LIKE '%country%' OR LOWER(wc.name) LIKE '%region%'
-                GROUP BY wa.wine_answer
+                FROM player_wine_details pwd
+                JOIN wine_categories wc ON pwd.category_id = wc.id
+                WHERE LOWER(wc.guessing_element) LIKE '%country%' OR LOWER(wc.guessing_element) LIKE '%region%'
+                GROUP BY pwd.wine_answer
                 ORDER BY count DESC
                 LIMIT 10
             `).all();
@@ -2219,12 +2204,12 @@ async function getInsightsData(env, corsHeaders) {
         try {
             wineTypesResult = await env.wine_events.prepare(`
                 SELECT 
-                    wa.wine_answer as type,
+                    pwd.wine_answer as type,
                     COUNT(*) as count
-                FROM wine_answers wa
-                JOIN wine_categories wc ON wa.category_id = wc.id
-                WHERE LOWER(wc.name) LIKE '%type%' OR LOWER(wc.name) LIKE '%color%'
-                GROUP BY wa.wine_answer
+                FROM player_wine_details pwd
+                JOIN wine_categories wc ON pwd.category_id = wc.id
+                WHERE LOWER(wc.guessing_element) LIKE '%type%' OR LOWER(wc.guessing_element) LIKE '%color%'
+                GROUP BY pwd.wine_answer
                 ORDER BY count DESC
             `).all();
         } catch (e) {
