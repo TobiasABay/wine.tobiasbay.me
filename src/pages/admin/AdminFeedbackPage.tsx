@@ -1,8 +1,8 @@
 import { UserButton, useUser } from "@clerk/clerk-react";
-import { 
-    Box, 
-    Typography, 
-    Paper, 
+import {
+    Box,
+    Typography,
+    Paper,
     Table,
     TableBody,
     TableCell,
@@ -41,7 +41,11 @@ export default function AdminFeedbackPage() {
         try {
             setLoading(true);
             const response = await apiService.getAllFeedback();
-            setFeedback(response.feedback || []);
+            const feedbackList = response.feedback || [];
+            setFeedback(feedbackList);
+
+            // Update the last viewed count in localStorage when feedback is loaded
+            localStorage.setItem('admin-last-viewed-feedback-count', feedbackList.length.toString());
         } catch (err: any) {
             setError(err.message || 'Failed to load feedback');
         } finally {
@@ -133,9 +137,9 @@ export default function AdminFeedbackPage() {
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            <Typography 
-                                                variant="body2" 
-                                                sx={{ 
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
                                                     whiteSpace: 'pre-wrap',
                                                     wordBreak: 'break-word'
                                                 }}

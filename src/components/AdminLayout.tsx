@@ -1,13 +1,50 @@
-import { Box, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider } from '@mui/material';
+import { Box, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider, Badge } from '@mui/material';
 import { Dashboard, EventNote, Home, Insights, Feedback, Wifi } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { apiService } from '../services/api';
 
 const drawerWidth = 240;
 
 export default function AdminLayout() {
     const navigate = useNavigate();
     const location = useLocation();
+    const [newFeedbackCount, setNewFeedbackCount] = useState(0);
+
+    useEffect(() => {
+        // Check for new feedback when the admin layout mounts
+        checkNewFeedback();
+    }, []);
+
+    const checkNewFeedback = async () => {
+        try {
+            const response = await apiService.getAllFeedback();
+            const totalFeedback = response.feedback?.length || 0;
+
+            // Get last viewed count from localStorage
+            const lastViewedCount = parseInt(localStorage.getItem('admin-last-viewed-feedback-count') || '0', 10);
+
+            // Calculate new feedback count
+            const newCount = Math.max(0, totalFeedback - lastViewedCount);
+            setNewFeedbackCount(newCount);
+        } catch (error) {
+            console.error('Error checking new feedback:', error);
+        }
+    };
+
+    const handleFeedbackClick = () => {
+        navigate('/admin/feedback');
+
+        // Mark feedback as viewed when navigating to the feedback page
+        apiService.getAllFeedback().then(response => {
+            const totalFeedback = response.feedback?.length || 0;
+            localStorage.setItem('admin-last-viewed-feedback-count', totalFeedback.toString());
+            setNewFeedbackCount(0);
+        }).catch(error => {
+            console.error('Error updating viewed feedback count:', error);
+        });
+    };
 
     return (
         <Box sx={{ display: 'flex' }}>
@@ -76,9 +113,25 @@ export default function AdminLayout() {
                     </ListItem>
 
                     <ListItem disablePadding>
-                        <ListItemButton onClick={() => navigate('/admin/feedback')} selected={location.pathname === '/admin/feedback'}>
+                        <ListItemButton onClick={handleFeedbackClick} selected={location.pathname === '/admin/feedback'}>
                             <ListItemIcon>
-                                <Feedback />
+                                <Badge
+                                    badgeContent={newFeedbackCount}
+                                    color="error"
+                                    overlap="circular"
+                                    sx={{
+                                        '& .MuiBadge-badge': {
+                                            right: -3,
+                                            top: 3,
+                                            fontSize: '0.65rem',
+                                            height: 18,
+                                            minWidth: 18,
+                                            padding: '0 4px'
+                                        }
+                                    }}
+                                >
+                                    <Feedback />
+                                </Badge>
                             </ListItemIcon>
                             <ListItemText primary="Feedback" />
                         </ListItemButton>
