@@ -321,27 +321,81 @@ class Database {
     shufflePlayers(eventId) {
         return new Promise((resolve, reject) => {
             // Get all players for the event
-            this.getPlayersByEventId(eventId).then(players => {
-                // Shuffle the players array
-                const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+            this.getPlayersByEventId(eventId).then(async (players) => {
+                try {
+                    // Shuffle the players array
+                    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
 
-                // Update presentation order for each player
-                const updatePromises = shuffledPlayers.map((player, index) => {
-                    return new Promise((updateResolve, updateReject) => {
-                        const sql = 'UPDATE players SET presentation_order = ? WHERE id = ?';
-                        this.db.run(sql, [index + 1, player.id], function (err) {
-                            if (err) {
-                                updateReject(err);
-                            } else {
-                                updateResolve();
-                            }
+                    // Create mapping: old presentation_order -> new presentation_order
+                    const orderMapping = {};
+                    players.forEach((player) => {
+                        const oldOrder = player.presentation_order;
+                        const newOrder = shuffledPlayers.findIndex(p => p.id === player.id) + 1;
+                        orderMapping[oldOrder] = newOrder;
+                    });
+
+                    // Update players' presentation_order
+                    const updatePromises = shuffledPlayers.map((player, index) => {
+                        return new Promise((updateResolve, updateReject) => {
+                            const sql = 'UPDATE players SET presentation_order = ? WHERE id = ?';
+                            this.db.run(sql, [index + 1, player.id], function (err) {
+                                if (err) {
+                                    updateReject(err);
+                                } else {
+                                    updateResolve();
+                                }
+                            });
                         });
                     });
-                });
 
-                Promise.all(updatePromises)
-                    .then(() => resolve(shuffledPlayers))
-                    .catch(reject);
+                    await Promise.all(updatePromises);
+
+                    // Update wine_number in wine guesses to match new presentation_order
+                    const guessUpdatePromises = Object.entries(orderMapping).map(([oldWineNumber, newWineNumber]) => {
+                        return new Promise((updateResolve, updateReject) => {
+                            const sql = `
+                                UPDATE player_wine_guesses 
+                                SET wine_number = ? 
+                                WHERE wine_number = ? 
+                                AND player_id IN (SELECT id FROM players WHERE event_id = ?)
+                            `;
+                            this.db.run(sql, [newWineNumber, parseInt(oldWineNumber), eventId], function (err) {
+                                if (err) {
+                                    updateReject(err);
+                                } else {
+                                    updateResolve();
+                                }
+                            });
+                        });
+                    });
+
+                    await Promise.all(guessUpdatePromises);
+
+                    // Update wine_number in wine scores to match new presentation_order
+                    const scoreUpdatePromises = Object.entries(orderMapping).map(([oldWineNumber, newWineNumber]) => {
+                        return new Promise((updateResolve, updateReject) => {
+                            const sql = `
+                                UPDATE wine_scores 
+                                SET wine_number = ? 
+                                WHERE wine_number = ? 
+                                AND player_id IN (SELECT id FROM players WHERE event_id = ?)
+                            `;
+                            this.db.run(sql, [newWineNumber, parseInt(oldWineNumber), eventId], function (err) {
+                                if (err) {
+                                    updateReject(err);
+                                } else {
+                                    updateResolve();
+                                }
+                            });
+                        });
+                    });
+
+                    await Promise.all(scoreUpdatePromises);
+
+                    resolve(shuffledPlayers);
+                } catch (error) {
+                    reject(error);
+                }
             }).catch(reject);
         });
     }

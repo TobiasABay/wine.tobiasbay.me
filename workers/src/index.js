@@ -851,12 +851,42 @@ async function updateAutoShuffle(eventId, request, env, corsHeaders) {
       ORDER BY presentation_order ASC
     `).bind(eventId).all();
 
-        const shuffledPlayers = [...players.results].sort(() => Math.random() - 0.5);
+        const playersList = players.results || [];
+        const shuffledPlayers = [...playersList].sort(() => Math.random() - 0.5);
 
+        // Create mapping: old presentation_order -> new presentation_order
+        const orderMapping = {};
+        playersList.forEach((player, index) => {
+            const oldOrder = player.presentation_order;
+            const newOrder = shuffledPlayers.findIndex(p => p.id === player.id) + 1;
+            orderMapping[oldOrder] = newOrder;
+        });
+
+        // Update players' presentation_order
         for (let i = 0; i < shuffledPlayers.length; i++) {
             await env.wine_events.prepare(`
         UPDATE players SET presentation_order = ? WHERE id = ?
       `).bind(i + 1, shuffledPlayers[i].id).run();
+        }
+
+        // Update wine_number in wine guesses to match new presentation_order
+        for (const [oldWineNumber, newWineNumber] of Object.entries(orderMapping)) {
+            await env.wine_events.prepare(`
+        UPDATE player_wine_guesses 
+        SET wine_number = ? 
+        WHERE wine_number = ? 
+        AND player_id IN (SELECT id FROM players WHERE event_id = ?)
+      `).bind(newWineNumber, parseInt(oldWineNumber), eventId).run();
+        }
+
+        // Update wine_number in wine scores to match new presentation_order
+        for (const [oldWineNumber, newWineNumber] of Object.entries(orderMapping)) {
+            await env.wine_events.prepare(`
+        UPDATE wine_scores 
+        SET wine_number = ? 
+        WHERE wine_number = ? 
+        AND player_id IN (SELECT id FROM players WHERE event_id = ?)
+      `).bind(newWineNumber, parseInt(oldWineNumber), eventId).run();
         }
     }
 
@@ -1801,9 +1831,9 @@ async function getAdminAllEvents(env, corsHeaders) {
         const eventsResult = await env.wine_events.prepare(`
             SELECT * FROM events ORDER BY created_at DESC
         `).all();
-        
+
         const events = eventsResult.results || [];
-        
+
         // For each event, get its players count
         const eventsWithPlayers = await Promise.all(
             events.map(async (event) => {
@@ -1812,13 +1842,13 @@ async function getAdminAllEvents(env, corsHeaders) {
                     WHERE event_id = ? AND is_active = 1 
                     ORDER BY presentation_order ASC
                 `).bind(event.id).all();
-                
+
                 const players = (playersResult.results || []).map(player => ({
                     ...player,
                     is_active: Boolean(player.is_active),
                     is_ready: Boolean(player.is_ready)
                 }));
-                
+
                 return {
                     ...event,
                     is_active: Boolean(event.is_active),

@@ -60,7 +60,7 @@ export default function AdminEventsListPage() {
     const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
     const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
     const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
-    const [sortBy, setSortBy] = useState<'name' | 'created_at' | 'date' | 'location' | 'players'>('created_at');
+    const [sortBy, setSortBy] = useState<'name' | 'created_at' | 'location' | 'players'>('created_at');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const { user } = useUser();
     const navigate = useNavigate();
@@ -108,10 +108,6 @@ export default function AdminEventsListPage() {
                 case 'created_at':
                     aValue = new Date(a.created_at).getTime();
                     bValue = new Date(b.created_at).getTime();
-                    break;
-                case 'date':
-                    aValue = new Date(a.date).getTime();
-                    bValue = new Date(b.date).getTime();
                     break;
                 case 'location':
                     aValue = a.location.toLowerCase();
@@ -516,23 +512,6 @@ export default function AdminEventsListPage() {
                                         userSelect: 'none',
                                         '&:hover': { backgroundColor: 'grey.200' }
                                     }}
-                                    onClick={() => handleSort('date')}
-                                >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        Date
-                                        {sortBy === 'date' && (
-                                            sortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
-                                        )}
-                                    </Box>
-                                </TableCell>
-                                <TableCell
-                                    sx={{
-                                        fontWeight: 'bold',
-                                        backgroundColor: 'grey.100',
-                                        cursor: 'pointer',
-                                        userSelect: 'none',
-                                        '&:hover': { backgroundColor: 'grey.200' }
-                                    }}
                                     onClick={() => handleSort('location')}
                                 >
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -566,7 +545,7 @@ export default function AdminEventsListPage() {
                         <TableBody>
                             {events.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                                         <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                                             No events found
                                         </Typography>
@@ -636,9 +615,6 @@ export default function AdminEventsListPage() {
                                             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                                                 {new Date(event.created_at).toLocaleTimeString()}
                                             </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            {new Date(event.date).toLocaleDateString()}
                                         </TableCell>
                                         <TableCell>{event.location}</TableCell>
                                         <TableCell align="center">
