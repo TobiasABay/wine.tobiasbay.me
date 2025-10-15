@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { apiService } from '../services/api';
+import { apiService } from '../../services/api';
 import {
     Box,
     Typography,
-    Container,
     Paper,
     Button,
     Table,
@@ -139,22 +138,22 @@ export default function AdminEventDetailsPage() {
 
     if (error) {
         return (
-            <Container maxWidth="md" sx={{ mt: 4 }}>
+            <Box sx={{ p: 3 }}>
                 <Alert severity="error">{error}</Alert>
-            </Container>
+            </Box>
         );
     }
 
     if (!wineData) {
         return (
-            <Container maxWidth="md" sx={{ mt: 4 }}>
+            <Box sx={{ p: 3 }}>
                 <Alert severity="info">No wine data found</Alert>
-            </Container>
+            </Box>
         );
     }
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ mb: 4 }}>
             {/* Header with User Info */}
             <Box sx={{
                 display: 'flex',
@@ -331,6 +330,6 @@ export default function AdminEventDetailsPage() {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Container>
+        </Box>
     );
 }

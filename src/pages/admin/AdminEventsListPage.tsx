@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiService, type Event } from '../services/api';
+import { apiService, type Event } from '../../services/api';
 import {
     Box,
     Typography,
-    Container,
     Paper,
     Table,
     TableBody,
@@ -32,7 +31,7 @@ import {
     Checkbox
 } from '@mui/material';
 import { UserButton, useUser } from '@clerk/clerk-react';
-import { CheckCircle, Cancel, Delete, MoreVert, Edit, DeleteSweep, Restore, Block, Insights, Feedback, Wifi } from '@mui/icons-material';
+import { CheckCircle, Cancel, Delete, MoreVert, Edit, DeleteSweep, Restore, Block } from '@mui/icons-material';
 
 export default function AdminEventsListPage() {
     const [events, setEvents] = useState<Event[]>([]);
@@ -324,14 +323,14 @@ export default function AdminEventsListPage() {
 
     if (error) {
         return (
-            <Container maxWidth="lg" sx={{ mt: 4 }}>
+            <Box sx={{ p: 3 }}>
                 <Alert severity="error">{error}</Alert>
-            </Container>
+            </Box>
         );
     }
 
     return (
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        <>
             {/* Header with User Info */}
             <Box sx={{
                 display: 'flex',
@@ -350,31 +349,7 @@ export default function AdminEventsListPage() {
                         Signed in as {user?.primaryEmailAddress?.emailAddress || user?.fullName || 'Admin'}
                     </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Insights />}
-                        sx={{ textTransform: 'none' }}
-                    >
-                        Insights
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Feedback />}
-                        sx={{ textTransform: 'none' }}
-                    >
-                        Feedback
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Wifi />}
-                        onClick={() => navigate('/ws-test')}
-                        sx={{ textTransform: 'none' }}
-                    >
-                        WebSocket
-                    </Button>
-                    <UserButton afterSignOutUrl="/" />
-                </Box>
+                <UserButton afterSignOutUrl="/" />
             </Box>
 
             {/* Bulk Actions Toolbar */}
@@ -816,7 +791,7 @@ export default function AdminEventsListPage() {
                 onClose={handleSnackbarClose}
                 message={snackbarMessage}
             />
-        </Container>
+        </>
     );
 }
 
