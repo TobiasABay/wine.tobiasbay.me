@@ -2097,17 +2097,29 @@ async function getInsightsData(env, corsHeaders) {
             wineRatingsResult = { results: [] };
         }
 
-        // 3. Category Accuracy - Just count guesses per category (accuracy calculation too complex)
+        // 3. Category Accuracy - Calculate real accuracy by comparing guesses with answers
         let categoryAccuracyResult;
         try {
             categoryAccuracyResult = await env.wine_events.prepare(`
                 SELECT 
                     wc.guessing_element as category_name,
                     COUNT(pg.id) as total_guesses,
-                    0 as correct_guesses,
-                    0 as accuracy
+                    SUM(CASE 
+                        WHEN LOWER(pg.guess) = LOWER(pwd.wine_answer) THEN 1 
+                        ELSE 0 
+                    END) as correct_guesses,
+                    ROUND(
+                        (CAST(SUM(CASE WHEN LOWER(pg.guess) = LOWER(pwd.wine_answer) THEN 1 ELSE 0 END) AS FLOAT) / COUNT(pg.id)) * 100, 
+                        1
+                    ) as accuracy
                 FROM player_wine_guesses pg
                 JOIN wine_categories wc ON pg.category_id = wc.id
+                JOIN player_wine_details pwd ON pg.category_id = pwd.category_id AND pg.wine_number = (
+                    SELECT p.presentation_order 
+                    FROM players p 
+                    WHERE p.id = pwd.player_id
+                )
+                WHERE pg.guess IS NOT NULL AND pg.guess != '' AND pwd.wine_answer IS NOT NULL
                 GROUP BY wc.id, wc.guessing_element
                 HAVING COUNT(pg.id) > 0
                 ORDER BY total_guesses DESC

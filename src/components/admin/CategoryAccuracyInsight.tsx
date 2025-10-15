@@ -17,9 +17,15 @@ export default function CategoryAccuracyInsight({ data, title, type }: CategoryA
 
     // Sort and filter based on type
     if (type === 'hardest') {
-        displayData = displayData.sort((a, b) => a.accuracy - b.accuracy).slice(0, 5);
+        displayData = displayData
+            .filter(item => item.accuracy !== null && item.accuracy !== undefined)
+            .sort((a, b) => a.accuracy - b.accuracy)
+            .slice(0, 5);
     } else if (type === 'easiest') {
-        displayData = displayData.sort((a, b) => b.accuracy - a.accuracy).slice(0, 5);
+        displayData = displayData
+            .filter(item => item.accuracy !== null && item.accuracy !== undefined)
+            .sort((a, b) => b.accuracy - a.accuracy)
+            .slice(0, 5);
     } else {
         displayData = displayData.sort((a, b) => b.total_guesses - a.total_guesses);
     }
@@ -57,10 +63,11 @@ export default function CategoryAccuracyInsight({ data, title, type }: CategoryA
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                                         {category.category_name}
                                     </Typography>
-                                    {type !== 'all' && (
-                                        category.accuracy >= 50 ?
-                                            <TrendingUp sx={{ color: '#4caf50', fontSize: 18 }} /> :
-                                            <TrendingDown sx={{ color: '#f44336', fontSize: 18 }} />
+                                    {type === 'hardest' && (
+                                        <TrendingDown sx={{ color: '#f44336', fontSize: 18 }} />
+                                    )}
+                                    {type === 'easiest' && (
+                                        <TrendingUp sx={{ color: '#4caf50', fontSize: 18 }} />
                                     )}
                                 </Box>
                                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>

@@ -24,36 +24,36 @@ export default function WineRatingsInsight({ data }: WineRatingsInsightProps) {
                 border: `1px solid ${type === 'high' ? '#c8e6c9' : '#ffcdd2'}`
             }}
         >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                <Box sx={{ flex: 1 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block' }}>
                         {wine.wine_name}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem', display: 'block' }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
                         {wine.event_name}
                     </Typography>
                 </Box>
-                {type === 'high' ?
-                    <TrendingUp sx={{ color: '#4caf50', fontSize: 18 }} /> :
-                    <TrendingDown sx={{ color: '#f44336', fontSize: 18 }} />
-                }
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Rating value={wine.average_score} precision={0.1} readOnly size="small" sx={{ fontSize: '0.9rem' }} />
-                <Chip
-                    label={wine.average_score.toFixed(2)}
-                    size="small"
-                    sx={{
-                        backgroundColor: type === 'high' ? '#4caf50' : '#f44336',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        height: 20,
-                        fontSize: '0.7rem'
-                    }}
-                />
-                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                    ({wine.total_scores})
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Rating value={wine.average_score} precision={0.1} readOnly size="small" sx={{ fontSize: '0.9rem' }} />
+                    <Chip
+                        label={wine.average_score.toFixed(2)}
+                        size="small"
+                        sx={{
+                            backgroundColor: type === 'high' ? '#4caf50' : '#f44336',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            height: 20,
+                            fontSize: '0.7rem'
+                        }}
+                    />
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                        ({wine.total_scores})
+                    </Typography>
+                    {type === 'high' ?
+                        <TrendingUp sx={{ color: '#4caf50', fontSize: 18 }} /> :
+                        <TrendingDown sx={{ color: '#f44336', fontSize: 18 }} />
+                    }
+                </Box>
             </Box>
         </Box>
     );
