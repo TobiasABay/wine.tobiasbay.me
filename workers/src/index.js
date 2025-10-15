@@ -2143,9 +2143,97 @@ async function getAllFeedback(env, corsHeaders) {
 
 async function getInsightsData(env, corsHeaders) {
     try {
-        // 1. Top Performers - For now, return empty as it requires complex calculation
-        // This would need to replicate the leaderboard logic which is too complex for a simple query
-        const topPerformersResult = { results: [] };
+        // 1. Top Performers - Calculate across all events
+        let topPerformersResult;
+        try {
+            // Get all finished events (where current_wine_number > total wines or event_started = false)
+            const finishedEventsResult = await env.wine_events.prepare(`
+                SELECT e.id, e.name as event_name, COUNT(p.id) as player_count
+                FROM events e
+                LEFT JOIN players p ON e.id = p.event_id
+                WHERE e.is_active = 0 OR e.event_started = 1
+                GROUP BY e.id, e.name
+                HAVING COUNT(p.id) > 0
+            `).all();
+
+            const finishedEvents = finishedEventsResult.results || [];
+            const allPerformers = [];
+
+            // Calculate leaderboard for each finished event
+            for (const event of finishedEvents) {
+                // Get all players for this event
+                const playersResult = await env.wine_events.prepare(
+                    'SELECT * FROM players WHERE event_id = ? ORDER BY presentation_order ASC'
+                ).bind(event.id).all();
+                const players = playersResult.results || [];
+
+                if (players.length === 0) continue;
+
+                // Get all wine categories for this event
+                const categoriesResult = await env.wine_events.prepare(
+                    'SELECT * FROM wine_categories WHERE event_id = ? ORDER BY created_at ASC'
+                ).bind(event.id).all();
+                const categories = categoriesResult.results || [];
+
+                // Calculate scores for each player
+                for (const player of players) {
+                    let totalPoints = 0;
+                    let correctGuesses = 0;
+                    let totalGuesses = 0;
+
+                    // Get all guesses for this player
+                    const allPlayerGuessesResult = await env.wine_events.prepare(`
+                        SELECT * FROM player_wine_guesses WHERE player_id = ?
+                    `).bind(player.id).all();
+                    const allPlayerGuesses = allPlayerGuessesResult.results || [];
+
+                    // For each wine (including their own wine)
+                    for (const wineOwner of players) {
+                        // Get the actual wine details for this wine
+                        const actualWineDetailsResult = await env.wine_events.prepare(
+                            'SELECT category_id, wine_answer FROM player_wine_details WHERE player_id = ?'
+                        ).bind(wineOwner.id).all();
+                        const actualWineDetails = actualWineDetailsResult.results || [];
+
+                        // Filter guesses for this specific wine
+                        const playerGuessesForThisWine = allPlayerGuesses.filter(guess =>
+                            guess.wine_number === wineOwner.presentation_order
+                        );
+
+                        // Compare guesses with actual details
+                        for (const guess of playerGuessesForThisWine) {
+                            totalGuesses++;
+                            const actualDetail = actualWineDetails.find(d => d.category_id === guess.category_id);
+                            const category = categories.find(c => c.id === guess.category_id);
+
+                            if (actualDetail && actualDetail.wine_answer.toLowerCase() === guess.guess.toLowerCase()) {
+                                // Correct guess! Get the difficulty factor
+                                const difficultyFactor = category ? parseInt(category.difficulty_factor) || 1 : 1;
+                                totalPoints += difficultyFactor;
+                                correctGuesses++;
+                            }
+                        }
+                    }
+
+                    if (totalGuesses > 0) {
+                        allPerformers.push({
+                            player_name: player.name,
+                            event_name: event.event_name,
+                            total_points: totalPoints,
+                            accuracy: parseFloat((correctGuesses / totalGuesses * 100).toFixed(1))
+                        });
+                    }
+                }
+            }
+
+            // Sort by total points descending and take top 10
+            allPerformers.sort((a, b) => b.total_points - a.total_points);
+            topPerformersResult = { results: allPerformers.slice(0, 10) };
+
+        } catch (e) {
+            console.error('Error fetching top performers:', e);
+            topPerformersResult = { results: [] };
+        }
 
         // 2. Wine Ratings - highest and lowest rated wines (by player/wine owner)
         let wineRatingsResult;
@@ -2284,19 +2372,22 @@ async function getInsightsData(env, corsHeaders) {
             countriesResult = { results: [] };
         }
 
-        // 8. Wine Types - red/white/rosé distribution
+        // 8. Wine Types - red/white/rosé distribution from events
         let wineTypesResult;
         try {
+            // Get wine types from the events table itself, counting by number of players
             wineTypesResult = await env.wine_events.prepare(`
                 SELECT 
-                    pwd.wine_answer as type,
-                    COUNT(*) as count
-                FROM player_wine_details pwd
-                JOIN wine_categories wc ON pwd.category_id = wc.id
-                WHERE LOWER(wc.guessing_element) LIKE '%type%' OR LOWER(wc.guessing_element) LIKE '%color%'
-                GROUP BY pwd.wine_answer
+                    e.wine_type as type,
+                    COUNT(p.id) as count
+                FROM events e
+                LEFT JOIN players p ON e.id = p.event_id
+                WHERE e.wine_type IS NOT NULL AND e.wine_type != ''
+                GROUP BY e.wine_type
                 ORDER BY count DESC
             `).all();
+
+            console.log('Wine types found:', JSON.stringify(wineTypesResult.results));
         } catch (e) {
             console.error('Error fetching wine types:', e);
             wineTypesResult = { results: [] };
