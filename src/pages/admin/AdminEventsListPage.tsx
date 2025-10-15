@@ -135,6 +135,7 @@ export default function AdminEventsListPage() {
     };
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, selectedEvent: Event) => {
+        console.log('Menu opened for event:', selectedEvent.id);
         event.stopPropagation();
         setMenuAnchorEl(event.currentTarget);
         setSelectedEvent(selectedEvent);
@@ -146,7 +147,9 @@ export default function AdminEventsListPage() {
     };
 
     const handleEditClick = () => {
+        console.log('Edit clicked, selectedEvent:', selectedEvent);
         if (selectedEvent) {
+            console.log('Opening edit dialog for event:', selectedEvent.id);
             // Populate form with current event data
             setEditFormData({
                 name: selectedEvent.name,
@@ -162,6 +165,8 @@ export default function AdminEventsListPage() {
             });
             setEditDialogOpen(true);
             handleMenuClose();
+        } else {
+            console.error('No selected event for editing');
         }
     };
 
@@ -178,31 +183,43 @@ export default function AdminEventsListPage() {
     };
 
     const handleEditSave = async () => {
-        if (!selectedEvent) return;
+        console.log('Saving event edit for:', selectedEvent?.id);
+        console.log('Form data:', editFormData);
+
+        if (!selectedEvent) {
+            console.error('No selected event for saving');
+            return;
+        }
 
         // Validate max_participants
         const maxParticipants = Number(editFormData.max_participants);
         if (isNaN(maxParticipants) || maxParticipants < 1) {
+            console.error('Invalid max participants:', editFormData.max_participants);
             setError('Max participants must be a valid number greater than 0');
             setSnackbarMessage('Max participants must be a valid number greater than 0');
             setSnackbarOpen(true);
             return;
         }
 
+        const updateData = {
+            name: editFormData.name,
+            date: editFormData.date,
+            location: editFormData.location,
+            wineType: editFormData.wine_type,
+            maxParticipants: maxParticipants,
+            description: editFormData.description,
+            budget: editFormData.budget,
+            duration: editFormData.duration,
+            wineNotes: editFormData.wine_notes,
+            autoShuffle: editFormData.auto_shuffle
+        };
+
+        console.log('Sending update data:', updateData);
+
         try {
             setSaving(true);
-            await apiService.updateEvent(selectedEvent.id, {
-                name: editFormData.name,
-                date: editFormData.date,
-                location: editFormData.location,
-                wineType: editFormData.wine_type,
-                maxParticipants: maxParticipants,
-                description: editFormData.description,
-                budget: editFormData.budget,
-                duration: editFormData.duration,
-                wineNotes: editFormData.wine_notes,
-                autoShuffle: editFormData.auto_shuffle
-            });
+            const result = await apiService.updateEvent(selectedEvent.id, updateData);
+            console.log('Update result:', result);
 
             // Reload events to show updated data
             await loadEvents();
@@ -211,6 +228,7 @@ export default function AdminEventsListPage() {
             setSnackbarOpen(true);
             handleEditDialogClose();
         } catch (err: any) {
+            console.error('Error updating event:', err);
             setError(err.message || 'Failed to update event');
             setSnackbarMessage('Failed to update event');
             setSnackbarOpen(true);
@@ -402,6 +420,14 @@ export default function AdminEventsListPage() {
                 <Box>
                     <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
                         Admin - All Events
+                        {editDialogOpen && (
+                            <Chip
+                                label="Edit Dialog Open"
+                                color="primary"
+                                size="small"
+                                sx={{ ml: 2 }}
+                            />
+                        )}
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                         Signed in as {user?.primaryEmailAddress?.emailAddress || user?.fullName || 'Admin'}
@@ -721,6 +747,12 @@ export default function AdminEventsListPage() {
                 onClose={handleEditDialogClose}
                 maxWidth="md"
                 fullWidth
+                sx={{
+                    '& .MuiDialog-paper': {
+                        backgroundColor: 'white',
+                        zIndex: 9999
+                    }
+                }}
             >
                 <DialogTitle>Edit Event</DialogTitle>
                 <DialogContent>

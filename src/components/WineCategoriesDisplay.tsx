@@ -6,7 +6,12 @@ import {
     Paper,
     Chip,
     CircularProgress,
-    Button
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions
 } from '@mui/material';
 import { WineBar } from '@mui/icons-material';
 import { apiService } from '../services/api';
@@ -39,6 +44,7 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
     const [totalWines, setTotalWines] = useState<number>(0);
     const [averageScore, setAverageScore] = useState<number | null>(null);
     const [scoreCount, setScoreCount] = useState<number>(0);
+    const [finishConfirmOpen, setFinishConfirmOpen] = useState<boolean>(false);
     const navigate = useNavigate();
 
     // Fetch initial data on mount
@@ -132,18 +138,28 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
                 console.error('Error setting current wine:', error);
             }
         } else if (currentWineNumber === totalWines) {
-            // If on last wine and clicking finish:
-            // 1. Set wine number beyond total to signal completion to all players
-            // 2. Navigate to finish page
-            try {
-                await apiService.setCurrentWine(eventId, totalWines + 1);
-                navigate(`/finish/${eventId}`);
-            } catch (error) {
-                console.error('Error finishing event:', error);
-                // Navigate anyway even if the API call fails
-                navigate(`/finish/${eventId}`);
-            }
+            // Show confirmation dialog for finish
+            setFinishConfirmOpen(true);
         }
+    };
+
+    const handleFinishConfirm = async () => {
+        if (!eventId) return;
+
+        try {
+            // Set wine number beyond total to signal completion to all players
+            await apiService.setCurrentWine(eventId, totalWines + 1);
+            navigate(`/finish/${eventId}`);
+        } catch (error) {
+            console.error('Error finishing event:', error);
+            // Navigate anyway even if the API call fails
+            navigate(`/finish/${eventId}`);
+        }
+        setFinishConfirmOpen(false);
+    };
+
+    const handleFinishCancel = () => {
+        setFinishConfirmOpen(false);
     };
 
     const handlePreviousWine = async () => {
@@ -538,6 +554,41 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
                     );
                 })}
             </Box>
+
+            {/* Finish Confirmation Dialog */}
+            <Dialog
+                open={finishConfirmOpen}
+                onClose={handleFinishCancel}
+                aria-labelledby="finish-dialog-title"
+                aria-describedby="finish-dialog-description"
+            >
+                <DialogTitle id="finish-dialog-title">
+                    Finish Wine Tasting Event?
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="finish-dialog-description">
+                        Are you sure you want to finish this wine tasting event? This action will:
+                        <br />• End the event for all participants
+                        <br />• Navigate to the results page
+                        <br />• Cannot be undone
+                        <br /><br />
+                        Make sure all players have finished scoring before proceeding.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleFinishCancel} color="primary">
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleFinishConfirm}
+                        color="primary"
+                        variant="contained"
+                        sx={{ backgroundColor: '#4caf50', '&:hover': { backgroundColor: '#45a049' } }}
+                    >
+                        Yes, Finish Event
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
