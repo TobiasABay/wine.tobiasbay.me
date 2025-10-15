@@ -588,7 +588,7 @@ async function updateEvent(eventId, request, env, corsHeaders) {
             UPDATE events 
             SET name = ?, date = ?, max_participants = ?, wine_type = ?, 
                 location = ?, description = ?, budget = ?, duration = ?, 
-                wine_notes = ?, updated_at = CURRENT_TIMESTAMP
+                wine_notes = ?, auto_shuffle = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         `).bind(
             sanitizedEventName,
@@ -600,6 +600,7 @@ async function updateEvent(eventId, request, env, corsHeaders) {
             eventData.budget || '',
             eventData.duration || '',
             eventData.wineNotes || eventData.wine_notes || '',
+            eventData.autoShuffle || eventData.auto_shuffle || false,
             eventId
         ).run();
 

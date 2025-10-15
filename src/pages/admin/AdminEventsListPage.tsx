@@ -54,7 +54,8 @@ export default function AdminEventsListPage() {
         description: '',
         budget: '',
         duration: '',
-        wine_notes: ''
+        wine_notes: '',
+        auto_shuffle: false
     });
     const [saving, setSaving] = useState(false);
     const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
@@ -156,7 +157,8 @@ export default function AdminEventsListPage() {
                 description: selectedEvent.description || '',
                 budget: selectedEvent.budget || '',
                 duration: selectedEvent.duration || '',
-                wine_notes: selectedEvent.wine_notes || ''
+                wine_notes: selectedEvent.wine_notes || '',
+                auto_shuffle: selectedEvent.auto_shuffle || false
             });
             setEditDialogOpen(true);
             handleMenuClose();
@@ -168,7 +170,7 @@ export default function AdminEventsListPage() {
         setSelectedEvent(null);
     };
 
-    const handleEditFormChange = (field: string, value: string | number) => {
+    const handleEditFormChange = (field: string, value: string | number | boolean) => {
         setEditFormData(prev => ({
             ...prev,
             [field]: value
@@ -178,6 +180,15 @@ export default function AdminEventsListPage() {
     const handleEditSave = async () => {
         if (!selectedEvent) return;
 
+        // Validate max_participants
+        const maxParticipants = Number(editFormData.max_participants);
+        if (isNaN(maxParticipants) || maxParticipants < 1) {
+            setError('Max participants must be a valid number greater than 0');
+            setSnackbarMessage('Max participants must be a valid number greater than 0');
+            setSnackbarOpen(true);
+            return;
+        }
+
         try {
             setSaving(true);
             await apiService.updateEvent(selectedEvent.id, {
@@ -185,11 +196,12 @@ export default function AdminEventsListPage() {
                 date: editFormData.date,
                 location: editFormData.location,
                 wineType: editFormData.wine_type,
-                maxParticipants: editFormData.max_participants,
+                maxParticipants: maxParticipants,
                 description: editFormData.description,
                 budget: editFormData.budget,
                 duration: editFormData.duration,
-                wineNotes: editFormData.wine_notes
+                wineNotes: editFormData.wine_notes,
+                autoShuffle: editFormData.auto_shuffle
             });
 
             // Reload events to show updated data
@@ -734,8 +746,12 @@ export default function AdminEventsListPage() {
                                 fullWidth
                                 label="Max Participants"
                                 type="number"
-                                value={editFormData.max_participants}
-                                onChange={(e) => handleEditFormChange('max_participants', parseInt(e.target.value))}
+                                value={editFormData.max_participants || ''}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    const numValue = value === '' ? 0 : parseInt(value, 10);
+                                    handleEditFormChange('max_participants', isNaN(numValue) ? 0 : numValue);
+                                }}
                                 required
                             />
                         </Box>
@@ -785,6 +801,16 @@ export default function AdminEventsListPage() {
                             value={editFormData.wine_notes}
                             onChange={(e) => handleEditFormChange('wine_notes', e.target.value)}
                         />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt: 1 }}>
+                            <Checkbox
+                                checked={editFormData.auto_shuffle}
+                                onChange={(e) => handleEditFormChange('auto_shuffle', e.target.checked)}
+                                color="primary"
+                            />
+                            <Typography variant="body2">
+                                Enable auto-shuffle for players
+                            </Typography>
+                        </Box>
                     </Box>
                 </DialogContent>
                 <DialogActions>

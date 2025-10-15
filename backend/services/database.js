@@ -127,7 +127,7 @@ class Database {
                 UPDATE events 
                 SET name = ?, date = ?, max_participants = ?, wine_type = ?, 
                     location = ?, description = ?, budget = ?, duration = ?, 
-                    wine_notes = ?, updated_at = CURRENT_TIMESTAMP
+                    wine_notes = ?, auto_shuffle = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             `;
 
@@ -141,6 +141,7 @@ class Database {
                 eventData.budget || '',
                 eventData.duration || '',
                 eventData.wineNotes || eventData.wine_notes || '',
+                eventData.autoShuffle || eventData.auto_shuffle || false,
                 eventId
             ], function (err) {
                 if (err) {

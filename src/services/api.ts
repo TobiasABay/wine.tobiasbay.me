@@ -29,6 +29,7 @@ export interface EventData {
     budget?: string;
     duration?: string;
     wineNotes?: string;
+    autoShuffle?: boolean;
     wineCategories?: WineCategory[];
 }
 
