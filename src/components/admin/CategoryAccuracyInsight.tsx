@@ -27,7 +27,7 @@ export default function CategoryAccuracyInsight({ data, title, type }: CategoryA
             .sort((a, b) => b.accuracy - a.accuracy)
             .slice(0, 5);
     } else {
-        displayData = displayData.sort((a, b) => b.total_guesses - a.total_guesses);
+        displayData = displayData.sort((a, b) => b.total_guesses - a.total_guesses).slice(0, 5);
     }
 
     const getAccuracyColor = (accuracy: number) => {
@@ -45,9 +45,9 @@ export default function CategoryAccuracyInsight({ data, title, type }: CategoryA
                 </Typography>
             </Box>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
-                {type === 'hardest' && 'Categories with lowest guess accuracy'}
-                {type === 'easiest' && 'Categories with highest guess accuracy'}
-                {type === 'all' && 'Total guesses submitted per category'}
+                {type === 'hardest' && 'Top 5 categories with lowest guess accuracy'}
+                {type === 'easiest' && 'Top 5 categories with highest guess accuracy'}
+                {type === 'all' && 'Top 5 categories with most total guesses'}
             </Typography>
 
             {displayData.length === 0 ? (

@@ -237,3 +237,72 @@ export function sanitizeJoinCode(code: string): string {
     return sanitized;
 }
 
+/**
+ * Sanitize feedback text
+ * - Allows letters, numbers, spaces, and common punctuation
+ * - Maximum 1000 characters
+ * - Removes HTML tags and dangerous content
+ * @param feedback - The feedback text to sanitize
+ * @param trimSpaces - Whether to trim leading/trailing spaces (default: true)
+ * @returns Sanitized feedback text
+ */
+export function sanitizeFeedback(feedback: string, trimSpaces: boolean = true): string {
+    if (!feedback) return '';
+
+    let sanitized = feedback
+        // Remove HTML tags
+        .replace(/<[^>]*>/g, '')
+        // Remove script tags and their content
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        // Remove event handlers (onclick, onerror, etc.)
+        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+        // Remove javascript: protocol
+        .replace(/javascript:/gi, '')
+        // Remove data: protocol (can be used for XSS)
+        .replace(/data:text\/html/gi, '')
+        // Remove potential SQL injection patterns
+        .replace(/[';\"\\]/g, '')
+        // Remove multiple consecutive spaces
+        .replace(/\s+/g, ' ');
+
+    // Only trim if explicitly requested
+    if (trimSpaces) {
+        sanitized = sanitized.trim();
+    }
+
+    // Limit length to 1000 characters
+    if (sanitized.length > 1000) {
+        sanitized = sanitized.substring(0, 1000);
+    }
+
+    return sanitized;
+}
+
+/**
+ * Validate feedback text
+ * @param feedback - The feedback text to validate
+ * @returns Object with isValid flag and error message if invalid
+ */
+export function validateFeedback(feedback: string): { isValid: boolean; error?: string } {
+    const sanitized = sanitizeFeedback(feedback, true); // Trim for validation
+
+    if (!sanitized) {
+        return { isValid: false, error: 'Feedback cannot be empty' };
+    }
+
+    if (sanitized.length < 3) {
+        return { isValid: false, error: 'Feedback must be at least 3 characters' };
+    }
+
+    if (sanitized.length > 1000) {
+        return { isValid: false, error: 'Feedback must be less than 1000 characters' };
+    }
+
+    // Check for inappropriate content
+    if (containsInappropriateContent(sanitized)) {
+        return { isValid: false, error: 'Please keep your feedback appropriate and respectful' };
+    }
+
+    return { isValid: true };
+}
+

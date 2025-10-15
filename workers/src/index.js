@@ -48,6 +48,63 @@ function containsInappropriateContent(text) {
     });
 }
 
+// Sanitize feedback text
+function sanitizeFeedback(feedback, trimSpaces = true) {
+    if (!feedback) return '';
+
+    let sanitized = feedback
+        // Remove HTML tags
+        .replace(/<[^>]*>/g, '')
+        // Remove script tags and their content
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        // Remove event handlers (onclick, onerror, etc.)
+        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+        // Remove javascript: protocol
+        .replace(/javascript:/gi, '')
+        // Remove data: protocol (can be used for XSS)
+        .replace(/data:text\/html/gi, '')
+        // Remove potential SQL injection patterns
+        .replace(/[';\"\\]/g, '')
+        // Remove multiple consecutive spaces
+        .replace(/\s+/g, ' ');
+
+    // Only trim if explicitly requested
+    if (trimSpaces) {
+        sanitized = sanitized.trim();
+    }
+
+    // Limit length to 1000 characters
+    if (sanitized.length > 1000) {
+        sanitized = sanitized.substring(0, 1000);
+    }
+
+    return sanitized;
+}
+
+// Validate feedback text
+function validateFeedback(feedback) {
+    const sanitized = sanitizeFeedback(feedback, true); // Trim for validation
+
+    if (!sanitized) {
+        return { isValid: false, error: 'Feedback cannot be empty' };
+    }
+
+    if (sanitized.length < 3) {
+        return { isValid: false, error: 'Feedback must be at least 3 characters' };
+    }
+
+    if (sanitized.length > 1000) {
+        return { isValid: false, error: 'Feedback must be less than 1000 characters' };
+    }
+
+    // Check for inappropriate content
+    if (containsInappropriateContent(sanitized)) {
+        return { isValid: false, error: 'Please keep your feedback appropriate and respectful' };
+    }
+
+    return { isValid: true };
+}
+
 // Input sanitization functions
 function sanitizeInput(input, maxLength = 100) {
     if (!input || typeof input !== 'string') return '';
@@ -2012,12 +2069,27 @@ async function submitFeedback(request, env, corsHeaders) {
             });
         }
 
+        // Validate feedback
+        const validation = validateFeedback(feedback);
+        if (!validation.isValid) {
+            return new Response(JSON.stringify({
+                error: validation.error
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Sanitize feedback
+        const sanitizedFeedback = sanitizeFeedback(feedback, true);
+        const sanitizedPlayerName = sanitizePlayerName(playerName, true);
+
         const feedbackId = generateUUID();
 
         await env.wine_events.prepare(`
             INSERT INTO player_feedback (id, event_id, player_id, player_name, feedback)
             VALUES (?, ?, ?, ?, ?)
-        `).bind(feedbackId, eventId, playerId, playerName, feedback).run();
+        `).bind(feedbackId, eventId, playerId, sanitizedPlayerName, sanitizedFeedback).run();
 
         return new Response(JSON.stringify({
             success: true,

@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, CheckCircle, Cancel, EmojiEvents, Star, Feedback, Close } from '@mui/icons-material';
 import { apiService } from '../services/api';
+import { sanitizeFeedback, validateFeedback } from '../utils/sanitize';
 import type { Event } from '../services/api';
 
 interface LeaderboardPlayer {
@@ -244,11 +245,20 @@ export default function MyResultsPage() {
     }, [loading, myPlayerData, eventId]);
 
     const handleFeedbackSubmit = async () => {
-        if (!feedback.trim() || !eventId || !myPlayerData) return;
+        if (!eventId || !myPlayerData) return;
+
+        // Validate feedback
+        const validation = validateFeedback(feedback);
+        if (!validation.isValid) {
+            alert(validation.error);
+            return;
+        }
 
         try {
             setFeedbackSubmitting(true);
-            await apiService.submitFeedback(eventId, myPlayerData.player_id, myPlayerData.player_name, feedback);
+            // Sanitize feedback before sending
+            const sanitizedFeedback = sanitizeFeedback(feedback, true);
+            await apiService.submitFeedback(eventId, myPlayerData.player_id, myPlayerData.player_name, sanitizedFeedback);
             
             // Mark as submitted in localStorage
             const feedbackKey = `feedback-${eventId}-${myPlayerData.player_id}`;
@@ -257,6 +267,7 @@ export default function MyResultsPage() {
             setFeedbackModalOpen(false);
         } catch (error) {
             console.error('Error submitting feedback:', error);
+            alert('Failed to submit feedback. Please try again.');
         } finally {
             setFeedbackSubmitting(false);
         }
@@ -650,10 +661,15 @@ export default function MyResultsPage() {
                         rows={4}
                         placeholder="Tell us what you thought about the event..."
                         value={feedback}
-                        onChange={(e) => setFeedback(e.target.value)}
+                        onChange={(e) => {
+                            const sanitized = sanitizeFeedback(e.target.value, false);
+                            setFeedback(sanitized);
+                        }}
                         variant="outlined"
                         autoFocus
                         sx={{ mt: 2 }}
+                        inputProps={{ maxLength: 1000 }}
+                        helperText={`${feedback.length}/1000 characters`}
                     />
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
