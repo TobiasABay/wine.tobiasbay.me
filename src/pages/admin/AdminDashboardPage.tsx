@@ -29,21 +29,19 @@ export default function AdminDashboardPage() {
 
             // Fetch all events (without players)
             const eventsList = await apiService.getAllEvents();
-            console.log('Total events fetched:', eventsList.length);
 
             // Fetch each event individually to get players data
-            // Use Promise.allSettled to handle 404 errors gracefully
+            // Note: Some events may return 404 (deleted but still in list) - we handle these gracefully
             const eventsResults = await Promise.allSettled(
-                eventsList.map(event => apiService.getEvent(event.id))
+                eventsList.map(event =>
+                    apiService.getEvent(event.id).catch(() => null)
+                )
             );
 
-            // Filter out failed requests and extract successful results
+            // Filter out failed/null results and extract successful events
             const eventsWithPlayers = eventsResults
-                .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+                .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled' && result.value !== null)
                 .map(result => result.value);
-
-            console.log('Events with players:', eventsWithPlayers);
-            console.log('Failed events:', eventsResults.filter(r => r.status === 'rejected').length);
 
             const now = new Date();
             const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -58,16 +56,6 @@ export default function AdminDashboardPage() {
             eventsWithPlayers.forEach(event => {
                 const eventCreatedAt = new Date(event.created_at);
                 const playerCount = event.players?.length || 0;
-
-                console.log(`Event ${event.id}:`, {
-                    created_at: event.created_at,
-                    eventCreatedAt,
-                    playerCount,
-                    players: event.players,
-                    isIn24h: eventCreatedAt >= last24Hours,
-                    isInWeek: eventCreatedAt >= lastWeek,
-                    isInMonth: eventCreatedAt >= lastMonth
-                });
 
                 // If event was created in last 24 hours, count all its players
                 if (eventCreatedAt >= last24Hours) {
@@ -84,8 +72,6 @@ export default function AdminDashboardPage() {
                     countMonth += playerCount;
                 }
             });
-
-            console.log('Final counts:', { count24h, countWeek, countMonth });
 
             setActivityStats({
                 last24Hours: count24h,
