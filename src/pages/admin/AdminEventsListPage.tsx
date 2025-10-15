@@ -46,6 +46,7 @@ export default function AdminEventsListPage() {
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editFormData, setEditFormData] = useState({
+        eventId: '',
         name: '',
         date: '',
         location: '',
@@ -149,6 +150,7 @@ export default function AdminEventsListPage() {
         if (selectedEvent) {
             // Populate form with current event data
             setEditFormData({
+                eventId: selectedEvent.id,
                 name: selectedEvent.name,
                 date: selectedEvent.date.split('T')[0], // Convert to YYYY-MM-DD format
                 location: selectedEvent.location,
@@ -161,7 +163,6 @@ export default function AdminEventsListPage() {
                 auto_shuffle: selectedEvent.auto_shuffle || false
             });
             setEditDialogOpen(true);
-            // Don't call handleMenuClose() here - keep selectedEvent for saving
             setMenuAnchorEl(null); // Just close the menu
         }
     };
@@ -169,6 +170,19 @@ export default function AdminEventsListPage() {
     const handleEditDialogClose = () => {
         setEditDialogOpen(false);
         setSelectedEvent(null);
+        setEditFormData({
+            eventId: '',
+            name: '',
+            date: '',
+            location: '',
+            wine_type: '',
+            max_participants: 0,
+            description: '',
+            budget: '',
+            duration: '',
+            wine_notes: '',
+            auto_shuffle: false
+        });
     };
 
     const handleEditFormChange = (field: string, value: string | number | boolean) => {
@@ -179,7 +193,12 @@ export default function AdminEventsListPage() {
     };
 
     const handleEditSave = async () => {
-        if (!selectedEvent) return;
+        if (!editFormData.eventId) {
+            setError('No event ID found for saving');
+            setSnackbarMessage('No event ID found for saving');
+            setSnackbarOpen(true);
+            return;
+        }
 
         // Validate max_participants
         const maxParticipants = Number(editFormData.max_participants);
@@ -192,7 +211,7 @@ export default function AdminEventsListPage() {
 
         try {
             setSaving(true);
-            await apiService.updateEvent(selectedEvent.id, {
+            await apiService.updateEvent(editFormData.eventId, {
                 name: editFormData.name,
                 date: editFormData.date,
                 location: editFormData.location,
