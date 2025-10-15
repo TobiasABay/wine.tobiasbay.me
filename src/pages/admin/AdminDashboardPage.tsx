@@ -32,11 +32,18 @@ export default function AdminDashboardPage() {
             console.log('Total events fetched:', eventsList.length);
 
             // Fetch each event individually to get players data
-            const eventsWithPlayers = await Promise.all(
+            // Use Promise.allSettled to handle 404 errors gracefully
+            const eventsResults = await Promise.allSettled(
                 eventsList.map(event => apiService.getEvent(event.id))
             );
 
+            // Filter out failed requests and extract successful results
+            const eventsWithPlayers = eventsResults
+                .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+                .map(result => result.value);
+
             console.log('Events with players:', eventsWithPlayers);
+            console.log('Failed events:', eventsResults.filter(r => r.status === 'rejected').length);
 
             const now = new Date();
             const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
