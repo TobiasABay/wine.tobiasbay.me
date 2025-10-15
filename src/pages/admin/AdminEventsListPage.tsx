@@ -71,9 +71,25 @@ export default function AdminEventsListPage() {
     const loadEvents = async () => {
         try {
             setLoading(true);
-            const eventsData = await apiService.getAllEvents();
+
+            // Fetch all events (without players)
+            const eventsList = await apiService.getAllEvents();
+
+            // Fetch each event individually to get players data
+            // Note: Some events may return 404 (deleted but still in list) - we handle these gracefully
+            const eventsResults = await Promise.allSettled(
+                eventsList.map(event =>
+                    apiService.getEvent(event.id).catch(() => null)
+                )
+            );
+
+            // Filter out failed/null results and extract successful events
+            const eventsWithPlayers = eventsResults
+                .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled' && result.value !== null)
+                .map(result => result.value);
+
             // Sort by created_at descending (most recent first)
-            const sortedEvents = eventsData.sort((a, b) =>
+            const sortedEvents = eventsWithPlayers.sort((a, b) =>
                 new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             );
             setEvents(sortedEvents);
