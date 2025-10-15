@@ -110,7 +110,7 @@ class Database {
 
     getAllEvents() {
         return new Promise((resolve, reject) => {
-            const sql = 'SELECT * FROM events ORDER BY created_at DESC';
+            const sql = 'SELECT * FROM events WHERE is_active = 1 ORDER BY created_at DESC';
             this.db.all(sql, [], (err, rows) => {
                 if (err) {
                     reject(err);
