@@ -1,5 +1,5 @@
 import { UserButton, useUser } from "@clerk/clerk-react";
-import { Box, Typography, CircularProgress, Alert, IconButton, Tooltip } from "@mui/material";
+import { Box, Typography, Alert, IconButton, Tooltip, Paper, Skeleton } from "@mui/material";
 import { Refresh } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { apiService } from "../../services/api";
@@ -54,13 +54,23 @@ export default function AdminInsightsPage() {
         }
     };
 
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-                <CircularProgress />
+    // Skeleton component for loading state
+    const InsightSkeleton = ({ height = 400 }: { height?: number }) => (
+        <Paper sx={{ p: 3, height: height }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Skeleton variant="circular" width={24} height={24} />
+                <Skeleton variant="text" width={200} height={32} />
             </Box>
-        );
-    }
+            <Skeleton variant="text" width="80%" height={20} sx={{ mb: 3 }} />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {[...Array(5)].map((_, i) => (
+                    <Box key={i} sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                        <Skeleton variant="rectangular" width="100%" height={60} sx={{ borderRadius: 1 }} />
+                    </Box>
+                ))}
+            </Box>
+        </Paper>
+    );
 
     return (
         <>
@@ -106,45 +116,71 @@ export default function AdminInsightsPage() {
             )}
 
             {/* Insights Grid */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* Row 1: Top Performers & Wine Ratings */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, gap: 3 }}>
-                    <TopPerformersInsight data={insights.topPerformers} />
-                    <WineRatingsInsight data={insights.wineRatings} />
-                </Box>
+            {loading ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {/* Row 1: Top Performers & Wine Ratings Skeletons */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, gap: 3 }}>
+                        <InsightSkeleton height={500} />
+                        <InsightSkeleton height={500} />
+                    </Box>
 
-                {/* Row 2: Category Insights */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
-                    <CategoryAccuracyInsight
-                        data={insights.categoryAccuracy}
-                        title="Most Guessed Categories"
-                        type="all"
-                    />
-                    <CategoryAccuracyInsight
-                        data={insights.categoryAccuracy}
-                        title="Hardest Categories"
-                        type="hardest"
-                    />
-                    <CategoryAccuracyInsight
-                        data={insights.categoryAccuracy}
-                        title="Easiest Categories"
-                        type="easiest"
-                    />
-                </Box>
+                    {/* Row 2: Category Insights Skeletons */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
+                        <InsightSkeleton height={400} />
+                        <InsightSkeleton height={400} />
+                        <InsightSkeleton height={400} />
+                    </Box>
 
-                {/* Row 3: Wine Characteristics & Common Mistakes */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3 }}>
-                    <WineCharacteristicsInsight
-                        grapeVarieties={insights.grapeVarieties}
-                        countries={insights.countries}
-                        wineTypes={insights.wineTypes}
-                    />
-                    <CommonMistakesInsight data={insights.commonMistakes} />
-                </Box>
+                    {/* Row 3: Wine Characteristics & Common Mistakes Skeletons */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3 }}>
+                        <InsightSkeleton height={350} />
+                        <InsightSkeleton height={350} />
+                    </Box>
 
-                {/* Row 4: Active Events */}
-                <ActiveEventsInsight data={insights.activeEvents} />
-            </Box>
+                    {/* Row 4: Active Events Skeleton */}
+                    <InsightSkeleton height={300} />
+                </Box>
+            ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {/* Row 1: Top Performers & Wine Ratings */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, gap: 3 }}>
+                        <TopPerformersInsight data={insights.topPerformers} />
+                        <WineRatingsInsight data={insights.wineRatings} />
+                    </Box>
+
+                    {/* Row 2: Category Insights */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
+                        <CategoryAccuracyInsight
+                            data={insights.categoryAccuracy}
+                            title="Most Guessed Categories"
+                            type="all"
+                        />
+                        <CategoryAccuracyInsight
+                            data={insights.categoryAccuracy}
+                            title="Hardest Categories"
+                            type="hardest"
+                        />
+                        <CategoryAccuracyInsight
+                            data={insights.categoryAccuracy}
+                            title="Easiest Categories"
+                            type="easiest"
+                        />
+                    </Box>
+
+                    {/* Row 3: Wine Characteristics & Common Mistakes */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3 }}>
+                        <WineCharacteristicsInsight
+                            grapeVarieties={insights.grapeVarieties}
+                            countries={insights.countries}
+                            wineTypes={insights.wineTypes}
+                        />
+                        <CommonMistakesInsight data={insights.commonMistakes} />
+                    </Box>
+
+                    {/* Row 4: Active Events */}
+                    <ActiveEventsInsight data={insights.activeEvents} />
+                </Box>
+            )}
         </>
     );
 }
