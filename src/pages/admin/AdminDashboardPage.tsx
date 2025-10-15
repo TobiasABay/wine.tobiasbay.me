@@ -1,6 +1,6 @@
 import { UserButton, useUser } from "@clerk/clerk-react";
-import { Box, Typography, Paper, Card, CardContent } from "@mui/material";
-import { TrendingUp, CalendarToday, DateRange, AccessTime } from "@mui/icons-material";
+import { Box, Typography, Paper, Card, CardContent, IconButton, Tooltip } from "@mui/material";
+import { TrendingUp, CalendarToday, DateRange, AccessTime, Refresh } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { apiService } from "../../services/api";
 
@@ -23,62 +23,77 @@ export default function AdminDashboardPage() {
         document.title = 'Wine Tasting - Admin Dashboard';
     }, []);
 
+    const fetchActivityStats = async () => {
+        try {
+            setLoading(true);
+
+            // Fetch all events with their players
+            const events = await apiService.getAllEvents();
+
+            console.log('Total events fetched:', events.length);
+            console.log('All events:', events);
+
+            const now = new Date();
+            const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+            let count24h = 0;
+            let countWeek = 0;
+            let countMonth = 0;
+
+            // Count players who joined events based on when the event was created
+            events.forEach(event => {
+                const eventCreatedAt = new Date(event.created_at);
+                const playerCount = event.players?.length || 0;
+
+                console.log(`Event ${event.id}:`, {
+                    created_at: event.created_at,
+                    eventCreatedAt,
+                    playerCount,
+                    players: event.players,
+                    isIn24h: eventCreatedAt >= last24Hours,
+                    isInWeek: eventCreatedAt >= lastWeek,
+                    isInMonth: eventCreatedAt >= lastMonth
+                });
+
+                // If event was created in last 24 hours, count all its players
+                if (eventCreatedAt >= last24Hours) {
+                    count24h += playerCount;
+                }
+
+                // If event was created in last week, count all its players
+                if (eventCreatedAt >= lastWeek) {
+                    countWeek += playerCount;
+                }
+
+                // If event was created in last month, count all its players
+                if (eventCreatedAt >= lastMonth) {
+                    countMonth += playerCount;
+                }
+            });
+
+            console.log('Final counts:', { count24h, countWeek, countMonth });
+
+            setActivityStats({
+                last24Hours: count24h,
+                lastWeek: countWeek,
+                lastMonth: countMonth
+            });
+        } catch (error) {
+            console.error('Error fetching activity stats:', error);
+            // Fallback to 0 on error
+            setActivityStats({
+                last24Hours: 0,
+                lastWeek: 0,
+                lastMonth: 0
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchActivityStats = async () => {
-            try {
-                setLoading(true);
-
-                // Fetch all events with their players
-                const events = await apiService.getAllEvents();
-
-                const now = new Date();
-                const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-                const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-                let count24h = 0;
-                let countWeek = 0;
-                let countMonth = 0;
-
-                // Count players who joined events based on when the event was created
-                events.forEach(event => {
-                    const eventCreatedAt = new Date(event.created_at);
-                    const playerCount = event.players?.length || 0;
-
-                    // If event was created in last 24 hours, count all its players
-                    if (eventCreatedAt >= last24Hours) {
-                        count24h += playerCount;
-                    }
-
-                    // If event was created in last week, count all its players
-                    if (eventCreatedAt >= lastWeek) {
-                        countWeek += playerCount;
-                    }
-
-                    // If event was created in last month, count all its players
-                    if (eventCreatedAt >= lastMonth) {
-                        countMonth += playerCount;
-                    }
-                });
-
-                setActivityStats({
-                    last24Hours: count24h,
-                    lastWeek: countWeek,
-                    lastMonth: countMonth
-                });
-            } catch (error) {
-                console.error('Error fetching activity stats:', error);
-                // Fallback to 0 on error
-                setActivityStats({
-                    last24Hours: 0,
-                    lastWeek: 0,
-                    lastMonth: 0
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchActivityStats();
     }, []);
 
@@ -131,9 +146,23 @@ export default function AdminDashboardPage() {
 
             {/* User Activity Stats */}
             <Box sx={{ mb: 4 }}>
-                <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold', color: '#2c3e50' }}>
-                    User Activity
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
+                        User Activity
+                    </Typography>
+                    <Tooltip title="Refresh stats">
+                        <IconButton
+                            onClick={fetchActivityStats}
+                            disabled={loading}
+                            sx={{
+                                color: '#1976d2',
+                                '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
+                            }}
+                        >
+                            <Refresh />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
                 <Box sx={{
                     display: 'grid',
                     gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
