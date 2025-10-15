@@ -27,11 +27,16 @@ export default function AdminDashboardPage() {
         try {
             setLoading(true);
 
-            // Fetch all events with their players
-            const events = await apiService.getAllEvents();
+            // Fetch all events (without players)
+            const eventsList = await apiService.getAllEvents();
+            console.log('Total events fetched:', eventsList.length);
 
-            console.log('Total events fetched:', events.length);
-            console.log('All events:', events);
+            // Fetch each event individually to get players data
+            const eventsWithPlayers = await Promise.all(
+                eventsList.map(event => apiService.getEvent(event.id))
+            );
+
+            console.log('Events with players:', eventsWithPlayers);
 
             const now = new Date();
             const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -43,7 +48,7 @@ export default function AdminDashboardPage() {
             let countMonth = 0;
 
             // Count players who joined events based on when the event was created
-            events.forEach(event => {
+            eventsWithPlayers.forEach(event => {
                 const eventCreatedAt = new Date(event.created_at);
                 const playerCount = event.players?.length || 0;
 
