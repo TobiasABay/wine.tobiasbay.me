@@ -15,7 +15,7 @@ export default function WineRatingsInsight({ data }: WineRatingsInsightProps) {
     const highest = sortedByScore.slice(0, 5);
     const lowest = sortedByScore.slice(-5).reverse();
 
-    const WineRatingRow = ({ wine, index, type }: { wine: any; index: number; type: 'high' | 'low' }) => (
+    const WineRatingRow = ({ wine, type }: { wine: any; type: 'high' | 'low' }) => (
         <Box
             sx={{
                 p: 2,
@@ -78,7 +78,7 @@ export default function WineRatingsInsight({ data }: WineRatingsInsightProps) {
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {highest.map((wine, index) => (
-                                <WineRatingRow key={index} wine={wine} index={index} type="high" />
+                                <WineRatingRow key={index} wine={wine} type="high" />
                             ))}
                         </Box>
                     </Box>
@@ -90,7 +90,7 @@ export default function WineRatingsInsight({ data }: WineRatingsInsightProps) {
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {lowest.map((wine, index) => (
-                                <WineRatingRow key={index} wine={wine} index={index} type="low" />
+                                <WineRatingRow key={index} wine={wine} type="low" />
                             ))}
                         </Box>
                     </Box>
