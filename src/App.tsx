@@ -16,6 +16,7 @@ import DemoPage from './pages/DemoPage'
 import WebSocketTestPage from './pages/WebSocketTestPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import AdminLayout from './components/AdminLayout'
+import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
           <Route index element={<AdminEventsListPage />} />
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path=":eventId" element={<AdminEventDetailsPage />} />
+          <Route path="feedback" element={<AdminFeedbackPage />} />
         </Route>
       </Routes>
     </Router>

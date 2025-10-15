@@ -76,7 +76,7 @@ export default function AdminLayout() {
                     </ListItem>
 
                     <ListItem disablePadding>
-                        <ListItemButton>
+                        <ListItemButton onClick={() => navigate('/admin/feedback')}>
                             <ListItemIcon>
                                 <Feedback />
                             </ListItemIcon>
