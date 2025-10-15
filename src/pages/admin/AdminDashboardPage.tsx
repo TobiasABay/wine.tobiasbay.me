@@ -26,22 +26,9 @@ export default function AdminDashboardPage() {
     const fetchActivityStats = async () => {
         try {
             setLoading(true);
-
-            // Fetch all events (without players)
-            const eventsList = await apiService.getAllEvents();
-
-            // Fetch each event individually to get players data
-            // Note: Some events may return 404 (deleted but still in list) - we handle these gracefully
-            const eventsResults = await Promise.allSettled(
-                eventsList.map(event =>
-                    apiService.getEvent(event.id).catch(() => null)
-                )
-            );
-
-            // Filter out failed/null results and extract successful events
-            const eventsWithPlayers = eventsResults
-                .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled' && result.value !== null)
-                .map(result => result.value);
+            
+            // Fetch all events with players (admin endpoint includes inactive events and players)
+            const eventsWithPlayers = await apiService.getAdminAllEvents();
 
             const now = new Date();
             const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);

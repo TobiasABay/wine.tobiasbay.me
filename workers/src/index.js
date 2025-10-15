@@ -333,6 +333,10 @@ export default {
             }
 
             // Admin endpoints
+            if (apiPath === '/api/admin/events/list' && method === 'GET') {
+                return await getAdminAllEvents(env, corsHeaders);
+            }
+
             if (apiPath.startsWith('/api/admin/events/') && apiPath.endsWith('/wine-data') && method === 'GET') {
                 const eventId = apiPath.split('/')[4];
                 return await getAdminWineData(eventId, env, corsHeaders);
@@ -1791,6 +1795,52 @@ async function getLeaderboard(eventId, env, corsHeaders) {
 }
 
 // Admin function to get detailed wine data for debugging
+async function getAdminAllEvents(env, corsHeaders) {
+    try {
+        // Get all events (including inactive ones for admin)
+        const eventsResult = await env.wine_events.prepare(`
+            SELECT * FROM events ORDER BY created_at DESC
+        `).all();
+        
+        const events = eventsResult.results || [];
+        
+        // For each event, get its players count
+        const eventsWithPlayers = await Promise.all(
+            events.map(async (event) => {
+                const playersResult = await env.wine_events.prepare(`
+                    SELECT * FROM players 
+                    WHERE event_id = ? AND is_active = 1 
+                    ORDER BY presentation_order ASC
+                `).bind(event.id).all();
+                
+                const players = (playersResult.results || []).map(player => ({
+                    ...player,
+                    is_active: Boolean(player.is_active),
+                    is_ready: Boolean(player.is_ready)
+                }));
+                
+                return {
+                    ...event,
+                    is_active: Boolean(event.is_active),
+                    auto_shuffle: Boolean(event.auto_shuffle),
+                    event_started: Boolean(event.event_started),
+                    players: players
+                };
+            })
+        );
+
+        return new Response(JSON.stringify(eventsWithPlayers), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error getting admin events:', error);
+        return new Response(JSON.stringify({ error: 'Failed to get admin events' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+
 async function getAdminWineData(eventId, env, corsHeaders) {
     try {
 
