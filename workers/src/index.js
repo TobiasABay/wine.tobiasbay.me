@@ -2120,7 +2120,7 @@ async function getInsightsData(env, corsHeaders) {
                     WHERE p.id = pwd.player_id
                 )
                 WHERE pg.guess IS NOT NULL AND pg.guess != '' AND pwd.wine_answer IS NOT NULL
-                GROUP BY wc.id, wc.guessing_element
+                GROUP BY wc.guessing_element
                 HAVING COUNT(pg.id) > 0
                 ORDER BY total_guesses DESC
             `).all();
