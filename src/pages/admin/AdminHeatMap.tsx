@@ -184,6 +184,7 @@ export default function AdminHeatMap() {
 
             await Promise.all(geocodePromises);
             setEventLocations(locations);
+            console.log('Event Locations:', locations);
 
             // Initialize map
             if (locations.length > 0) {
