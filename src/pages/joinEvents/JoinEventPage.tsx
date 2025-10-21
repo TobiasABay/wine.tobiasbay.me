@@ -521,30 +521,27 @@ export default function JoinEventPage() {
                 deviceId: deviceId
             });
 
-            // Submit wine answers
-            const wineAnswerData = wineCategories.map(category => ({
-                categoryId: category.id,
-                wineAnswer: wineAnswers[category.id]
-            }));
-
-            // Submit wine answers
-
-            await apiService.submitWineAnswers({
-                playerId: result.playerId,
-                wineAnswers: wineAnswerData
-            });
-
             // Store player ID for ready status tracking
             localStorage.setItem(`player-id-${result.eventId}`, result.playerId);
 
             // Check if this is a reconnection
             if (result.reconnected && result.currentWineNumber) {
                 console.log('Player reconnected with wine categories:', result);
-                // Player reconnected, redirect to scoring page with current wine
+                // Player reconnected, don't submit wine answers again - redirect to scoring page
                 navigate(`/score/${result.eventId}?wine=${result.currentWineNumber}`);
             } else {
                 console.log('New player joined with wine categories:', result);
-                // New player, go to event created page
+                // New player, submit wine answers and go to event created page
+                const wineAnswerData = wineCategories.map(category => ({
+                    categoryId: category.id,
+                    wineAnswer: wineAnswers[category.id]
+                }));
+
+                await apiService.submitWineAnswers({
+                    playerId: result.playerId,
+                    wineAnswers: wineAnswerData
+                });
+
                 navigate(`/event-created/${result.eventId}`);
             }
         } catch (error: any) {

@@ -62,7 +62,10 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
                 const event = await apiService.getEvent(eventId);
                 const wineNum = event.current_wine_number || 1;
                 setCurrentWineNumber(wineNum);
-                setTotalWines(event.players?.length || 0);
+
+                // Count only active players for total wines
+                const activePlayers = event.players?.filter(player => player.is_active) || [];
+                setTotalWines(activePlayers.length);
 
                 // Get average score for current wine
                 try {

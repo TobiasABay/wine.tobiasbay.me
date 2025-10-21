@@ -18,7 +18,7 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import AdminLayout from './components/AdminLayout'
 import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
 import AdminInsightsPage from './pages/admin/AdminInsightsPage'
-import HeatMap from './pages/admin/HeatMap'
+import AdminHeatMap from './pages/admin/AdminHeatMap'
 
 function App() {
   return (
@@ -52,7 +52,7 @@ function App() {
           <Route path=":eventId" element={<AdminEventDetailsPage />} />
           <Route path="feedback" element={<AdminFeedbackPage />} />
           <Route path="insights" element={<AdminInsightsPage />} />
-          <Route path="heat-map" element={<HeatMap />} />
+          <Route path="heat-map" element={<AdminHeatMap />} />
         </Route>
       </Routes>
     </Router>
