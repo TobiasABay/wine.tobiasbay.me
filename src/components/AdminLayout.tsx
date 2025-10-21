@@ -147,7 +147,7 @@ export default function AdminLayout() {
                     </ListItem>
 
                     <ListItem disablePadding>
-                        <ListItemButton onClick={() => navigate('/heat-map')}>
+                        <ListItemButton onClick={() => navigate('/admin/heat-map')}>
                             <ListItemIcon>
                                 <TravelExplore />
                             </ListItemIcon>

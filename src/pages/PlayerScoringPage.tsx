@@ -262,7 +262,6 @@ export default function PlayerScoringPage() {
     const [wineCategories, setWineCategories] = useState<WineCategory[]>([]);
     const [categoryGuesses, setCategoryGuesses] = useState<Record<string, string>>({});
     const [guessesSubmitted, setGuessesSubmitted] = useState<boolean>(false);
-    const [hasExistingGuesses, setHasExistingGuesses] = useState<boolean>(false);
     const [selectedCountry, setSelectedCountry] = useState<string>('');
     const { eventId } = useParams();
     const navigate = useNavigate();
@@ -311,29 +310,6 @@ export default function PlayerScoringPage() {
                 // Load wine categories
                 const categories = await apiService.getWineCategories(eventId);
                 setWineCategories(categories);
-
-                // Check if player has existing wine guesses
-                try {
-                    const existingGuesses = await apiService.getPlayerWineDetails(playerId);
-                    if (existingGuesses && existingGuesses.length > 0) {
-                        console.log('Player has existing wine guesses:', existingGuesses);
-                        setHasExistingGuesses(true);
-                        setGuessesSubmitted(true);
-
-                        // Pre-populate the form with existing guesses
-                        const guessMap: Record<string, string> = {};
-                        existingGuesses.forEach(guess => {
-                            guessMap[guess.category_id] = guess.wine_answer;
-                        });
-                        setCategoryGuesses(guessMap);
-                    } else {
-                        console.log('Player has no existing wine guesses');
-                        setHasExistingGuesses(false);
-                    }
-                } catch (error) {
-                    console.log('No existing wine guesses found for player:', error);
-                    setHasExistingGuesses(false);
-                }
 
                 // Check if event has started
                 if (!event.event_started) {
@@ -1025,7 +1001,6 @@ export default function PlayerScoringPage() {
 
                                 {wineCategories.map((category) => {
                                     const options = getOptionsForCategory(category.guessing_element, selectedCountry);
-                                    const hasExistingGuess = !!(hasExistingGuesses && categoryGuesses[category.id]);
 
                                     return (
                                         <Box key={category.id} sx={{ mb: 3 }}>
@@ -1046,7 +1021,7 @@ export default function PlayerScoringPage() {
                                                     value={categoryGuesses[category.id] || ''}
                                                     label={category.guessing_element}
                                                     onChange={(e) => handleCategoryGuessChange(category.id, e.target.value)}
-                                                    disabled={submitting || hasExistingGuess}
+                                                    disabled={submitting || guessesSubmitted}
                                                     sx={{
                                                         '& .MuiOutlinedInput-root': {
                                                             backgroundColor: 'rgba(255,255,255,0.1)',
@@ -1091,44 +1066,28 @@ export default function PlayerScoringPage() {
                             </Alert>
                         )}
 
-                        {!hasExistingGuesses && (
-                            <Button
-                                onClick={handleSubmitAll}
-                                disabled={submitting || (wineCategories.length > 0 && Object.keys(categoryGuesses).length !== wineCategories.length)}
-                                variant="contained"
-                                sx={{
-                                    backgroundColor: '#ffd700',
-                                    color: '#333',
-                                    fontWeight: 'bold',
-                                    px: 4,
-                                    py: 1.5,
-                                    fontSize: '1.1rem',
-                                    '&:hover': {
-                                        backgroundColor: '#ffc107',
-                                    },
-                                    '&:disabled': {
-                                        backgroundColor: 'rgba(255,255,255,0.3)',
-                                        color: 'rgba(255,255,255,0.7)',
-                                    }
-                                }}
-                            >
-                                {submitting ? 'Submitting...' : 'Submit Score & Guesses'}
-                            </Button>
-                        )}
-
-                        {hasExistingGuesses && (
-                            <Box sx={{
-                                backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                                border: '1px solid rgba(76, 175, 80, 0.4)',
-                                borderRadius: 2,
-                                p: 2,
-                                textAlign: 'center'
-                            }}>
-                                <Typography variant="body1" sx={{ color: '#4caf50', fontWeight: 'medium' }}>
-                                    ✓ Your wine categories have already been submitted
-                                </Typography>
-                            </Box>
-                        )}
+                        <Button
+                            onClick={handleSubmitAll}
+                            disabled={submitting || (wineCategories.length > 0 && Object.keys(categoryGuesses).length !== wineCategories.length)}
+                            variant="contained"
+                            sx={{
+                                backgroundColor: '#ffd700',
+                                color: '#333',
+                                fontWeight: 'bold',
+                                px: 4,
+                                py: 1.5,
+                                fontSize: '1.1rem',
+                                '&:hover': {
+                                    backgroundColor: '#ffc107',
+                                },
+                                '&:disabled': {
+                                    backgroundColor: 'rgba(255,255,255,0.3)',
+                                    color: 'rgba(255,255,255,0.7)',
+                                }
+                            }}
+                        >
+                            {submitting ? 'Submitting...' : 'Submit Score & Guesses'}
+                        </Button>
                     </Box>
                 )}
             </Container>
