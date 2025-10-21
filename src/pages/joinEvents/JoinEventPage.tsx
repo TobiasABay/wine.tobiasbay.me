@@ -460,9 +460,11 @@ export default function JoinEventPage() {
 
                     // Check if this is a reconnection
                     if (result.reconnected && result.currentWineNumber) {
+                        console.log('Player reconnected:', result);
                         // Player reconnected, redirect to scoring page with current wine
                         navigate(`/score/${result.eventId}?wine=${result.currentWineNumber}`);
                     } else {
+                        console.log('New player joined:', result);
                         // New player, go to event created page
                         navigate(`/event-created/${result.eventId}`);
                     }
@@ -533,9 +535,11 @@ export default function JoinEventPage() {
 
             // Check if this is a reconnection
             if (result.reconnected && result.currentWineNumber) {
+                console.log('Player reconnected with wine categories:', result);
                 // Player reconnected, redirect to scoring page with current wine
                 navigate(`/score/${result.eventId}?wine=${result.currentWineNumber}`);
             } else {
+                console.log('New player joined with wine categories:', result);
                 // New player, go to event created page
                 navigate(`/event-created/${result.eventId}`);
             }

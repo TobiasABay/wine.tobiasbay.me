@@ -1,5 +1,5 @@
 import { Box, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider, Badge } from '@mui/material';
-import { Dashboard, EventNote, Home, Insights, Feedback, Wifi } from '@mui/icons-material';
+import { Dashboard, EventNote, Home, Insights, Feedback, Wifi, TravelExplore } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Outlet } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -143,6 +143,15 @@ export default function AdminLayout() {
                                 <Wifi />
                             </ListItemIcon>
                             <ListItemText primary="WebSocket" />
+                        </ListItemButton>
+                    </ListItem>
+
+                    <ListItem disablePadding>
+                        <ListItemButton onClick={() => navigate('/heat-map')}>
+                            <ListItemIcon>
+                                <TravelExplore />
+                            </ListItemIcon>
+                            <ListItemText primary="Heat Map" />
                         </ListItemButton>
                     </ListItem>
                 </List>

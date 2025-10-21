@@ -1011,6 +1011,14 @@ async function joinEvent(request, env, corsHeaders) {
         `).bind(event.id, deviceId).first();
 
         if (existingPlayer) {
+            console.log('Player reconnection detected:', {
+                playerId: existingPlayer.id,
+                playerName: existingPlayer.name,
+                newName: sanitizedName,
+                eventStarted: event.event_started,
+                currentWine: event.current_wine_number
+            });
+
             // Update the player's name if it changed
             if (existingPlayer.name !== sanitizedName) {
                 await env.wine_events.prepare(`
@@ -1025,6 +1033,8 @@ async function joinEvent(request, env, corsHeaders) {
 
                 // If the current wine is past this player's turn, they've missed it
                 if (currentWineNumber > playerWineNumber) {
+                    console.log(`Player ${existingPlayer.name} missed wines ${playerWineNumber} to ${currentWineNumber - 1}`);
+
                     // Mark their wine as completed (skipped) for any missed turns
                     for (let wineNum = playerWineNumber; wineNum < currentWineNumber; wineNum++) {
                         // Check if they already have a score for this wine
@@ -1033,6 +1043,7 @@ async function joinEvent(request, env, corsHeaders) {
                         `).bind(existingPlayer.id, wineNum).first();
 
                         if (!existingScore) {
+                            console.log(`Marking wine ${wineNum} as skipped for player ${existingPlayer.name}`);
                             // Insert a skipped score (0 points) for missed wines
                             await env.wine_events.prepare(`
                                 INSERT INTO wine_scores (player_id, wine_number, score, created_at)

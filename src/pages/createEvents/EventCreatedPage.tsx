@@ -303,20 +303,9 @@ export default function EventCreatedPage() {
                     return;
                 }
 
-                // Only update if player list has changed
-                setPlayers(currentPlayers => {
-                    const currentPlayerIds = currentPlayers.map(p => p.id).sort().join(',');
-                    const newPlayerIds = newPlayers.map(p => p.id).sort().join(',');
-
-                    // If player list hasn't changed, don't update
-                    if (currentPlayerIds === newPlayerIds) {
-                        return currentPlayers;
-                    }
-
-                    // New players detected, return updated list without wine details
-                    // Wine details can be fetched on-demand if needed
-                    return newPlayers;
-                });
+                // Always update player list to ensure consistency
+                // This handles cases where players reconnect and their state changes
+                setPlayers(newPlayers);
             } catch (error) {
                 console.error('Error polling for updates:', error);
             }
