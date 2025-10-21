@@ -1006,9 +1006,12 @@ async function joinEvent(request, env, corsHeaders) {
 
     // If deviceId is provided, check if this device already joined this event
     if (deviceId) {
+        console.log('Checking for existing player with deviceId:', deviceId, 'in event:', event.id);
         const existingPlayer = await env.wine_events.prepare(`
             SELECT * FROM players WHERE event_id = ? AND device_id = ? AND is_active = 1
         `).bind(event.id, deviceId).first();
+
+        console.log('Existing player found:', existingPlayer);
 
         if (existingPlayer) {
             console.log('Player reconnection detected:', {
@@ -1065,12 +1068,22 @@ async function joinEvent(request, env, corsHeaders) {
             }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
+        } else {
+            console.log('No existing player found for deviceId:', deviceId);
         }
+    } else {
+        console.log('No deviceId provided');
     }
 
+    console.log('Creating new player...');
     const currentPlayers = await env.wine_events.prepare(`
     SELECT COUNT(*) as count FROM players WHERE event_id = ? AND is_active = 1
   `).bind(event.id).first();
+
+    console.log('Current player count:', currentPlayers.count);
+    console.log('All players in event:', await env.wine_events.prepare(`
+        SELECT id, name, device_id, presentation_order FROM players WHERE event_id = ? AND is_active = 1 ORDER BY presentation_order
+    `).bind(event.id).all());
 
     if (currentPlayers.count >= event.max_participants) {
         return new Response(JSON.stringify({ error: 'Event is full' }), {

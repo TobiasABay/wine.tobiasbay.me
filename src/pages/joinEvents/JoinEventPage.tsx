@@ -452,10 +452,12 @@ export default function JoinEventPage() {
 
                 if (categories.length === 0) {
                     // No wine categories, join directly
+                    const deviceId = getDeviceId();
+                    console.log('Joining event with deviceId:', deviceId);
                     const result = await apiService.joinEvent({
                         playerName: sanitizedName,
                         joinCode: sanitizedCode,
-                        deviceId: getDeviceId()
+                        deviceId: deviceId
                     });
 
                     // Check if this is a reconnection
@@ -511,10 +513,12 @@ export default function JoinEventPage() {
 
         try {
             // Join the event
+            const deviceId = getDeviceId();
+            console.log('Joining event with wine categories, deviceId:', deviceId);
             const result = await apiService.joinEvent({
                 playerName: sanitizedName,
                 joinCode: sanitizedCode,
-                deviceId: getDeviceId()
+                deviceId: deviceId
             });
 
             // Submit wine answers
