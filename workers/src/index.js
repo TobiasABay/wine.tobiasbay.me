@@ -1007,11 +1007,18 @@ async function joinEvent(request, env, corsHeaders) {
     // If deviceId is provided, check if this device already joined this event
     if (deviceId) {
         console.log('Checking for existing player with deviceId:', deviceId, 'in event:', event.id);
+        console.log('Player name:', sanitizedName);
         const existingPlayer = await env.wine_events.prepare(`
             SELECT * FROM players WHERE event_id = ? AND device_id = ? AND is_active = 1
         `).bind(event.id, deviceId).first();
 
         console.log('Existing player found:', existingPlayer);
+
+        // Also check for any players with the same device_id (including inactive ones)
+        const allPlayersWithDevice = await env.wine_events.prepare(`
+            SELECT * FROM players WHERE event_id = ? AND device_id = ?
+        `).bind(event.id, deviceId).all();
+        console.log('All players with this device_id (including inactive):', allPlayersWithDevice);
 
         if (existingPlayer) {
             console.log('Player reconnection detected:', {
@@ -1081,9 +1088,18 @@ async function joinEvent(request, env, corsHeaders) {
   `).bind(event.id).first();
 
     console.log('Current player count:', currentPlayers.count);
-    console.log('All players in event:', await env.wine_events.prepare(`
+    const allPlayers = await env.wine_events.prepare(`
         SELECT id, name, device_id, presentation_order FROM players WHERE event_id = ? AND is_active = 1 ORDER BY presentation_order
-    `).bind(event.id).all());
+    `).bind(event.id).all();
+    console.log('All players in event:', allPlayers);
+
+    // Check if there are any players with the same device_id but different names
+    if (deviceId) {
+        const playersWithSameDevice = await env.wine_events.prepare(`
+            SELECT id, name, device_id, presentation_order FROM players WHERE event_id = ? AND device_id = ? ORDER BY presentation_order
+        `).bind(event.id, deviceId).all();
+        console.log('Players with same device_id:', playersWithSameDevice);
+    }
 
     if (currentPlayers.count >= event.max_participants) {
         return new Response(JSON.stringify({ error: 'Event is full' }), {
