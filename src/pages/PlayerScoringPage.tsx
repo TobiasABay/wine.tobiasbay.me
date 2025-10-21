@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -265,6 +265,7 @@ export default function PlayerScoringPage() {
     const [selectedCountry, setSelectedCountry] = useState<string>('');
     const { eventId } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     // Initialize selectedCountry when wine categories are loaded
     useEffect(() => {
@@ -321,8 +322,9 @@ export default function PlayerScoringPage() {
                 const sortedPlayers = (event.players || []).sort((a, b) => a.presentation_order - b.presentation_order);
                 setAllPlayers(sortedPlayers);
 
-                // Get current wine number from the event
-                const eventCurrentWine = event.current_wine_number || 1;
+                // Get current wine number from the event or URL parameter
+                const wineFromUrl = searchParams.get('wine');
+                const eventCurrentWine = wineFromUrl ? parseInt(wineFromUrl) : (event.current_wine_number || 1);
                 setCurrentWineNumber(eventCurrentWine);
 
                 // Set current player based on current wine number

@@ -457,7 +457,15 @@ export default function JoinEventPage() {
                         joinCode: sanitizedCode,
                         deviceId: getDeviceId()
                     });
-                    navigate(`/event-created/${result.eventId}`);
+
+                    // Check if this is a reconnection
+                    if (result.reconnected && result.currentWineNumber) {
+                        // Player reconnected, redirect to scoring page with current wine
+                        navigate(`/score/${result.eventId}?wine=${result.currentWineNumber}`);
+                    } else {
+                        // New player, go to event created page
+                        navigate(`/event-created/${result.eventId}`);
+                    }
                 } else {
                     // Has wine categories, go to step 2
                     setActiveStep(1);
@@ -523,8 +531,14 @@ export default function JoinEventPage() {
             // Store player ID for ready status tracking
             localStorage.setItem(`player-id-${result.eventId}`, result.playerId);
 
-            // Successfully joined event
-            navigate(`/event-created/${result.eventId}`);
+            // Check if this is a reconnection
+            if (result.reconnected && result.currentWineNumber) {
+                // Player reconnected, redirect to scoring page with current wine
+                navigate(`/score/${result.eventId}?wine=${result.currentWineNumber}`);
+            } else {
+                // New player, go to event created page
+                navigate(`/event-created/${result.eventId}`);
+            }
         } catch (error: any) {
             console.error('Error joining event:', error);
             setError(error.message || 'Failed to join event. Please try again.');

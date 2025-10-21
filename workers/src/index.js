@@ -449,6 +449,7 @@ export default {
                 return await updatePlayerOrder(eventId, request, env, corsHeaders);
             }
 
+
             if (apiPath === '/api/players/wine-answers' && method === 'POST') {
                 return await submitWineAnswers(request, env, corsHeaders);
             }
@@ -1017,12 +1018,39 @@ async function joinEvent(request, env, corsHeaders) {
                 `).bind(sanitizedName, existingPlayer.id).run();
             }
 
+            // Check if the event has started and if the player missed their turn
+            if (event.event_started && event.current_wine_number) {
+                const currentWineNumber = event.current_wine_number;
+                const playerWineNumber = existingPlayer.presentation_order;
+
+                // If the current wine is past this player's turn, they've missed it
+                if (currentWineNumber > playerWineNumber) {
+                    // Mark their wine as completed (skipped) for any missed turns
+                    for (let wineNum = playerWineNumber; wineNum < currentWineNumber; wineNum++) {
+                        // Check if they already have a score for this wine
+                        const existingScore = await env.wine_events.prepare(`
+                            SELECT * FROM wine_scores WHERE player_id = ? AND wine_number = ?
+                        `).bind(existingPlayer.id, wineNum).first();
+
+                        if (!existingScore) {
+                            // Insert a skipped score (0 points) for missed wines
+                            await env.wine_events.prepare(`
+                                INSERT INTO wine_scores (player_id, wine_number, score, created_at)
+                                VALUES (?, ?, 0, ?)
+                            `).bind(existingPlayer.id, wineNum, Date.now()).run();
+                        }
+                    }
+                }
+            }
+
             return new Response(JSON.stringify({
                 success: true,
                 eventId: event.id,
                 playerId: existingPlayer.id,
                 presentationOrder: existingPlayer.presentation_order,
-                message: `Welcome back ${sanitizedName}! You're already in this event.`
+                message: `Welcome back ${sanitizedName}! You're already in this event.`,
+                reconnected: true,
+                currentWineNumber: event.current_wine_number || 1
             }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
@@ -2419,3 +2447,4 @@ async function getInsightsData(env, corsHeaders) {
         });
     }
 }
+

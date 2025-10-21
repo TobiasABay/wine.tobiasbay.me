@@ -228,6 +228,8 @@ class ApiService {
         playerId: string;
         presentationOrder: number;
         message: string;
+        reconnected?: boolean;
+        currentWineNumber?: number;
     }> {
         return this.request<{
             success: boolean;
@@ -235,6 +237,8 @@ class ApiService {
             playerId: string;
             presentationOrder: number;
             message: string;
+            reconnected?: boolean;
+            currentWineNumber?: number;
         }>('/api/players/join', {
             method: 'POST',
             body: JSON.stringify(joinData),
@@ -722,6 +726,7 @@ class ApiService {
             throw error;
         }
     }
+
 }
 
 export const apiService = new ApiService();
