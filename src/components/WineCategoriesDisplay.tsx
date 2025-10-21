@@ -65,6 +65,11 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
 
                 // Count only active players for total wines
                 const activePlayers = event.players?.filter(player => player.is_active) || [];
+                console.log('WineCategoriesDisplay: Initial load player count:', {
+                    totalPlayers: event.players?.length || 0,
+                    activePlayers: activePlayers.length,
+                    players: event.players?.map(p => ({ name: p.name, is_active: p.is_active }))
+                });
                 setTotalWines(activePlayers.length);
 
                 // Get average score for current wine
@@ -188,6 +193,16 @@ export default function WineCategoriesDisplay({ eventId, isEventCreator = false 
         const targetWineNumber = wineNumber || currentWineNumber;
 
         try {
+            // Get updated event data to refresh player count
+            const event = await apiService.getEvent(eventId);
+            const activePlayers = event.players?.filter(player => player.is_active) || [];
+            console.log('WineCategoriesDisplay: Refreshing player count:', {
+                totalPlayers: event.players?.length || 0,
+                activePlayers: activePlayers.length,
+                players: event.players?.map(p => ({ name: p.name, is_active: p.is_active }))
+            });
+            setTotalWines(activePlayers.length);
+
             // Get updated average score for current wine
             const scoresResponse = await apiService.getWineScores(eventId);
             const wineData = scoresResponse.averages[targetWineNumber.toString()];
