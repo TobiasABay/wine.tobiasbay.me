@@ -1025,7 +1025,7 @@ export default function PlayerScoringPage() {
 
                                 {wineCategories.map((category) => {
                                     const options = getOptionsForCategory(category.guessing_element, selectedCountry);
-                                    const hasExistingGuess = hasExistingGuesses && categoryGuesses[category.id];
+                                    const hasExistingGuess = !!(hasExistingGuesses && categoryGuesses[category.id]);
 
                                     return (
                                         <Box key={category.id} sx={{ mb: 3 }}>
