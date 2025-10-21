@@ -194,7 +194,7 @@ export default function AdminHeatMap() {
                 });
 
                 const mapInstance = new window.google.maps.Map(mapRef.current, {
-                    zoom: 4,
+                    zoom: 10, // Closer view - city/region level
                     center: bounds.getCenter(),
                     mapTypeId: 'roadmap',
                     mapId: 'DEMO_MAP_ID' // Required for AdvancedMarkerElement
@@ -260,7 +260,7 @@ export default function AdminHeatMap() {
             } else if (events.length > 0) {
                 // All geocoding failed - create a default map centered on world
                 const mapInstance = new window.google.maps.Map(mapRef.current, {
-                    zoom: 2,
+                    zoom: 3, // Slightly closer world view
                     center: { lat: 20, lng: 0 },
                     mapTypeId: 'roadmap',
                     mapId: 'DEMO_MAP_ID' // Required for AdvancedMarkerElement
