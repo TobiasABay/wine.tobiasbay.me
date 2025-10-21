@@ -357,7 +357,7 @@ const getOptionsForCategory = (guessingElement: string, selectedCountry?: string
         ];
     } else if (element === 'Alcohol Content') {
         return [
-            'Under 12%', '12-13%', '13-14%', '14-15%', '15-16%', '16-17%', 'Over 17%'
+            'Under 12%', '12.0-12.9%', '13.0-13.9%', '14.0-14.9%', '15.0-15.9%', '16.0-16.9%', '17% and above'
         ];
     } else if (element === 'Tannin Level') {
         return [
