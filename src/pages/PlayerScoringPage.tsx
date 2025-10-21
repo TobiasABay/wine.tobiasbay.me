@@ -243,9 +243,6 @@ const ALL_WINE_REGIONS = [
     // Slovakia
     'Malokarpatská', 'Južnoslovenská', 'Východoslovenská', 'Nitrianska',
     'Stredoslovenská', 'Severoslovenská',
-
-    // Generic
-    'Other'
 ];
 
 export default function PlayerScoringPage() {
@@ -554,7 +551,6 @@ export default function PlayerScoringPage() {
                 'Morocco',
                 'Netherlands',
                 'New Zealand',
-                'Other',
                 'Peru',
                 'Poland',
                 'Portugal',

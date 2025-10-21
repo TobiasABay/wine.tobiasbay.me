@@ -18,6 +18,7 @@ import FullscreenButton from '../../components/FullscreenButton';
 import { apiService } from '../../services/api';
 import { sanitizeEventName, validateEventName } from '../../utils/sanitize';
 import { getDeviceId } from '../../utils/deviceId';
+import InfoBox from '../../components/InfoBox';
 
 const COOLDOWN_SECONDS = 60; // 60 seconds cooldown between event creations
 
@@ -325,22 +326,43 @@ export default function EventDetailsPage() {
                         overflow: 'auto'
                     }}
                 >
-                    <Box sx={{ textAlign: 'center', mb: 4 }}>
-                        <Description sx={{ fontSize: 80, mb: 2, opacity: 0.9, color: 'white' }} />
-                        <Typography variant="h4" component="h2" gutterBottom fontWeight="bold" sx={{ opacity: 0.9, color: 'white' }}>
-                            Tell Us More
-                        </Typography>
+                    <Box sx={{ position: 'relative', mb: 4 }}>
+                        <Box sx={{
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            zIndex: 10
+                        }}>
+                            <InfoBox
+                                title="Wine Categories"
+                                variant="inline"
+                                maxWidth={400}
+                            >
+                                Create different categories of things your guests should try to guess about each wine.
+                                For each category, select what participants should guess (like country, grape variety, etc.)
+                                and set a difficulty level from 1 (easy) to 5 (very hard). The difficulty level affects how many points the player earns for guessing correctly.
+                            </InfoBox>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                            <Description sx={{ fontSize: 80, mb: 2, opacity: 0.9, color: 'white' }} />
+                            <Typography variant="h4" component="h2" gutterBottom fontWeight="bold" sx={{ opacity: 0.9, color: 'white' }}>
+                                Tell Us More
+                            </Typography>
+                        </Box>
                     </Box>
 
                     <Grid container spacing={3}>
                         {/* Wine Guessing Categories Section */}
                         <Grid size={12}>
-                            <Typography variant="h5" component="h3" gutterBottom sx={{ color: 'white', fontWeight: 'bold', mb: 3 }}>
+
+                            <Typography variant="h5" component="h3" sx={{ color: 'white', fontWeight: 'bold' }}>
                                 Wine Guessing Categories
                             </Typography>
-                            <Typography variant="body2" sx={{ color: 'white', opacity: 0.8, mb: 3 }}>
+
+                            <Typography variant="body2" sx={{ color: 'white', opacity: 0.8, justifyContent: 'center', alignItems: 'center' }}>
                                 Create different categories of things your guests should try to guess about each wine
                             </Typography>
+
                         </Grid>
 
                         {/* Wine Guessing Categories Container */}
@@ -348,8 +370,7 @@ export default function EventDetailsPage() {
                             <Box sx={{
                                 border: '1px solid rgba(255,255,255,0.2)',
                                 borderRadius: 2,
-                                p: 3,
-                                mb: 2,
+                                p: 1,
                                 backgroundColor: 'rgba(255,255,255,0.05)'
                             }}>
                                 {wineCategories.map((category, index) => (
@@ -553,6 +574,6 @@ export default function EventDetailsPage() {
                     </Grid>
                 </Paper>
             </Box>
-        </Container>
+        </Container >
     );
 }

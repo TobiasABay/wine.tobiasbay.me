@@ -61,7 +61,6 @@ const WINE_COUNTRIES = [
     'Morocco',
     'Netherlands',
     'New Zealand',
-    'Other',
     'Peru',
     'Poland',
     'Portugal',
@@ -307,9 +306,6 @@ const ALL_WINE_REGIONS = [
     // Slovakia
     'Malokarpatská', 'Južnoslovenská', 'Východoslovenská', 'Nitrianska',
     'Stredoslovenská', 'Severoslovenská',
-
-    // Generic
-    'Other'
 ];
 
 // Helper function to get options based on guessing element
