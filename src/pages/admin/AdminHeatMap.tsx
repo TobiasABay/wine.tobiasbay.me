@@ -1,5 +1,5 @@
 import { UserButton } from "@clerk/clerk-react"
-import { Box, Typography, Paper, CircularProgress, Alert, Switch, FormControlLabel } from "@mui/material"
+import { Box, Typography, Paper, Alert, Switch, FormControlLabel } from "@mui/material"
 import { useUser } from "@clerk/clerk-react"
 import { useEffect, useRef, useState } from "react"
 import { apiService } from "../../services/api"
@@ -24,7 +24,7 @@ export default function AdminHeatMap() {
     const mapRef = useRef<HTMLDivElement>(null);
     const [map, setMap] = useState<any>(null);
     const [heatmap, setHeatmap] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const [error, setError] = useState<string>('');
     const [events, setEvents] = useState<Event[]>([]);
     const [eventLocations, setEventLocations] = useState<EventLocation[]>([]);
@@ -90,7 +90,7 @@ export default function AdminHeatMap() {
                             console.log('Google Maps fully initialized from existing script');
                             resolve();
                         }
-                    }, 100);
+                    }, 1000);
                 });
             }
 
@@ -98,18 +98,17 @@ export default function AdminHeatMap() {
             scriptLoadingRef.current = true;
             return new Promise<void>((resolve, reject) => {
                 const script = document.createElement('script');
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=visualization&loading=async`;
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker&loading=async`;
                 script.async = true;
                 script.defer = true;
                 script.onload = () => {
                     console.log('Google Maps script loaded');
                     // Wait for Google Maps to be fully initialized
                     const checkGoogleMapsReady = setInterval(() => {
-                        if (window.google && window.google.maps && window.google.maps.Geocoder && window.google.maps.visualization) {
+                        if (window.google && window.google.maps && window.google.maps.Geocoder && window.google.maps.marker) {
                             clearInterval(checkGoogleMapsReady);
                             scriptLoadedRef.current = true;
                             scriptLoadingRef.current = false;
-                            console.log('Google Maps fully initialized');
                             resolve();
                         }
                     }, 100);
@@ -174,9 +173,11 @@ export default function AdminHeatMap() {
                     const lat = result.geometry.location.lat();
                     const lng = result.geometry.location.lng();
                     locations.push({ event, lat, lng });
-                    console.log(`✓ Geocoded "${event.name}" at ${event.location}: ${lat}, ${lng}`);
-                } catch (err) {
-                    console.error(`✗ Failed to geocode "${event.name}" (${event.location}):`, err);
+                } catch (err: any) {
+                    // Only log if it's not a ZERO_RESULTS error (which is expected for invalid locations)
+                    if (!err.message?.includes('ZERO_RESULTS')) {
+                        console.error(`✗ Failed to geocode "${event.name}" (${event.location}):`, err);
+                    }
                     failedEvents.push(`${event.name} (${event.location})`);
                 }
             });
@@ -195,39 +196,42 @@ export default function AdminHeatMap() {
                     zoom: 4,
                     center: bounds.getCenter(),
                     mapTypeId: 'roadmap',
-                    styles: [
-                        {
-                            featureType: 'all',
-                            elementType: 'labels',
-                            stylers: [{ visibility: 'on' }]
-                        }
-                    ]
+                    mapId: 'DEMO_MAP_ID' // Required for AdvancedMarkerElement
                 });
 
                 mapInstance.fitBounds(bounds);
                 setMap(mapInstance);
 
-                // Create heatmap layer
-                const heatmapData = locations.map(loc =>
-                    new window.google.maps.LatLng(loc.lat, loc.lng)
-                );
+                // Create custom heatmap visualization using circles instead of deprecated HeatmapLayer
+                const heatmapData = locations.map(loc => ({
+                    position: new window.google.maps.LatLng(loc.lat, loc.lng),
+                    weight: 1
+                }));
 
-                const heatmapLayer = new window.google.maps.visualization.HeatmapLayer({
-                    data: heatmapData,
-                    map: mapInstance,
-                    radius: 50,
-                    opacity: 0.6
+                // Create custom heatmap using circles with gradient opacity
+                const heatmapCircles = heatmapData.map((data) => {
+                    const circle = new window.google.maps.Circle({
+                        strokeColor: '#FF0000',
+                        strokeOpacity: 0.8,
+                        strokeWeight: 2,
+                        fillColor: '#FF0000',
+                        fillOpacity: 0.35,
+                        map: mapInstance,
+                        center: data.position,
+                        radius: 50000, // 50km radius
+                        zIndex: 1
+                    });
+                    return circle;
                 });
 
-                setHeatmap(heatmapLayer);
+                setHeatmap(heatmapCircles);
 
-                // Create markers
+                // Create markers using modern AdvancedMarkerElement
                 const markers = locations.map(loc => {
-                    const marker = new window.google.maps.Marker({
+                    const marker = new window.google.maps.marker.AdvancedMarkerElement({
                         position: { lat: loc.lat, lng: loc.lng },
                         map: mapInstance,
-                        title: loc.event.name,
-                        animation: window.google.maps.Animation.DROP
+                        title: loc.event.name
                     });
 
                     // Create info window
@@ -238,7 +242,7 @@ export default function AdminHeatMap() {
                                 <p style="margin: 5px 0; color: #333;"><strong>Date:</strong> ${new Date(loc.event.date).toLocaleDateString()}</p>
                                 <p style="margin: 5px 0; color: #333;"><strong>Location:</strong> ${loc.event.location}</p>
                                 <p style="margin: 5px 0; color: #333;"><strong>Wine Type:</strong> ${loc.event.wine_type}</p>
-                                <p style="margin: 5px 0; color: #333;"><strong>Participants:</strong> ${loc.event.players.length}/${loc.event.max_participants}</p>
+                                <p style="margin: 5px 0; color: #333;"><strong>Participants:</strong> ${loc.event.players?.length || 0}/${loc.event.max_participants}</p>
                                 <p style="margin: 5px 0; color: #333;"><strong>Status:</strong> ${loc.event.is_active ? '🟢 Active' : '🔴 Inactive'}</p>
                             </div>
                         `
@@ -253,8 +257,14 @@ export default function AdminHeatMap() {
 
                 markersRef.current = markers;
             } else if (events.length > 0) {
-                // All geocoding failed
-                setError(`Unable to geocode any events. Please ensure event locations are valid addresses (e.g., "Copenhagen, Denmark" or "123 Main St, New York, NY").`);
+                // All geocoding failed - create a default map centered on world
+                const mapInstance = new window.google.maps.Map(mapRef.current, {
+                    zoom: 2,
+                    center: { lat: 20, lng: 0 },
+                    mapTypeId: 'roadmap',
+                    mapId: 'DEMO_MAP_ID' // Required for AdvancedMarkerElement
+                });
+                setMap(mapInstance);
             }
 
             setLoading(false);
@@ -265,8 +275,10 @@ export default function AdminHeatMap() {
 
     // Toggle heatmap visibility
     useEffect(() => {
-        if (heatmap) {
-            heatmap.setMap(showHeatmap ? map : null);
+        if (heatmap && Array.isArray(heatmap)) {
+            heatmap.forEach(circle => {
+                circle.setMap(showHeatmap ? map : null);
+            });
         }
     }, [showHeatmap, heatmap, map]);
 
@@ -372,15 +384,6 @@ export default function AdminHeatMap() {
                 <Alert severity="error" sx={{ mb: 3 }}>
                     {error}
                 </Alert>
-            )}
-            {/* Loading */}
-            {loading && apiKey && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 5 }}>
-                    <CircularProgress />
-                    <Typography variant="body1" sx={{ ml: 2 }}>
-                        Loading map data and geocoding locations...
-                    </Typography>
-                </Box>
             )}
 
             {/* Map Container */}
