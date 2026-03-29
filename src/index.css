@@ -3,3 +3,22 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+html {
+  height: 100%;
+  color-scheme: light;
+  /* Solid color: iOS 26+ Safari uses body/html background-color for toolbar tint when meta theme-color is ignored */
+  background-color: #667eea;
+}
+
+body {
+  min-height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  background-color: #667eea;
+}
+
+#root {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}

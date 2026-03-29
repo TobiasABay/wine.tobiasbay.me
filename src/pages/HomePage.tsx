@@ -4,11 +4,52 @@ import { Box, Typography, Button, Paper } from "@mui/material";
 import { Add, GroupAdd } from "@mui/icons-material";
 import FullscreenButton from '../components/FullscreenButton';
 
+/** Full-bleed mobile background: blue/purple above, pink/red below (matches Create + Join panels). */
+const MOBILE_SPLIT_BG =
+    'linear-gradient(180deg, #667eea 0%, #764ba2 50%, #f093fb 50%, #f5576c 100%)';
+
+/** Solid colors for iOS 26+ Safari: it samples `background-color` on full-width fixed strips near the edges (meta theme-color is unreliable). */
+const SAFARI_TOP_TINT = '#667eea';
+const SAFARI_BOTTOM_TINT = '#f5576c';
+
 export default function HomePage() {
     const navigate = useNavigate();
 
     useEffect(() => {
         document.title = 'Wine Tasting - Home';
+    }, []);
+
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width:899.95px)');
+        const applyLayeredBg = (el: HTMLElement) => {
+            // Gradient alone leaves background-color transparent → Safari 26 falls back to white chrome
+            el.style.backgroundColor = SAFARI_TOP_TINT;
+            el.style.backgroundImage = MOBILE_SPLIT_BG;
+            el.style.backgroundRepeat = 'no-repeat';
+            el.style.backgroundSize = '100% 100%';
+        };
+        const clearLayeredBg = (el: HTMLElement) => {
+            el.style.backgroundColor = '';
+            el.style.backgroundImage = '';
+            el.style.backgroundRepeat = '';
+            el.style.backgroundSize = '';
+        };
+        const syncDocumentBg = () => {
+            if (mq.matches) {
+                applyLayeredBg(document.documentElement);
+                applyLayeredBg(document.body);
+            } else {
+                clearLayeredBg(document.documentElement);
+                clearLayeredBg(document.body);
+            }
+        };
+        syncDocumentBg();
+        mq.addEventListener('change', syncDocumentBg);
+        return () => {
+            mq.removeEventListener('change', syncDocumentBg);
+            clearLayeredBg(document.documentElement);
+            clearLayeredBg(document.body);
+        };
     }, []);
 
     const handleCreateEvent = () => {
@@ -24,20 +65,55 @@ export default function HomePage() {
             sx={{
                 display: 'flex',
                 flexDirection: { xs: 'column', md: 'row' },
-                minHeight: '100vh',
+                minHeight: '100dvh',
                 padding: 0,
                 margin: 0,
                 border: 'none',
                 outline: 'none',
-                position: 'relative'
+                position: 'relative',
+                background: { xs: MOBILE_SPLIT_BG, md: 'transparent' }
             }}
         >
+            {/*
+              iOS 26+ Safari tints the status bar / toolbar from full-width fixed elements within a few px of
+              the top and bottom (see WebKit “Liquid Glass” behavior). These sentinels are off-screen or under
+              the system UI but supply the intended solid colors.
+            */}
+            <Box
+                aria-hidden
+                sx={{
+                    display: { xs: 'block', md: 'none' },
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '12px',
+                    minHeight: '12px',
+                    backgroundColor: SAFARI_TOP_TINT,
+                    zIndex: 999,
+                    pointerEvents: 'none'
+                }}
+            />
+            <Box
+                aria-hidden
+                sx={{
+                    display: { xs: 'block', md: 'none' },
+                    position: 'fixed',
+                    bottom: '-8px',
+                    left: 0,
+                    width: '100%',
+                    minHeight: '12px',
+                    backgroundColor: SAFARI_BOTTOM_TINT,
+                    zIndex: 999,
+                    pointerEvents: 'none'
+                }}
+            />
             {/* Fullscreen Button */}
             <Box
                 sx={{
                     position: 'fixed',
-                    top: { xs: 10, md: 20 },
-                    right: { xs: 10, md: 20 },
+                    top: { xs: 'calc(10px + env(safe-area-inset-top, 0px))', md: 20 },
+                    right: { xs: 'calc(10px + env(safe-area-inset-right, 0px))', md: 20 },
                     zIndex: 1000
                 }}
             >
@@ -51,13 +127,18 @@ export default function HomePage() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: {
+                        xs: 'transparent',
+                        md: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    },
                     color: 'white',
                     position: 'relative',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    minHeight: { xs: '50vh', md: '100vh' },
-                    padding: { xs: 3, md: 0 },
+                    minHeight: { xs: '50dvh', md: '100vh' },
+                    pt: { xs: 'max(24px, calc(24px + env(safe-area-inset-top, 0px)))', md: 0 },
+                    pb: { xs: 3, md: 0 },
+                    px: { xs: 3, md: 0 },
                     '&:hover': {
                         transform: { xs: 'none', md: 'scale(1.02)' },
                         boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
@@ -125,13 +206,18 @@ export default function HomePage() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    background: {
+                        xs: 'transparent',
+                        md: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                    },
                     color: 'white',
                     position: 'relative',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    minHeight: { xs: '50vh', md: '100vh' },
-                    padding: { xs: 3, md: 0 },
+                    minHeight: { xs: '50dvh', md: '100vh' },
+                    pt: { xs: 3, md: 0 },
+                    pb: { xs: 'max(24px, calc(24px + env(safe-area-inset-bottom, 0px)))', md: 0 },
+                    px: { xs: 3, md: 0 },
                     '&:hover': {
                         transform: { xs: 'none', md: 'scale(1.02)' },
                         boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
